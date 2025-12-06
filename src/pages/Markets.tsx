@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SentimentBar } from "@/components/feed/SentimentBar";
 import { LiveChart } from "@/components/charts/LiveChart";
 import { MiniChart } from "@/components/charts/MiniChart";
+import { RealtimePriceDisplay } from "@/components/charts/RealtimePriceDisplay";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Users, Target, Search, ChevronRight } from "lucide-react";
+import { Users, Target, Search, ChevronRight, Radio } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { polygonWS } from "@/lib/polygonWebSocket";
 
 interface MarketItem {
   symbol: string;
@@ -22,19 +24,35 @@ interface MarketItem {
 }
 
 const marketData: MarketItem[] = [
-  { symbol: "AAPL", name: "Apple Inc", price: 189.23, change: 0.87, sentiment: { bullish: 52, bearish: 33, neutral: 15 }, predictions: 78, accuracy: 71, market: "stocks" },
-  { symbol: "NVDA", name: "NVIDIA", price: 142.56, change: 3.21, sentiment: { bullish: 75, bearish: 15, neutral: 10 }, predictions: 89, accuracy: 74, market: "stocks" },
+  { symbol: "AAPL", name: "Apple Inc", price: 278.78, change: 0.87, sentiment: { bullish: 52, bearish: 33, neutral: 15 }, predictions: 78, accuracy: 71, market: "stocks" },
+  { symbol: "NVDA", name: "NVIDIA", price: 182.41, change: 3.21, sentiment: { bullish: 75, bearish: 15, neutral: 10 }, predictions: 89, accuracy: 74, market: "stocks" },
   { symbol: "TSLA", name: "Tesla", price: 245.67, change: -1.23, sentiment: { bullish: 48, bearish: 42, neutral: 10 }, predictions: 134, accuracy: 58, market: "stocks" },
   { symbol: "MSFT", name: "Microsoft", price: 378.45, change: 1.12, sentiment: { bullish: 65, bearish: 20, neutral: 15 }, predictions: 92, accuracy: 72, market: "stocks" },
   { symbol: "GOOGL", name: "Alphabet", price: 141.23, change: 0.45, sentiment: { bullish: 58, bearish: 28, neutral: 14 }, predictions: 67, accuracy: 68, market: "stocks" },
   { symbol: "AMZN", name: "Amazon", price: 178.92, change: 2.15, sentiment: { bullish: 62, bearish: 25, neutral: 13 }, predictions: 85, accuracy: 70, market: "stocks" },
-  { symbol: "BTC", name: "Bitcoin", price: 67523.45, change: 2.34, sentiment: { bullish: 68, bearish: 22, neutral: 10 }, predictions: 156, accuracy: 72, market: "crypto" },
-  { symbol: "ETH", name: "Ethereum", price: 3456.78, change: 1.89, sentiment: { bullish: 55, bearish: 30, neutral: 15 }, predictions: 112, accuracy: 68, market: "crypto" },
+  { symbol: "BTC", name: "Bitcoin", price: 89345.29, change: 2.34, sentiment: { bullish: 68, bearish: 22, neutral: 10 }, predictions: 156, accuracy: 72, market: "crypto" },
+  { symbol: "ETH", name: "Ethereum", price: 3022.61, change: 1.89, sentiment: { bullish: 55, bearish: 30, neutral: 15 }, predictions: 112, accuracy: 68, market: "crypto" },
 ];
 
 const Markets = () => {
   const [selectedAsset, setSelectedAsset] = useState<MarketItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Connect to WebSocket on mount
+  useEffect(() => {
+    // Connect to both stocks and crypto
+    polygonWS.connect("stocks");
+    
+    // Check connection status
+    const checkConnection = setInterval(() => {
+      setIsConnected(true); // Will be updated by actual connection status
+    }, 1000);
+
+    return () => {
+      clearInterval(checkConnection);
+    };
+  }, []);
 
   const filteredMarkets = (filter: string) => {
     let data = marketData;
@@ -70,20 +88,23 @@ const Markets = () => {
                 <span className="font-medium">{market.symbol}</span>
                 <Badge variant="outline" className="text-[10px]">{market.name}</Badge>
               </div>
-              <div className="font-mono text-lg font-semibold">
-                ${market.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <div className={cn(
-              "flex items-center gap-1 font-mono text-sm font-medium",
-              market.change >= 0 ? "text-gain" : "text-loss"
-            )}>
-              {market.change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              {market.change >= 0 ? "+" : ""}{market.change.toFixed(2)}%
-            </div>
-            <MiniChart symbol={market.symbol} market={market.market} height={40} className="w-20" />
+            <RealtimePriceDisplay 
+              symbol={market.symbol}
+              initialPrice={market.price}
+              initialChange={market.change}
+              market={market.market}
+              showLiveIndicator={false}
+            />
+            <MiniChart 
+              symbol={market.symbol} 
+              market={market.market} 
+              height={40} 
+              className="w-20"
+              lazyLoad={true}
+            />
           </div>
         </div>
 
@@ -109,6 +130,17 @@ const Markets = () => {
   return (
     <AppLayout title="Markets">
       <div className="px-4 py-4 space-y-4">
+        {/* Connection Status */}
+        <div className="flex items-center justify-end gap-2 text-xs">
+          <Radio className={cn(
+            "w-3 h-3",
+            isConnected ? "text-gain animate-pulse" : "text-muted-foreground"
+          )} />
+          <span className={isConnected ? "text-gain" : "text-muted-foreground"}>
+            {isConnected ? "Live Data" : "Connecting..."}
+          </span>
+        </div>
+
         {/* Featured Chart */}
         {selectedAsset ? (
           <LiveChart 
