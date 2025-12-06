@@ -133,6 +133,13 @@ export async function getPreviousClose(ticker: string): Promise<any> {
 
 // Get ticker snapshot
 export async function getTickerSnapshot(ticker: string, market: "stocks" | "crypto" | "forex" = "stocks"): Promise<any> {
+  const cacheKey = `snapshot-${ticker}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < 30000) { // 30 second cache for snapshots
+    return cached.data;
+  }
+
   const url = `${POLYGON_BASE_URL}/v2/snapshot/locale/us/markets/${market}/tickers/${ticker}?apiKey=${POLYGON_API_KEY}`;
   
   const response = await fetch(url);
@@ -140,7 +147,100 @@ export async function getTickerSnapshot(ticker: string, market: "stocks" | "cryp
     throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
   }
   
-  return response.json();
+  const data = await response.json();
+  apiCache.set(cacheKey, { data, timestamp: Date.now() });
+  
+  return data;
+}
+
+// Get last trade price for a ticker
+export async function getLastTrade(ticker: string): Promise<{ price: number; timestamp: number } | null> {
+  const cacheKey = `trade-${ticker}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < 15000) { // 15 second cache
+    return cached.data;
+  }
+
+  try {
+    const url = `${POLYGON_BASE_URL}/v2/last/trade/${ticker}?apiKey=${POLYGON_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    const result = data.results ? { price: data.results.p, timestamp: data.results.t } : null;
+    
+    if (result) {
+      apiCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    }
+    
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+// Get current price using previous close (most reliable for free tier)
+export async function getCurrentPrice(
+  symbol: string, 
+  market: "stocks" | "crypto" | "forex" = "stocks"
+): Promise<{ price: number; change: number; changePercent: number } | null> {
+  const cacheKey = `current-${symbol}-${market}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < 30000) { // 30 second cache
+    return cached.data;
+  }
+
+  try {
+    const ticker = formatPolygonTicker(symbol, market);
+    const prevData = await getPreviousClose(ticker);
+    
+    if (!prevData.results?.[0]) return null;
+    
+    const bar = prevData.results[0];
+    const price = bar.c;
+    const prevClose = bar.o;
+    const change = price - prevClose;
+    const changePercent = (change / prevClose) * 100;
+    
+    const result = { price, change, changePercent };
+    apiCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+// Batch fetch current prices for multiple symbols (with rate limit awareness)
+export async function batchGetCurrentPrices(
+  symbols: Array<{ symbol: string; market: "stocks" | "crypto" | "forex" }>
+): Promise<Map<string, { price: number; change: number; changePercent: number }>> {
+  const results = new Map();
+  
+  // Process in small batches with delays to avoid rate limiting
+  const batchSize = 3;
+  for (let i = 0; i < symbols.length; i += batchSize) {
+    const batch = symbols.slice(i, i + batchSize);
+    
+    const promises = batch.map(async ({ symbol, market }) => {
+      const data = await getCurrentPrice(symbol, market);
+      if (data) {
+        results.set(symbol, data);
+      }
+    });
+    
+    await Promise.all(promises);
+    
+    // Small delay between batches
+    if (i + batchSize < symbols.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+  
+  return results;
 }
 
 // Format ticker for different markets

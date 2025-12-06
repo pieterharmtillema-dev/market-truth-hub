@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SentimentBar } from "@/components/feed/SentimentBar";
 import { LiveChart } from "@/components/charts/LiveChart";
@@ -7,10 +7,9 @@ import { RealtimePriceDisplay } from "@/components/charts/RealtimePriceDisplay";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Target, Search, ChevronRight, Radio } from "lucide-react";
+import { Users, Target, Search, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { polygonWS } from "@/lib/polygonWebSocket";
 
 interface MarketItem {
   symbol: string;
@@ -37,22 +36,6 @@ const marketData: MarketItem[] = [
 const Markets = () => {
   const [selectedAsset, setSelectedAsset] = useState<MarketItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-
-  // Connect to WebSocket on mount
-  useEffect(() => {
-    // Connect to both stocks and crypto
-    polygonWS.connect("stocks");
-    
-    // Check connection status
-    const checkConnection = setInterval(() => {
-      setIsConnected(true); // Will be updated by actual connection status
-    }, 1000);
-
-    return () => {
-      clearInterval(checkConnection);
-    };
-  }, []);
 
   const filteredMarkets = (filter: string) => {
     let data = marketData;
@@ -130,17 +113,6 @@ const Markets = () => {
   return (
     <AppLayout title="Markets">
       <div className="px-4 py-4 space-y-4">
-        {/* Connection Status */}
-        <div className="flex items-center justify-end gap-2 text-xs">
-          <Radio className={cn(
-            "w-3 h-3",
-            isConnected ? "text-gain animate-pulse" : "text-muted-foreground"
-          )} />
-          <span className={isConnected ? "text-gain" : "text-muted-foreground"}>
-            {isConnected ? "Live Data" : "Connecting..."}
-          </span>
-        </div>
-
         {/* Featured Chart */}
         {selectedAsset ? (
           <LiveChart 

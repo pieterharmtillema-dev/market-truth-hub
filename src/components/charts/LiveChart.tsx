@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries } from "lightweight-charts";
-import { getAggregates, getDateString, formatPolygonTicker, PolygonAggregateBar } from "@/lib/polygon";
+import { getAggregates, getDateString, formatPolygonTicker, getCurrentPrice, PolygonAggregateBar } from "@/lib/polygon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Radio, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LiveChartProps {
@@ -33,8 +33,38 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
   const [timeRange, setTimeRange] = useState<TimeRange>("1M");
   const [chartType, setChartType] = useState<ChartType>("candle");
   const [loading, setLoading] = useState(true);
+  const [priceLoading, setPriceLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [priceData, setPriceData] = useState<{ current: number; change: number; changePercent: number } | null>(null);
+  const [isLive, setIsLive] = useState(false);
+
+  // Fetch current price on mount and periodically
+  useEffect(() => {
+    const fetchCurrentPrice = async () => {
+      setPriceLoading(true);
+      try {
+        const data = await getCurrentPrice(symbol, market);
+        if (data) {
+          setPriceData({
+            current: data.price,
+            change: data.change,
+            changePercent: data.changePercent,
+          });
+          setIsLive(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch current price:", err);
+      } finally {
+        setPriceLoading(false);
+      }
+    };
+
+    fetchCurrentPrice();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCurrentPrice, 30000);
+    return () => clearInterval(interval);
+  }, [symbol, market]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -193,18 +223,33 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
                 {symbol}
                 <Badge variant="outline" className="text-[10px] font-normal">{name}</Badge>
               </CardTitle>
-              {priceData && (
+              {priceData ? (
                 <div className="flex items-center gap-2 mt-0.5">
+                  {priceLoading ? (
+                    <RefreshCw className="w-4 h-4 text-muted-foreground animate-spin" />
+                  ) : isLive && (
+                    <span className="flex items-center gap-1 text-[10px] text-primary">
+                      <Radio className="w-3 h-3" />
+                    </span>
+                  )}
                   <span className="font-mono text-xl font-semibold">
-                    ${priceData.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${priceData.current.toLocaleString(undefined, { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: priceData.current > 1000 ? 2 : 4 
+                    })}
                   </span>
                   <span className={cn(
                     "flex items-center gap-0.5 text-sm font-mono font-medium",
-                    priceData.change >= 0 ? "text-gain" : "text-loss"
+                    priceData.changePercent >= 0 ? "text-gain" : "text-loss"
                   )}>
-                    {priceData.change >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {priceData.change >= 0 ? "+" : ""}{priceData.changePercent.toFixed(2)}%
+                    {priceData.changePercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {priceData.changePercent >= 0 ? "+" : ""}{priceData.changePercent.toFixed(2)}%
                   </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <RefreshCw className="w-4 h-4 text-muted-foreground animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading price...</span>
                 </div>
               )}
             </div>
