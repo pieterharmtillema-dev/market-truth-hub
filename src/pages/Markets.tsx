@@ -23,14 +23,23 @@ interface MarketItem {
 }
 
 const marketData: MarketItem[] = [
+  // Stocks
   { symbol: "AAPL", name: "Apple Inc", price: 278.78, change: 0.87, sentiment: { bullish: 52, bearish: 33, neutral: 15 }, predictions: 78, accuracy: 71, market: "stocks" },
   { symbol: "NVDA", name: "NVIDIA", price: 182.41, change: 3.21, sentiment: { bullish: 75, bearish: 15, neutral: 10 }, predictions: 89, accuracy: 74, market: "stocks" },
   { symbol: "TSLA", name: "Tesla", price: 245.67, change: -1.23, sentiment: { bullish: 48, bearish: 42, neutral: 10 }, predictions: 134, accuracy: 58, market: "stocks" },
   { symbol: "MSFT", name: "Microsoft", price: 378.45, change: 1.12, sentiment: { bullish: 65, bearish: 20, neutral: 15 }, predictions: 92, accuracy: 72, market: "stocks" },
   { symbol: "GOOGL", name: "Alphabet", price: 141.23, change: 0.45, sentiment: { bullish: 58, bearish: 28, neutral: 14 }, predictions: 67, accuracy: 68, market: "stocks" },
   { symbol: "AMZN", name: "Amazon", price: 178.92, change: 2.15, sentiment: { bullish: 62, bearish: 25, neutral: 13 }, predictions: 85, accuracy: 70, market: "stocks" },
+  // Crypto
   { symbol: "BTC", name: "Bitcoin", price: 89345.29, change: 2.34, sentiment: { bullish: 68, bearish: 22, neutral: 10 }, predictions: 156, accuracy: 72, market: "crypto" },
   { symbol: "ETH", name: "Ethereum", price: 3022.61, change: 1.89, sentiment: { bullish: 55, bearish: 30, neutral: 15 }, predictions: 112, accuracy: 68, market: "crypto" },
+  // Forex
+  { symbol: "EUR/USD", name: "Euro/US Dollar", price: 1.0542, change: 0.12, sentiment: { bullish: 45, bearish: 40, neutral: 15 }, predictions: 67, accuracy: 65, market: "forex" },
+  { symbol: "GBP/USD", name: "British Pound/USD", price: 1.2734, change: -0.08, sentiment: { bullish: 42, bearish: 45, neutral: 13 }, predictions: 54, accuracy: 62, market: "forex" },
+  { symbol: "USD/JPY", name: "US Dollar/Yen", price: 149.85, change: 0.35, sentiment: { bullish: 55, bearish: 32, neutral: 13 }, predictions: 78, accuracy: 68, market: "forex" },
+  { symbol: "AUD/USD", name: "Australian Dollar/USD", price: 0.6523, change: -0.15, sentiment: { bullish: 38, bearish: 48, neutral: 14 }, predictions: 45, accuracy: 60, market: "forex" },
+  { symbol: "USD/CAD", name: "US Dollar/CAD", price: 1.4012, change: 0.22, sentiment: { bullish: 52, bearish: 35, neutral: 13 }, predictions: 52, accuracy: 64, market: "forex" },
+  { symbol: "EUR/GBP", name: "Euro/British Pound", price: 0.8278, change: 0.05, sentiment: { bullish: 48, bearish: 38, neutral: 14 }, predictions: 38, accuracy: 61, market: "forex" },
 ];
 
 const Markets = () => {

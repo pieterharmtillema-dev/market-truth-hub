@@ -1,5 +1,5 @@
 // Polygon.io API configuration
-export const POLYGON_API_KEY = "d4qamehr01quli1bdbq0d4qamehr01quli1bdbqg";
+export const POLYGON_API_KEY = "w_4UVsHuoT9cncTKAzRsnUlUabyFN5IY";
 export const POLYGON_BASE_URL = "https://api.polygon.io";
 
 export interface PolygonAggregateBar {
