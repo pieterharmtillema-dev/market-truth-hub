@@ -2,6 +2,30 @@ import { PredictionData } from "@/components/predictions/PredictionCard";
 import { LeaderData } from "@/components/leaderboard/LeaderboardCard";
 import { GroupData } from "@/components/groups/GroupCard";
 
+export type TradingStyle = "day-trader" | "swing-trader" | "long-term" | "scalper";
+export type MarketFocus = "crypto" | "forex" | "stocks" | "futures" | "options" | "all";
+
+export interface TraderType {
+  style: TradingStyle;
+  markets: MarketFocus[];
+}
+
+export const tradingStyleLabels: Record<TradingStyle, { label: string; icon: string; color: string }> = {
+  "day-trader": { label: "Day Trader", icon: "⚡", color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30" },
+  "swing-trader": { label: "Swing Trader", icon: "📊", color: "text-blue-400 bg-blue-400/10 border-blue-400/30" },
+  "long-term": { label: "Long Term", icon: "🎯", color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30" },
+  "scalper": { label: "Scalper", icon: "🔥", color: "text-orange-400 bg-orange-400/10 border-orange-400/30" },
+};
+
+export const marketFocusLabels: Record<MarketFocus, { label: string; icon: string; color: string }> = {
+  "crypto": { label: "Crypto", icon: "₿", color: "text-amber-400 bg-amber-400/10 border-amber-400/30" },
+  "forex": { label: "Forex", icon: "💱", color: "text-sky-400 bg-sky-400/10 border-sky-400/30" },
+  "stocks": { label: "Stocks", icon: "📈", color: "text-green-400 bg-green-400/10 border-green-400/30" },
+  "futures": { label: "Futures", icon: "📉", color: "text-purple-400 bg-purple-400/10 border-purple-400/30" },
+  "options": { label: "Options", icon: "🎲", color: "text-pink-400 bg-pink-400/10 border-pink-400/30" },
+  "all": { label: "All Markets", icon: "🌐", color: "text-slate-400 bg-slate-400/10 border-slate-400/30" },
+};
+
 export const mockPredictions: PredictionData[] = [
   {
     id: "1",
@@ -10,6 +34,10 @@ export const mockPredictions: PredictionData[] = [
       username: "alextrader",
       accuracy: 78,
       isVerified: true,
+      traderType: {
+        style: "swing-trader",
+        markets: ["crypto", "stocks"],
+      },
     },
     asset: "BTC/USD",
     assetType: "crypto",
@@ -31,6 +59,10 @@ export const mockPredictions: PredictionData[] = [
       username: "sarahswings",
       accuracy: 82,
       isVerified: true,
+      traderType: {
+        style: "long-term",
+        markets: ["stocks"],
+      },
     },
     asset: "NVDA",
     assetType: "stock",
@@ -51,6 +83,10 @@ export const mockPredictions: PredictionData[] = [
       name: "Mike Reynolds",
       username: "mikefx",
       accuracy: 71,
+      traderType: {
+        style: "day-trader",
+        markets: ["forex"],
+      },
     },
     asset: "EUR/USD",
     assetType: "forex",
@@ -71,6 +107,10 @@ export const mockPredictions: PredictionData[] = [
       name: "Jordan Lee",
       username: "jordancrypto",
       accuracy: 68,
+      traderType: {
+        style: "scalper",
+        markets: ["crypto"],
+      },
     },
     asset: "ETH/USD",
     assetType: "crypto",
@@ -95,6 +135,10 @@ export const mockLeaders: LeaderData[] = [
       username: "elenaquant",
       isVerified: true,
       tier: "diamond",
+      traderType: {
+        style: "swing-trader",
+        markets: ["stocks", "options"],
+      },
     },
     stats: {
       accuracy: 89,
@@ -111,6 +155,10 @@ export const mockLeaders: LeaderData[] = [
       username: "davidtrades",
       isVerified: true,
       tier: "platinum",
+      traderType: {
+        style: "day-trader",
+        markets: ["crypto"],
+      },
     },
     stats: {
       accuracy: 86,
@@ -127,6 +175,10 @@ export const mockLeaders: LeaderData[] = [
       username: "alextrader",
       isVerified: true,
       tier: "platinum",
+      traderType: {
+        style: "swing-trader",
+        markets: ["crypto", "stocks"],
+      },
     },
     stats: {
       accuracy: 84,
@@ -143,6 +195,10 @@ export const mockLeaders: LeaderData[] = [
       username: "sarahswings",
       isVerified: true,
       tier: "gold",
+      traderType: {
+        style: "long-term",
+        markets: ["stocks"],
+      },
     },
     stats: {
       accuracy: 82,
@@ -158,6 +214,10 @@ export const mockLeaders: LeaderData[] = [
       name: "Marcus Johnson",
       username: "marcusfx",
       tier: "gold",
+      traderType: {
+        style: "day-trader",
+        markets: ["forex"],
+      },
     },
     stats: {
       accuracy: 79,

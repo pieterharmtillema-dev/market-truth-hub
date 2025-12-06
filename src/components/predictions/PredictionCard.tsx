@@ -1,9 +1,10 @@
-import { TrendingUp, TrendingDown, Clock, Target, BarChart2, MessageCircle, Heart, Share2, CheckCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, Target, MessageCircle, Heart, Share2, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { TraderType, tradingStyleLabels, marketFocusLabels } from "@/data/mockData";
 
 export interface PredictionData {
   id: string;
@@ -13,6 +14,7 @@ export interface PredictionData {
     avatar?: string;
     accuracy: number;
     isVerified?: boolean;
+    traderType?: TraderType;
   };
   asset: string;
   assetType: "crypto" | "stock" | "forex" | "futures";
@@ -45,6 +47,8 @@ export function PredictionCard({ prediction, onLike, onComment, onShare }: Predi
     fail: "loss",
     neutral: "neutral",
   } as const;
+
+  const styleInfo = prediction.user.traderType ? tradingStyleLabels[prediction.user.traderType.style] : null;
 
   return (
     <Card 
@@ -81,6 +85,25 @@ export function PredictionCard({ prediction, onLike, onComment, onShare }: Predi
             {prediction.status === "active" ? "Active" : prediction.status === "success" ? "Hit ✓" : prediction.status === "fail" ? "Missed" : "Neutral"}
           </Badge>
         </div>
+
+        {/* Trader Type Tags */}
+        {prediction.user.traderType && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {styleInfo && (
+              <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", styleInfo.color)}>
+                {styleInfo.icon} {styleInfo.label}
+              </span>
+            )}
+            {prediction.user.traderType.markets.slice(0, 2).map((market) => {
+              const marketInfo = marketFocusLabels[market];
+              return (
+                <span key={market} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", marketInfo.color)}>
+                  {marketInfo.icon} {marketInfo.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* Prediction Details */}
         <div className="bg-background/50 rounded-lg p-3 mb-3">
