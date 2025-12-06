@@ -13,6 +13,16 @@ export interface FinnhubQuote {
   t: number;  // Timestamp
 }
 
+export interface FinnhubCandle {
+  c: number[];  // Close prices
+  h: number[];  // High prices
+  l: number[];  // Low prices
+  o: number[];  // Open prices
+  t: number[];  // Timestamps
+  v: number[];  // Volume
+  s: string;    // Status
+}
+
 // Simple cache for API responses
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10000; // 10 seconds for more real-time data
@@ -51,6 +61,82 @@ export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
   }
 }
 
+// Get stock candles (historical data)
+export async function getCandles(
+  symbol: string,
+  resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
+  from: number,
+  to: number
+): Promise<FinnhubCandle | null> {
+  const cacheKey = `candle-${symbol}-${resolution}-${from}-${to}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < 60000) { // 1 min cache for candles
+    return cached.data;
+  }
+
+  try {
+    const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Finnhub candle API error: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.s === "no_data") {
+      console.warn(`No candle data for symbol: ${symbol}`);
+      return null;
+    }
+    
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching candles for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Get crypto candles
+export async function getCryptoCandles(
+  symbol: string,
+  resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
+  from: number,
+  to: number
+): Promise<FinnhubCandle | null> {
+  const cacheKey = `crypto-candle-${symbol}-${resolution}-${from}-${to}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < 60000) {
+    return cached.data;
+  }
+
+  try {
+    const url = `${FINNHUB_BASE_URL}/crypto/candle?symbol=BINANCE:${symbol}USDT&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Finnhub crypto candle API error: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.s === "no_data") {
+      console.warn(`No crypto candle data for symbol: ${symbol}`);
+      return null;
+    }
+    
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching crypto candles for ${symbol}:`, error);
+    return null;
+  }
+}
+
 // Get current price with change info
 export async function getCurrentPrice(
   symbol: string,
@@ -84,6 +170,13 @@ export function formatFinnhubSymbol(symbol: string, market: "stocks" | "crypto" 
   }
 }
 
+// Get timestamps for date range
+export function getTimestamps(daysAgo: number): { from: number; to: number } {
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - (daysAgo * 24 * 60 * 60);
+  return { from, to: now };
+}
+
 // Batch fetch quotes for multiple symbols
 export async function batchGetQuotes(
   symbols: Array<{ symbol: string; market: "stocks" | "crypto" | "forex" }>
@@ -101,29 +194,6 @@ export async function batchGetQuotes(
   }
   
   return results;
-}
-
-// Get company profile
-export async function getCompanyProfile(symbol: string): Promise<any | null> {
-  const cacheKey = `profile-${symbol}`;
-  const cached = apiCache.get(cacheKey);
-  
-  if (cached && Date.now() - cached.timestamp < 300000) { // 5 min cache
-    return cached.data;
-  }
-
-  try {
-    const url = `${FINNHUB_BASE_URL}/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    apiCache.set(cacheKey, { data, timestamp: Date.now() });
-    return data;
-  } catch {
-    return null;
-  }
 }
 
 // Clear cache (useful for forcing refresh)

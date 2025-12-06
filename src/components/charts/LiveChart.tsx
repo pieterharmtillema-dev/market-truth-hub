@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries } from "lightweight-charts";
-import { getAggregates, getDateString, formatPolygonTicker, getCurrentPrice, PolygonAggregateBar } from "@/lib/polygon";
+import { getCandles, getCryptoCandles, getCurrentPrice, getTimestamps, FinnhubCandle } from "@/lib/finnhub";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,12 +17,12 @@ interface LiveChartProps {
 type TimeRange = "1D" | "1W" | "1M" | "3M" | "1Y";
 type ChartType = "candle" | "line";
 
-const timeRangeConfig: Record<TimeRange, { days: number; multiplier: number; timespan: "minute" | "hour" | "day" }> = {
-  "1D": { days: 1, multiplier: 5, timespan: "minute" },
-  "1W": { days: 7, multiplier: 1, timespan: "hour" },
-  "1M": { days: 30, multiplier: 1, timespan: "day" },
-  "3M": { days: 90, multiplier: 1, timespan: "day" },
-  "1Y": { days: 365, multiplier: 1, timespan: "day" },
+const timeRangeConfig: Record<TimeRange, { days: number; resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M" }> = {
+  "1D": { days: 1, resolution: "5" },
+  "1W": { days: 7, resolution: "60" },
+  "1M": { days: 30, resolution: "D" },
+  "3M": { days: 90, resolution: "D" },
+  "1Y": { days: 365, resolution: "D" },
 };
 
 export function LiveChart({ symbol, name, market = "stocks", className }: LiveChartProps) {
@@ -129,13 +129,17 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
 
       try {
         const config = timeRangeConfig[timeRange];
-        const ticker = formatPolygonTicker(symbol, market);
-        const from = getDateString(config.days);
-        const to = getDateString(0);
+        const { from, to } = getTimestamps(config.days);
 
-        const data = await getAggregates(ticker, config.multiplier, config.timespan, from, to);
+        let data: FinnhubCandle | null;
+        
+        if (market === "crypto") {
+          data = await getCryptoCandles(symbol, config.resolution, from, to);
+        } else {
+          data = await getCandles(symbol, config.resolution, from, to);
+        }
 
-        if (!data.results || data.results.length === 0) {
+        if (!data || !data.c || data.c.length === 0) {
           setError("No data available");
           setLoading(false);
           return;
@@ -147,12 +151,12 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
         }
 
         // Calculate price change
-        const firstBar = data.results[0];
-        const lastBar = data.results[data.results.length - 1];
-        const change = lastBar.c - firstBar.o;
-        const changePercent = (change / firstBar.o) * 100;
+        const firstClose = data.o[0];
+        const lastClose = data.c[data.c.length - 1];
+        const change = lastClose - firstClose;
+        const changePercent = (change / firstClose) * 100;
         setPriceData({
-          current: lastBar.c,
+          current: lastClose,
           change,
           changePercent,
         });
@@ -171,12 +175,12 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
             wickDownColor: downColor,
           });
 
-          const candleData: CandlestickData[] = data.results.map((bar: PolygonAggregateBar) => ({
-            time: (bar.t / 1000) as Time,
-            open: bar.o,
-            high: bar.h,
-            low: bar.l,
-            close: bar.c,
+          const candleData: CandlestickData[] = data.t.map((timestamp, i) => ({
+            time: timestamp as Time,
+            open: data.o[i],
+            high: data.h[i],
+            low: data.l[i],
+            close: data.c[i],
           }));
 
           candlestickSeries.setData(candleData);
@@ -189,9 +193,9 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
             crosshairMarkerRadius: 4,
           });
 
-          const lineData: LineData[] = data.results.map((bar: PolygonAggregateBar) => ({
-            time: (bar.t / 1000) as Time,
-            value: bar.c,
+          const lineData: LineData[] = data.t.map((timestamp, i) => ({
+            time: timestamp as Time,
+            value: data.c[i],
           }));
 
           lineSeries.setData(lineData);
