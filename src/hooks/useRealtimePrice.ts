@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCurrentPrice } from "@/lib/polygon";
+import { getCurrentPrice } from "@/lib/finnhub";
 
 interface RealtimePrice {
   price: number;
@@ -15,7 +15,7 @@ export function useRealtimePrice(
   initialPrice: number,
   initialChange: number,
   market: "stocks" | "crypto" | "forex" = "stocks",
-  refreshInterval: number = 30000 // Refresh every 30 seconds
+  refreshInterval: number = 15000 // Refresh every 15 seconds for more real-time data
 ): RealtimePrice {
   const [price, setPrice] = useState(initialPrice);
   const [change, setChange] = useState(0);
