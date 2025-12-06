@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, LineData, Time, AreaSeries } from "lightweight-charts";
-import { getAggregates, getDateString, formatPolygonTicker, PolygonAggregateBar } from "@/lib/polygon";
+import { getCandles, getCryptoCandles, getTimestamps } from "@/lib/finnhub";
 import { cn } from "@/lib/utils";
 
 interface MiniChartProps {
@@ -117,23 +117,26 @@ export function MiniChart({ symbol, market = "stocks", days = 7, height = 60, cl
       setLoading(true);
 
       try {
-        const ticker = formatPolygonTicker(symbol, market);
-        const from = getDateString(days);
-        const to = getDateString(0);
+        const { from, to } = getTimestamps(days);
 
         // Add staggered delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 300));
 
-        const data = await getAggregates(ticker, 1, "day", from, to);
+        let data;
+        if (market === "crypto") {
+          data = await getCryptoCandles(symbol, "D", from, to);
+        } else {
+          data = await getCandles(symbol, "D", from, to);
+        }
 
-        if (!data.results || data.results.length === 0) {
+        if (!data || !data.c || data.c.length === 0) {
           setLoading(false);
           return;
         }
 
-        const firstBar = data.results[0];
-        const lastBar = data.results[data.results.length - 1];
-        const positive = lastBar.c >= firstBar.o;
+        const firstClose = data.o[0];
+        const lastClose = data.c[data.c.length - 1];
+        const positive = lastClose >= firstClose;
         setIsPositive(positive);
 
         if (seriesRef.current) {
@@ -147,9 +150,9 @@ export function MiniChart({ symbol, market = "stocks", days = 7, height = 60, cl
           lineWidth: 2,
         });
 
-        const lineData: LineData[] = data.results.map((bar: PolygonAggregateBar) => ({
-          time: (bar.t / 1000) as Time,
-          value: bar.c,
+        const lineData: LineData[] = data.t.map((timestamp: number, i: number) => ({
+          time: timestamp as Time,
+          value: data.c[i],
         }));
 
         areaSeries.setData(lineData);
