@@ -1,66 +1,68 @@
-import { useState, useEffect, useCallback } from "react";
-import { polygonWS } from "@/lib/polygonWebSocket";
-import { getPreviousClose } from "@/lib/polygon";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getCurrentPrice } from "@/lib/polygon";
 
 interface RealtimePrice {
   price: number;
   change: number;
+  changePercent: number;
   isLive: boolean;
   loading: boolean;
+  lastUpdate: number;
 }
 
 export function useRealtimePrice(
   symbol: string,
   initialPrice: number,
   initialChange: number,
-  market: "stocks" | "crypto" | "forex" = "stocks"
+  market: "stocks" | "crypto" | "forex" = "stocks",
+  refreshInterval: number = 30000 // Refresh every 30 seconds
 ): RealtimePrice {
   const [price, setPrice] = useState(initialPrice);
-  const [change, setChange] = useState(initialChange);
+  const [change, setChange] = useState(0);
+  const [changePercent, setChangePercent] = useState(initialChange);
   const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handlePriceUpdate = useCallback((sym: string, newPrice: number, newChange: number) => {
-    if (sym === symbol || sym === symbol.replace("X:", "").replace("USD", "")) {
-      setPrice(newPrice);
-      setChange(newChange);
-      setIsLive(true);
+  const fetchPrice = useCallback(async () => {
+    try {
+      const data = await getCurrentPrice(symbol, market);
+      
+      if (data) {
+        setPrice(data.price);
+        setChange(data.change);
+        setChangePercent(data.changePercent);
+        setIsLive(true);
+        setLastUpdate(Date.now());
+      }
+    } catch (error) {
+      console.error(`Failed to fetch price for ${symbol}:`, error);
+    } finally {
+      setLoading(false);
     }
-  }, [symbol]);
+  }, [symbol, market]);
 
   useEffect(() => {
-    // For forex, we don't have WebSocket support in the free tier
-    if (market === "forex") {
-      setLoading(false);
-      return;
-    }
+    // Initial fetch
+    fetchPrice();
 
-    const wsType = market === "crypto" ? "crypto" : "stocks";
-    
-    // Try to get previous close for accurate change calculation
-    const fetchPrevClose = async () => {
-      try {
-        const data = await getPreviousClose(symbol);
-        if (data.results?.[0]?.c) {
-          polygonWS.setPrevClose(symbol, data.results[0].c);
-        }
-      } catch (e) {
-        // Use initial price as fallback
-        polygonWS.setPrevClose(symbol, initialPrice / (1 + initialChange / 100));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrevClose();
-
-    // Subscribe to real-time updates
-    const unsubscribe = polygonWS.subscribe(symbol, handlePriceUpdate, wsType);
+    // Set up refresh interval
+    intervalRef.current = setInterval(fetchPrice, refreshInterval);
 
     return () => {
-      unsubscribe();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
-  }, [symbol, market, initialPrice, initialChange, handlePriceUpdate]);
+  }, [fetchPrice, refreshInterval]);
 
-  return { price, change, isLive, loading };
+  return { 
+    price, 
+    change, 
+    changePercent, 
+    isLive, 
+    loading,
+    lastUpdate
+  };
 }
