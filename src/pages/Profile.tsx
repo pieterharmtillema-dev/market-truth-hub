@@ -1,15 +1,33 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
-import { mockPredictions } from "@/data/mockData";
+import { mockPredictions, tradingStyleLabels, marketFocusLabels, TradingStyle, MarketFocus } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, Settings, Share2, Edit2, Target, TrendingUp, BookOpen, Users } from "lucide-react";
+import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const userProfile = {
+  name: "Alex Chen",
+  username: "alextrader",
+  isVerified: true,
+  tier: "platinum" as const,
+  traderType: {
+    style: "swing-trader" as TradingStyle,
+    markets: ["crypto", "stocks"] as MarketFocus[],
+  },
+  bio: "Swing trader focused on crypto and tech stocks. 5+ years experience. Sharing transparent calls with full accountability.",
+  followers: 2847,
+  following: 156,
+  rank: 47,
+};
 
 const Profile = () => {
+  const styleInfo = tradingStyleLabels[userProfile.traderType.style];
+
   return (
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
@@ -27,40 +45,51 @@ const Profile = () => {
               </Avatar>
               <div className="flex-1 min-w-0 pb-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-xl">Alex Chen</h1>
-                  <CheckCircle className="w-5 h-5 text-primary" />
+                  <h1 className="font-bold text-xl">{userProfile.name}</h1>
+                  {userProfile.isVerified && <CheckCircle className="w-5 h-5 text-primary" />}
                 </div>
-                <p className="text-sm text-muted-foreground">@alextrader</p>
+                <p className="text-sm text-muted-foreground">@{userProfile.username}</p>
               </div>
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            {/* Tier & Rank Badges */}
+            <div className="flex flex-wrap gap-2 mb-3">
               <Badge variant="rank" className="gap-1">
-                🏆 #47 Global
+                🏆 #{userProfile.rank} Global
               </Badge>
-              <Badge className="bg-cyan-400/20 text-cyan-300 border-cyan-400/30">
-                Platinum Tier
+              <Badge className="bg-cyan-400/20 text-cyan-300 border-cyan-400/30 capitalize">
+                {userProfile.tier} Tier
               </Badge>
-              <Badge variant="success" className="gap-1">
-                <Target className="w-3 h-3" />
-                78% Accuracy
-              </Badge>
+            </div>
+
+            {/* Trader Type Tags */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border", styleInfo.color)}>
+                {styleInfo.icon} {styleInfo.label}
+              </span>
+              {userProfile.traderType.markets.map((market) => {
+                const marketInfo = marketFocusLabels[market];
+                return (
+                  <span key={market} className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border", marketInfo.color)}>
+                    {marketInfo.icon} {marketInfo.label}
+                  </span>
+                );
+              })}
             </div>
 
             {/* Bio */}
             <p className="text-sm text-muted-foreground mb-4">
-              Swing trader focused on crypto and tech stocks. 5+ years experience. Sharing transparent calls with full accountability.
+              {userProfile.bio}
             </p>
 
             {/* Follow Stats */}
             <div className="flex items-center gap-6 mb-4 text-sm">
               <div>
-                <span className="font-bold">2,847</span>
+                <span className="font-bold">{userProfile.followers.toLocaleString()}</span>
                 <span className="text-muted-foreground ml-1">Followers</span>
               </div>
               <div>
-                <span className="font-bold">156</span>
+                <span className="font-bold">{userProfile.following}</span>
                 <span className="text-muted-foreground ml-1">Following</span>
               </div>
             </div>

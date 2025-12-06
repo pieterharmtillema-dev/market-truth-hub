@@ -1,11 +1,22 @@
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
-import { mockLeaders } from "@/data/mockData";
+import { mockLeaders, tradingStyleLabels, marketFocusLabels, TradingStyle, MarketFocus } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Target, TrendingUp, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Leaderboard = () => {
+  const [styleFilter, setStyleFilter] = useState<TradingStyle | "all">("all");
+  const [marketFilter, setMarketFilter] = useState<MarketFocus | "all">("all");
+
+  const filteredLeaders = mockLeaders.filter((leader) => {
+    if (styleFilter !== "all" && leader.user.traderType?.style !== styleFilter) return false;
+    if (marketFilter !== "all" && !leader.user.traderType?.markets.includes(marketFilter)) return false;
+    return true;
+  });
+
   return (
     <AppLayout title="Leaderboard">
       <div className="px-4 py-4 space-y-4">
@@ -28,6 +39,60 @@ const Leaderboard = () => {
           </div>
         </div>
 
+        {/* Trading Style Filter */}
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Trading Style</div>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <Badge 
+              variant={styleFilter === "all" ? "default" : "outline"} 
+              className="cursor-pointer whitespace-nowrap"
+              onClick={() => setStyleFilter("all")}
+            >
+              All Styles
+            </Badge>
+            {(Object.entries(tradingStyleLabels) as [TradingStyle, typeof tradingStyleLabels[TradingStyle]][]).map(([key, value]) => (
+              <span
+                key={key}
+                onClick={() => setStyleFilter(key)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border cursor-pointer transition-all whitespace-nowrap",
+                  styleFilter === key ? value.color : "border-border text-muted-foreground hover:border-muted-foreground"
+                )}
+              >
+                {value.icon} {value.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Market Focus Filter */}
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Market Focus</div>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <Badge 
+              variant={marketFilter === "all" ? "default" : "outline"} 
+              className="cursor-pointer whitespace-nowrap"
+              onClick={() => setMarketFilter("all")}
+            >
+              All Markets
+            </Badge>
+            {(Object.entries(marketFocusLabels) as [MarketFocus, typeof marketFocusLabels[MarketFocus]][])
+              .filter(([key]) => key !== "all")
+              .map(([key, value]) => (
+              <span
+                key={key}
+                onClick={() => setMarketFilter(key)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border cursor-pointer transition-all whitespace-nowrap",
+                  marketFilter === key ? value.color : "border-border text-muted-foreground hover:border-muted-foreground"
+                )}
+              >
+                {value.icon} {value.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
         {/* Time Filters */}
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="w-full bg-card border border-border">
@@ -46,19 +111,26 @@ const Leaderboard = () => {
           </TabsList>
 
           <TabsContent value="all" className="mt-4 space-y-3">
-            {mockLeaders.map((leader) => (
-              <LeaderboardCard key={leader.rank} leader={leader} />
-            ))}
+            {filteredLeaders.length > 0 ? (
+              filteredLeaders.map((leader, index) => (
+                <LeaderboardCard key={leader.rank} leader={{ ...leader, rank: index + 1 }} />
+              ))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No traders match your filters</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="month" className="mt-4 space-y-3">
-            {[...mockLeaders].reverse().map((leader, index) => (
+            {[...filteredLeaders].reverse().map((leader, index) => (
               <LeaderboardCard key={leader.rank} leader={{ ...leader, rank: index + 1 }} />
             ))}
           </TabsContent>
 
           <TabsContent value="week" className="mt-4 space-y-3">
-            {mockLeaders.slice(0, 3).map((leader) => (
+            {filteredLeaders.slice(0, 3).map((leader) => (
               <LeaderboardCard key={leader.rank} leader={leader} />
             ))}
           </TabsContent>
@@ -70,16 +142,6 @@ const Leaderboard = () => {
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Asset Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          <Badge variant="default" className="cursor-pointer whitespace-nowrap">All Assets</Badge>
-          <Badge variant="outline" className="cursor-pointer whitespace-nowrap">Crypto</Badge>
-          <Badge variant="outline" className="cursor-pointer whitespace-nowrap">Stocks</Badge>
-          <Badge variant="outline" className="cursor-pointer whitespace-nowrap">Forex</Badge>
-          <Badge variant="outline" className="cursor-pointer whitespace-nowrap">Futures</Badge>
-          <Badge variant="outline" className="cursor-pointer whitespace-nowrap">Options</Badge>
-        </div>
       </div>
     </AppLayout>
   );

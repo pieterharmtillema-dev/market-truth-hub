@@ -1,8 +1,9 @@
-import { Trophy, TrendingUp, Target, Award, CheckCircle } from "lucide-react";
+import { Trophy, Target, Award, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { TraderType, tradingStyleLabels, marketFocusLabels } from "@/data/mockData";
 
 export interface LeaderData {
   rank: number;
@@ -12,6 +13,7 @@ export interface LeaderData {
     avatar?: string;
     isVerified?: boolean;
     tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
+    traderType?: TraderType;
   };
   stats: {
     accuracy: number;
@@ -43,6 +45,7 @@ const rankColors = {
 
 export function LeaderboardCard({ leader, onClick }: LeaderboardCardProps) {
   const isTopThree = leader.rank <= 3;
+  const styleInfo = leader.user.traderType ? tradingStyleLabels[leader.user.traderType.style] : null;
 
   return (
     <Card 
@@ -109,6 +112,25 @@ export function LeaderboardCard({ leader, onClick }: LeaderboardCardProps) {
             </div>
           </div>
         </div>
+
+        {/* Trader Type Tags */}
+        {leader.user.traderType && (
+          <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border/50">
+            {styleInfo && (
+              <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", styleInfo.color)}>
+                {styleInfo.icon} {styleInfo.label}
+              </span>
+            )}
+            {leader.user.traderType.markets.map((market) => {
+              const marketInfo = marketFocusLabels[market];
+              return (
+                <span key={market} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", marketInfo.color)}>
+                  {marketInfo.icon} {marketInfo.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
