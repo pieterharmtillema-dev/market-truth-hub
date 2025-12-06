@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries } from "lightweight-charts";
-import { getCandles, getCryptoCandles, getCurrentPrice, getTimestamps, FinnhubCandle } from "@/lib/finnhub";
+import { getAggregates, getDateString, formatPolygonTicker, PolygonAggregateBar } from "@/lib/polygon";
+import { getCurrentPrice } from "@/lib/finnhub";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,12 +18,12 @@ interface LiveChartProps {
 type TimeRange = "1D" | "1W" | "1M" | "3M" | "1Y";
 type ChartType = "candle" | "line";
 
-const timeRangeConfig: Record<TimeRange, { days: number; resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M" }> = {
-  "1D": { days: 1, resolution: "5" },
-  "1W": { days: 7, resolution: "60" },
-  "1M": { days: 30, resolution: "D" },
-  "3M": { days: 90, resolution: "D" },
-  "1Y": { days: 365, resolution: "D" },
+const timeRangeConfig: Record<TimeRange, { days: number; multiplier: number; timespan: "minute" | "hour" | "day" }> = {
+  "1D": { days: 1, multiplier: 5, timespan: "minute" },
+  "1W": { days: 7, multiplier: 1, timespan: "hour" },
+  "1M": { days: 30, multiplier: 1, timespan: "day" },
+  "3M": { days: 90, multiplier: 1, timespan: "day" },
+  "1Y": { days: 365, multiplier: 1, timespan: "day" },
 };
 
 export function LiveChart({ symbol, name, market = "stocks", className }: LiveChartProps) {
@@ -129,17 +130,13 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
 
       try {
         const config = timeRangeConfig[timeRange];
-        const { from, to } = getTimestamps(config.days);
+        const ticker = formatPolygonTicker(symbol, market);
+        const from = getDateString(config.days);
+        const to = getDateString(0);
 
-        let data: FinnhubCandle | null;
-        
-        if (market === "crypto") {
-          data = await getCryptoCandles(symbol, config.resolution, from, to);
-        } else {
-          data = await getCandles(symbol, config.resolution, from, to);
-        }
+        const data = await getAggregates(ticker, config.multiplier, config.timespan, from, to);
 
-        if (!data || !data.c || data.c.length === 0) {
+        if (!data.results || data.results.length === 0) {
           setError("No data available");
           setLoading(false);
           return;
@@ -150,16 +147,20 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
           chartRef.current.removeSeries(seriesRef.current);
         }
 
-        // Calculate price change
-        const firstClose = data.o[0];
-        const lastClose = data.c[data.c.length - 1];
-        const change = lastClose - firstClose;
-        const changePercent = (change / firstClose) * 100;
-        setPriceData({
-          current: lastClose,
-          change,
-          changePercent,
-        });
+        // Calculate price change from chart data
+        const firstBar = data.results[0];
+        const lastBar = data.results[data.results.length - 1];
+        const change = lastBar.c - firstBar.o;
+        const changePercent = (change / firstBar.o) * 100;
+        
+        // Only update price data from chart if we don't have live Finnhub data
+        if (!isLive) {
+          setPriceData({
+            current: lastBar.c,
+            change,
+            changePercent,
+          });
+        }
 
         const isPositive = change >= 0;
         const upColor = "hsl(142, 76%, 45%)";
@@ -175,12 +176,12 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
             wickDownColor: downColor,
           });
 
-          const candleData: CandlestickData[] = data.t.map((timestamp, i) => ({
-            time: timestamp as Time,
-            open: data.o[i],
-            high: data.h[i],
-            low: data.l[i],
-            close: data.c[i],
+          const candleData: CandlestickData[] = data.results.map((bar: PolygonAggregateBar) => ({
+            time: (bar.t / 1000) as Time,
+            open: bar.o,
+            high: bar.h,
+            low: bar.l,
+            close: bar.c,
           }));
 
           candlestickSeries.setData(candleData);
@@ -193,9 +194,9 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
             crosshairMarkerRadius: 4,
           });
 
-          const lineData: LineData[] = data.t.map((timestamp, i) => ({
-            time: timestamp as Time,
-            value: data.c[i],
+          const lineData: LineData[] = data.results.map((bar: PolygonAggregateBar) => ({
+            time: (bar.t / 1000) as Time,
+            value: bar.c,
           }));
 
           lineSeries.setData(lineData);
@@ -212,7 +213,7 @@ export function LiveChart({ symbol, name, market = "stocks", className }: LiveCh
     };
 
     fetchData();
-  }, [symbol, market, timeRange, chartType]);
+  }, [symbol, market, timeRange, chartType, isLive]);
 
   return (
     <Card variant="glass" className={cn("overflow-hidden", className)}>
