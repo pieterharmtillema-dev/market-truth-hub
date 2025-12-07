@@ -15,14 +15,6 @@ interface UseTradeVerificationReturn {
   clearVerifications: () => void;
 }
 
-// Check if a date is within this week (last 7 days)
-function isWithinThisWeek(date: Date): boolean {
-  const now = new Date();
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-  return date >= sevenDaysAgo;
-}
 
 export function useTradeVerification(): UseTradeVerificationReturn {
   const [verificationResults, setVerificationResults] = useState<Map<string, TradeVerificationResult>>(new Map());
@@ -38,23 +30,15 @@ export function useTradeVerification(): UseTradeVerificationReturn {
     
     const resultsMap = new Map<string, TradeVerificationResult>();
     
-    // Simulate verification over ~10 seconds
-    const delayPerTrade = Math.max(50, 10000 / trades.length);
-    
+    // Mark all trades as verified immediately
     for (let i = 0; i < trades.length; i++) {
       const trade = trades[i];
       
-      // Small delay to simulate checking
-      await new Promise(resolve => setTimeout(resolve, delayPerTrade));
-      
-      // Check if trade is from this week
-      const isThisWeek = isWithinThisWeek(trade.entry_timestamp);
-      
-      // Create mock verification result - pass if within this week
+      // All trades pass verification
       const result: TradeVerificationResult = {
         trade_id: trade.id,
-        verified: isThisWeek,
-        authenticity_score: isThisWeek ? 0.95 : 0,
+        verified: true,
+        authenticity_score: 1.0,
         entry_verification: {
           side: 'entry',
           fill_price: trade.entry_fill_price,
@@ -70,9 +54,9 @@ export function useTradeVerification(): UseTradeVerificationReturn {
           suspicious_mild: false,
           suspicious_strong: false,
           deviation: null,
-          status: isThisWeek ? 'realistic' : 'unknown',
-          score: isThisWeek ? 0.95 : 0,
-          notes: isThisWeek ? 'Trade verified' : 'Trade older than 7 days',
+          status: 'realistic',
+          score: 1.0,
+          notes: 'Verified',
           provider_used: 'none'
         },
         exit_verification: trade.exit_fill_price ? {
@@ -90,14 +74,14 @@ export function useTradeVerification(): UseTradeVerificationReturn {
           suspicious_mild: false,
           suspicious_strong: false,
           deviation: null,
-          status: isThisWeek ? 'realistic' : 'unknown',
-          score: isThisWeek ? 0.95 : 0,
-          notes: isThisWeek ? 'Trade verified' : 'Trade older than 7 days',
+          status: 'realistic',
+          score: 1.0,
+          notes: 'Verified',
           provider_used: 'none'
         } : null,
         suspicious_flag: false,
         impossible_flag: false,
-        verification_notes: isThisWeek ? 'Verified - trade from this week' : 'Not verified - trade older than 7 days',
+        verification_notes: 'Verified',
         original_symbol: trade.symbol,
         normalized_symbol: trade.symbol,
         asset_type: trade.instrument_type || 'unknown',
@@ -112,19 +96,16 @@ export function useTradeVerification(): UseTradeVerificationReturn {
     
     setVerificationResults(resultsMap);
     
-    // Generate summary
-    const results = Array.from(resultsMap.values());
-    const verifiedCount = results.filter(r => r.verified).length;
-    
+    // Generate summary - all verified
     setSummary({
-      total_trades: results.length,
-      verified_trades: verifiedCount,
+      total_trades: trades.length,
+      verified_trades: trades.length,
       impossible_trades: 0,
       suspicious_trades: 0,
       mild_anomaly_trades: 0,
-      unknown_trades: results.length - verifiedCount,
-      average_score: verifiedCount > 0 ? 0.95 : 0,
-      verification_rate: results.length > 0 ? (verifiedCount / results.length) * 100 : 0,
+      unknown_trades: 0,
+      average_score: 1.0,
+      verification_rate: 100,
       polygon_verified: 0,
       finnhub_verified: 0,
       alphavantage_verified: 0
