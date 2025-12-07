@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -7,7 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { analyzeTradesCSV, generateOrdersTestCSV, TradeAnalysisResult } from '@/lib/tradeAnalyzer';
 import { TradeAnalysisView } from './TradeAnalysisView';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTradeVerification } from '@/hooks/useTradeVerification';
+import { TradeToVerify } from '@/lib/tradeVerification';
 
 interface OrderCSVImporterProps {
   onImportComplete?: () => void;
@@ -20,7 +21,16 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [isVerified, setIsVerified] = useState(false);
   const { toast } = useToast();
+  
+  const { 
+    isVerifying, 
+    progress: verifyProgress, 
+    summary: verifySummary,
+    verifyAllTrades,
+    clearVerifications 
+  } = useTradeVerification();
 
   const handleFileAnalyze = useCallback(async (selectedFile: File) => {
     setIsAnalyzing(true);
@@ -155,6 +165,31 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
   const handleReset = () => {
     setFile(null);
     setAnalysis(null);
+    setIsVerified(false);
+    clearVerifications();
+  };
+
+  const handleVerify = async () => {
+    if (!analysis) return;
+    
+    const tradesToVerify: TradeToVerify[] = analysis.matchedTrades.map((trade, idx) => ({
+      id: `temp-${idx}`,
+      symbol: trade.symbol,
+      entry_fill_price: trade.entryPrice,
+      exit_fill_price: trade.exitPrice,
+      entry_timestamp: trade.entryTime,
+      exit_timestamp: trade.exitTime,
+      side: trade.side,
+      quantity: trade.quantity,
+    }));
+    
+    await verifyAllTrades(tradesToVerify);
+    setIsVerified(true);
+    
+    toast({
+      title: 'Verification Complete',
+      description: 'Your trades have been verified against market data',
+    });
   };
 
   if (isAnalyzing) {
@@ -200,26 +235,96 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
         {/* Analysis View */}
         <TradeAnalysisView analysis={analysis} />
 
+        {/* Verification Animation */}
+        {isVerifying && (
+          <Card className="border-primary/30 bg-primary/5 overflow-hidden">
+            <CardContent className="py-8">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-4 border-primary/20 flex items-center justify-center">
+                    <ShieldCheck className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
+                  <div 
+                    className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"
+                    style={{ animationDuration: '1s' }}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-foreground">Verifying Trades</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Checking {verifyProgress.completed} of {verifyProgress.total} trades...
+                  </p>
+                </div>
+                <Progress 
+                  value={(verifyProgress.completed / Math.max(verifyProgress.total, 1)) * 100} 
+                  className="w-48 h-2" 
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Verification Success */}
+        {isVerified && verifySummary && !isVerifying && (
+          <Card className="border-green-500/30 bg-green-500/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-green-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-green-600 dark:text-green-400">Verification Passed</p>
+                  <p className="text-sm text-muted-foreground">
+                    {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
+                    Score: {(verifySummary.average_score * 100).toFixed(0)}%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3">
-          <Button
-            onClick={handleImport}
-            disabled={isImporting || analysis.matchedTrades.length === 0}
-            className="flex-1"
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Import {analysis.matchedTrades.length} Trades
-              </>
-            )}
-          </Button>
-          <Button variant="outline" onClick={handleReset} disabled={isImporting}>
+          {!isVerified ? (
+            <Button
+              onClick={handleVerify}
+              disabled={isVerifying || analysis.matchedTrades.length === 0}
+              className="flex-1"
+              variant="outline"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Verify Trades
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleImport}
+              disabled={isImporting || analysis.matchedTrades.length === 0}
+              className="flex-1"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Import {analysis.matchedTrades.length} Trades
+                </>
+              )}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleReset} disabled={isImporting || isVerifying}>
             Cancel
           </Button>
         </div>
