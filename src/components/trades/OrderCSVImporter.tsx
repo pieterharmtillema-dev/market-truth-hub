@@ -95,19 +95,51 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
         return;
       }
 
-      // Only import verified trades
+      // Get all trades to import
       const trades = getVerifiedTrades();
       if (trades.length === 0) {
-        toast({ title: 'No verified trades', description: 'No verified trades to import', variant: 'destructive' });
+        toast({ title: 'No trades', description: 'No trades to import', variant: 'destructive' });
         return;
       }
+
+      // Fetch existing trades for duplicate detection
+      const { data: existingTrades } = await supabase
+        .from('trader_trades')
+        .select('asset, direction, entry_price, exit_price, entry_datetime_utc, quantity')
+        .eq('user_id', user.id);
+
+      // Create a set of existing trade signatures for quick lookup
+      const existingSignatures = new Set(
+        (existingTrades || []).map(t => 
+          `${t.asset}|${t.direction}|${t.entry_price}|${t.exit_price}|${t.entry_datetime_utc}|${t.quantity}`
+        )
+      );
+
+      // Filter out duplicates
+      const newTrades = trades.filter(trade => {
+        const signature = `${trade.symbol}|${trade.side}|${trade.entryPrice}|${trade.exitPrice}|${trade.entryTime.toISOString()}|${trade.quantity}`;
+        return !existingSignatures.has(signature);
+      });
+
+      if (newTrades.length === 0) {
+        toast({ 
+          title: 'No new trades', 
+          description: 'All trades already exist in your journal',
+          variant: 'default' 
+        });
+        setFile(null);
+        setAnalysis(null);
+        return;
+      }
+
+      const duplicateCount = trades.length - newTrades.length;
 
       // Process in batches
       const BATCH_SIZE = 50;
       let imported = 0;
 
-      for (let i = 0; i < trades.length; i += BATCH_SIZE) {
-        const batch = trades.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < newTrades.length; i += BATCH_SIZE) {
+        const batch = newTrades.slice(i, i + BATCH_SIZE);
         
         const tradesData = batch.map(trade => ({
           user_id: user.id,
@@ -126,7 +158,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
           margin: trade.margin || null,
           instrument_type: 'other' as const,
           group_symbol: trade.symbol,
-          notes: `Entry Order: ${trade.entryOrderId || 'N/A'}, Exit Order: ${trade.exitOrderId || 'N/A'}`,
+          notes: null,
         }));
 
         const { error, data } = await supabase
@@ -140,8 +172,13 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
           imported += data?.length || tradesData.length;
         }
 
-        setImportProgress(Math.round(((i + batch.length) / trades.length) * 100));
+        setImportProgress(Math.round(((i + batch.length) / newTrades.length) * 100));
       }
+
+      toast({
+        title: 'Import Complete',
+        description: `Imported ${imported} trades${duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped)` : ''}`,
+      });
 
       toast({
         title: 'Import Complete',
