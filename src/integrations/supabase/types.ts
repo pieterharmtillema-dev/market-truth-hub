@@ -46,48 +46,94 @@ export type Database = {
       }
       trader_trades: {
         Row: {
+          account_id: string | null
           asset: string
+          broker_id: string | null
+          commission: number | null
           created_at: string
           direction: string
           entry_date: string
+          entry_datetime_utc: string | null
           entry_price: number
           exit_date: string | null
+          exit_datetime_utc: string | null
           exit_price: number | null
+          group_strategy: string | null
+          group_symbol: string | null
           id: string
+          instrument_type: Database["public"]["Enums"]["instrument_type"] | null
+          leverage: number | null
+          margin: number | null
           notes: string | null
           profit_loss: number | null
           profit_loss_percent: number | null
           quantity: number | null
+          raw_row: Json | null
+          stop_loss: number | null
+          strategy: string | null
+          take_profit: number | null
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           asset: string
+          broker_id?: string | null
+          commission?: number | null
           created_at?: string
           direction: string
           entry_date: string
+          entry_datetime_utc?: string | null
           entry_price: number
           exit_date?: string | null
+          exit_datetime_utc?: string | null
           exit_price?: number | null
+          group_strategy?: string | null
+          group_symbol?: string | null
           id?: string
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
+          leverage?: number | null
+          margin?: number | null
           notes?: string | null
           profit_loss?: number | null
           profit_loss_percent?: number | null
           quantity?: number | null
+          raw_row?: Json | null
+          stop_loss?: number | null
+          strategy?: string | null
+          take_profit?: number | null
           user_id: string
         }
         Update: {
+          account_id?: string | null
           asset?: string
+          broker_id?: string | null
+          commission?: number | null
           created_at?: string
           direction?: string
           entry_date?: string
+          entry_datetime_utc?: string | null
           entry_price?: number
           exit_date?: string | null
+          exit_datetime_utc?: string | null
           exit_price?: number | null
+          group_strategy?: string | null
+          group_symbol?: string | null
           id?: string
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
+          leverage?: number | null
+          margin?: number | null
           notes?: string | null
           profit_loss?: number | null
           profit_loss_percent?: number | null
           quantity?: number | null
+          raw_row?: Json | null
+          stop_loss?: number | null
+          strategy?: string | null
+          take_profit?: number | null
           user_id?: string
         }
         Relationships: []
@@ -100,7 +146,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      instrument_type:
+        | "stock"
+        | "crypto"
+        | "forex"
+        | "futures"
+        | "options"
+        | "other"
+      trade_side: "buy" | "sell" | "long" | "short"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -227,6 +280,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      instrument_type: [
+        "stock",
+        "crypto",
+        "forex",
+        "futures",
+        "options",
+        "other",
+      ],
+      trade_side: ["buy", "sell", "long", "short"],
+    },
   },
 } as const
