@@ -74,8 +74,9 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     if (selectedFile) handleFileAnalyze(selectedFile);
   };
 
-  // State for unverified trades collapsible
+  // State for unverified trades collapsible and filter
   const [showUnverified, setShowUnverified] = useState(false);
+  const [unverifiedFilter, setUnverifiedFilter] = useState<'all' | 'impossible' | 'suspicious' | 'unknown' | 'lowscore'>('all');
 
   // Get only verified trades for import
   const getVerifiedTrades = useCallback(() => {
@@ -88,23 +89,47 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
   }, [analysis, verificationResults]);
 
   // Get unverified trades with their verification results
-  const getUnverifiedTradesWithResults = useCallback((): Array<{ trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number }> => {
+  const getUnverifiedTradesWithResults = useCallback((): Array<{ trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' }> => {
     if (!analysis || !verificationResults.size) return [];
     
     return analysis.matchedTrades
-      .map((trade, idx) => ({
-        trade,
-        result: verificationResults.get(`temp-${idx}`),
-        index: idx
-      }))
-      .filter((item): item is { trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number } => 
-        item.result !== undefined && !item.result.verified
+      .map((trade, idx) => {
+        const result = verificationResults.get(`temp-${idx}`);
+        if (!result || result.verified) return null;
+        
+        // Categorize the trade
+        let category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore';
+        if (result.impossible_flag) {
+          category = 'impossible';
+        } else if (result.entry_verification.status === 'unknown' || result.exit_verification?.status === 'unknown') {
+          category = 'unknown';
+        } else if (result.suspicious_flag) {
+          category = 'suspicious';
+        } else {
+          category = 'lowscore';
+        }
+        
+        return { trade, result, index: idx, category };
+      })
+      .filter((item): item is { trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' } => 
+        item !== null
       );
   }, [analysis, verificationResults]);
 
   const verifiedTradeCount = getVerifiedTrades().length;
   const unverifiedTrades = getUnverifiedTradesWithResults();
   const unverifiedTradeCount = unverifiedTrades.length;
+  
+  // Filter counts
+  const impossibleCount = unverifiedTrades.filter(t => t.category === 'impossible').length;
+  const suspiciousCount = unverifiedTrades.filter(t => t.category === 'suspicious').length;
+  const unknownCount = unverifiedTrades.filter(t => t.category === 'unknown').length;
+  const lowScoreCount = unverifiedTrades.filter(t => t.category === 'lowscore').length;
+  
+  // Filtered trades based on selected tab
+  const filteredUnverifiedTrades = unverifiedFilter === 'all' 
+    ? unverifiedTrades 
+    : unverifiedTrades.filter(t => t.category === unverifiedFilter);
 
   const handleImport = async () => {
     if (!analysis) return;
@@ -424,30 +449,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                       </CardTitle>
                       {/* Breakdown by type */}
                       <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                        {(() => {
-                          const impossible = unverifiedTrades.filter(t => t.result.impossible_flag).length;
-                          const suspicious = unverifiedTrades.filter(t => t.result.suspicious_flag && !t.result.impossible_flag).length;
-                          const unknown = unverifiedTrades.filter(t => 
-                            t.result.entry_verification.status === 'unknown' || 
-                            t.result.exit_verification?.status === 'unknown'
-                          ).length;
-                          const lowScore = unverifiedTrades.filter(t => 
-                            !t.result.impossible_flag && 
-                            !t.result.suspicious_flag && 
-                            t.result.entry_verification.status !== 'unknown' &&
-                            t.result.exit_verification?.status !== 'unknown' &&
-                            t.result.authenticity_score < 0.7
-                          ).length;
-                          
-                          return (
-                            <>
-                              {impossible > 0 && <span className="text-destructive">Impossible: {impossible}</span>}
-                              {suspicious > 0 && <span className="text-yellow-500">Suspicious: {suspicious}</span>}
-                              {unknown > 0 && <span>No data: {unknown}</span>}
-                              {lowScore > 0 && <span>Low score: {lowScore}</span>}
-                            </>
-                          );
-                        })()}
+                        {impossibleCount > 0 && <span className="text-destructive">Impossible: {impossibleCount}</span>}
+                        {suspiciousCount > 0 && <span className="text-yellow-500">Suspicious: {suspiciousCount}</span>}
+                        {unknownCount > 0 && <span>No data: {unknownCount}</span>}
+                        {lowScoreCount > 0 && <span>Low score: {lowScoreCount}</span>}
                       </div>
                     </div>
                     {showUnverified ? (
@@ -459,74 +464,146 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                 </CardHeader>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <CardContent className="pt-0 pb-3">
+                <CardContent className="pt-0 pb-3 space-y-3">
+                  {/* Filter tabs */}
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      variant={unverifiedFilter === 'all' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('all'); }}
+                    >
+                      All ({unverifiedTradeCount})
+                    </Button>
+                    {impossibleCount > 0 && (
+                      <Button
+                        variant={unverifiedFilter === 'impossible' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('impossible'); }}
+                      >
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Impossible ({impossibleCount})
+                      </Button>
+                    )}
+                    {suspiciousCount > 0 && (
+                      <Button
+                        variant={unverifiedFilter === 'suspicious' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs text-yellow-600"
+                        onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('suspicious'); }}
+                      >
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Suspicious ({suspiciousCount})
+                      </Button>
+                    )}
+                    {unknownCount > 0 && (
+                      <Button
+                        variant={unverifiedFilter === 'unknown' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('unknown'); }}
+                      >
+                        <HelpCircle className="h-3 w-3 mr-1" />
+                        No Data ({unknownCount})
+                      </Button>
+                    )}
+                    {lowScoreCount > 0 && (
+                      <Button
+                        variant={unverifiedFilter === 'lowscore' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('lowscore'); }}
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Low Score ({lowScoreCount})
+                      </Button>
+                    )}
+                  </div>
+                  
                   <ScrollArea className="max-h-64">
                     <div className="space-y-2">
-                      {unverifiedTrades.map(({ trade, result, index }) => (
-                        <div 
-                          key={index} 
-                          className="p-2 rounded-lg bg-muted/30 border border-border/30 text-xs"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                {result.impossible_flag ? (
-                                  <XCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                                ) : result.suspicious_flag ? (
-                                  <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
-                                ) : (
-                                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                                )}
-                                <span className="font-medium font-mono truncate">
-                                  {trade.symbol}
-                                </span>
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                                  trade.side === 'long' || trade.side === 'buy' as unknown as typeof trade.side ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
-                                }`}>
-                                  {trade.side.toUpperCase()}
-                                </span>
+                      {filteredUnverifiedTrades.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No trades in this category
+                        </p>
+                      ) : (
+                        filteredUnverifiedTrades.map(({ trade, result, index, category }) => (
+                          <div 
+                            key={index} 
+                            className="p-2 rounded-lg bg-muted/30 border border-border/30 text-xs"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {category === 'impossible' ? (
+                                    <XCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                                  ) : category === 'suspicious' ? (
+                                    <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                                  ) : category === 'unknown' ? (
+                                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  ) : (
+                                    <AlertTriangle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                                  )}
+                                  <span className="font-medium font-mono truncate">
+                                    {trade.symbol}
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                    trade.side === 'long' ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
+                                  }`}>
+                                    {trade.side.toUpperCase()}
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                    category === 'impossible' ? 'bg-destructive/20 text-destructive' :
+                                    category === 'suspicious' ? 'bg-yellow-500/20 text-yellow-600' :
+                                    category === 'unknown' ? 'bg-muted text-muted-foreground' :
+                                    'bg-orange-500/20 text-orange-600'
+                                  }`}>
+                                    {category === 'lowscore' ? 'LOW SCORE' : category.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-muted-foreground space-y-0.5">
+                                  <p>
+                                    Entry: ${trade.entryPrice.toFixed(4)} @ {trade.entryTime.toLocaleString()}
+                                  </p>
+                                  <p>
+                                    Exit: ${trade.exitPrice.toFixed(4)} @ {trade.exitTime.toLocaleString()}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-muted-foreground space-y-0.5">
-                                <p>
-                                  Entry: ${trade.entryPrice.toFixed(4)} @ {trade.entryTime.toLocaleString()}
+                              <div className="text-right flex-shrink-0">
+                                <p className={`font-medium ${trade.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {trade.netPnL >= 0 ? '+' : ''}{trade.netPnL.toFixed(2)}
                                 </p>
-                                <p>
-                                  Exit: ${trade.exitPrice.toFixed(4)} @ {trade.exitTime.toLocaleString()}
+                                <p className="text-muted-foreground/70 text-[10px]">
+                                  Qty: {trade.quantity}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right flex-shrink-0">
-                              <p className={`font-medium ${trade.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {trade.netPnL >= 0 ? '+' : ''}{trade.netPnL.toFixed(2)}
+                            {/* Failure reason */}
+                            <div className="mt-2 pt-2 border-t border-border/30">
+                              <p className="text-destructive/90">
+                                <strong>Reason:</strong>{' '}
+                                {result.unsupported_reason || 
+                                 (category === 'impossible'
+                                   ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
+                                   : category === 'suspicious'
+                                     ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
+                                     : category === 'unknown'
+                                       ? 'No market data available from any provider'
+                                       : `Score too low: ${(result.authenticity_score * 100).toFixed(0)}% (min 70%)`
+                                 )}
                               </p>
-                              <p className="text-muted-foreground/70 text-[10px]">
-                                Qty: {trade.quantity}
-                              </p>
+                              {result.entry_verification.market_low !== null && (
+                                <p className="text-muted-foreground/70 mt-1">
+                                  Market range: ${result.entry_verification.market_low.toFixed(4)} - ${result.entry_verification.market_high?.toFixed(4)} 
+                                  {result.entry_verification.provider_used !== 'none' && ` (via ${result.entry_verification.provider_used})`}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          {/* Failure reason */}
-                          <div className="mt-2 pt-2 border-t border-border/30">
-                            <p className="text-destructive/90">
-                              <strong>Reason:</strong>{' '}
-                              {result.unsupported_reason || 
-                               (result.impossible_flag 
-                                 ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
-                                 : result.suspicious_flag
-                                   ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
-                                   : result.entry_verification.status === 'unknown'
-                                     ? 'No market data available from any provider'
-                                     : result.verification_notes
-                               )}
-                            </p>
-                            {result.entry_verification.market_low !== null && (
-                              <p className="text-muted-foreground/70 mt-1">
-                                Market range: ${result.entry_verification.market_low.toFixed(4)} - ${result.entry_verification.market_high?.toFixed(4)} 
-                                {result.entry_verification.provider_used !== 'none' && ` (via ${result.entry_verification.provider_used})`}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </ScrollArea>
                 </CardContent>
