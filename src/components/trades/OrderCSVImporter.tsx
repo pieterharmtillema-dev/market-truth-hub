@@ -356,38 +356,73 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
 
         {/* Verification Result */}
         {isVerified && verifySummary && !isVerifying && (
-          verifySummary.average_score >= 0.7 ? (
-            <Card className="border-green-500/30 bg-green-500/5">
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <ShieldCheck className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-green-600 dark:text-green-400">Verification Passed</p>
-                    <p className="text-sm text-muted-foreground">
-                      {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
-                      Score: {(verifySummary.average_score * 100).toFixed(0)}%
-                    </p>
-                    {/* Provider breakdown */}
-                    <div className="text-xs text-muted-foreground/80 mt-1 flex flex-wrap gap-x-3">
-                      {verifySummary.polygon_verified > 0 && (
-                        <span>Polygon: {verifySummary.polygon_verified}</span>
-                      )}
-                      {verifySummary.finnhub_verified > 0 && (
-                        <span>Finnhub: {verifySummary.finnhub_verified}</span>
-                      )}
-                      {verifySummary.unknown_trades > 0 && (
-                        <span>Unknown: {verifySummary.unknown_trades}</span>
-                      )}
-                      {verifySummary.suspicious_trades > 0 && (
-                        <span>Suspicious: {verifySummary.suspicious_trades}</span>
-                      )}
+          verifySummary.verified_trades > 0 && verifySummary.average_score >= 0.5 ? (
+            // Show green or yellow based on anomalies
+            verifySummary.mild_anomaly_trades === 0 && verifySummary.suspicious_trades === 0 ? (
+              // Pure green - all verified, no anomalies
+              <Card className="border-green-500/30 bg-green-500/5">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <ShieldCheck className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-green-600 dark:text-green-400">Verification Passed</p>
+                      <p className="text-sm text-muted-foreground">
+                        {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
+                        Score: {(verifySummary.average_score * 100).toFixed(0)}%
+                      </p>
+                      <div className="text-xs text-muted-foreground/80 mt-1 flex flex-wrap gap-x-3">
+                        {verifySummary.polygon_verified > 0 && (
+                          <span>Polygon: {verifySummary.polygon_verified}</span>
+                        )}
+                        {verifySummary.finnhub_verified > 0 && (
+                          <span>Finnhub: {verifySummary.finnhub_verified}</span>
+                        )}
+                        {verifySummary.unknown_trades > 0 && (
+                          <span className="text-muted-foreground">No data: {verifySummary.unknown_trades}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : (
+              // Yellow - verified with minor anomalies
+              <Card className="border-yellow-500/30 bg-yellow-500/5">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-yellow-600 dark:text-yellow-400">Verified with Minor Anomalies</p>
+                      <p className="text-sm text-muted-foreground">
+                        {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
+                        Score: {(verifySummary.average_score * 100).toFixed(0)}%
+                      </p>
+                      <div className="text-xs text-muted-foreground/80 mt-1 flex flex-wrap gap-x-3">
+                        {verifySummary.mild_anomaly_trades > 0 && (
+                          <span className="text-yellow-600">Slight deviations: {verifySummary.mild_anomaly_trades}</span>
+                        )}
+                        {verifySummary.suspicious_trades > 0 && (
+                          <span className="text-yellow-600">Suspicious precision: {verifySummary.suspicious_trades}</span>
+                        )}
+                        {verifySummary.polygon_verified > 0 && (
+                          <span>Polygon: {verifySummary.polygon_verified}</span>
+                        )}
+                        {verifySummary.finnhub_verified > 0 && (
+                          <span>Finnhub: {verifySummary.finnhub_verified}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-yellow-600/80 mt-2">
+                        Some fills are slightly outside tolerance but within acceptable margin.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
           ) : (
             <Card className="border-destructive/30 bg-destructive/5">
               <CardContent className="py-4 space-y-3">
@@ -411,25 +446,19 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                     {verifySummary.impossible_trades > 0 && (
                       <li className="flex items-start gap-2">
                         <span className="text-destructive">•</span>
-                        <span><strong>{verifySummary.impossible_trades} impossible trade{verifySummary.impossible_trades > 1 ? 's' : ''}</strong> — fill prices outside market range at execution time</span>
-                      </li>
-                    )}
-                    {verifySummary.suspicious_trades > 0 && (
-                      <li className="flex items-start gap-2">
-                        <span className="text-yellow-500">•</span>
-                        <span><strong>{verifySummary.suspicious_trades} suspicious trade{verifySummary.suspicious_trades > 1 ? 's' : ''}</strong> — prices at exact high/low or high deviation</span>
+                        <span><strong>{verifySummary.impossible_trades} impossible trade{verifySummary.impossible_trades > 1 ? 's' : ''}</strong> — fill prices far outside tolerance (fraud detected)</span>
                       </li>
                     )}
                     {verifySummary.unknown_trades > 0 && (
                       <li className="flex items-start gap-2">
                         <span className="text-muted-foreground">•</span>
-                        <span><strong>{verifySummary.unknown_trades} unknown trade{verifySummary.unknown_trades > 1 ? 's' : ''}</strong> — no market data available</span>
+                        <span><strong>{verifySummary.unknown_trades} unknown trade{verifySummary.unknown_trades > 1 ? 's' : ''}</strong> — no market data available from any provider</span>
                       </li>
                     )}
-                    {verifySummary.average_score < 0.7 && verifySummary.impossible_trades === 0 && verifySummary.suspicious_trades === 0 && (
+                    {verifySummary.average_score < 0.5 && verifySummary.impossible_trades === 0 && (
                       <li className="flex items-start gap-2">
                         <span className="text-muted-foreground">•</span>
-                        <span>Average authenticity score ({(verifySummary.average_score * 100).toFixed(0)}%) below 70% threshold</span>
+                        <span>Average authenticity score ({(verifySummary.average_score * 100).toFixed(0)}%) below 50% threshold</span>
                       </li>
                     )}
                   </ul>
@@ -633,17 +662,27 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                                    (category === 'impossible'
                                      ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
                                      : category === 'suspicious'
-                                       ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
+                                       ? `${result.entry_verification.notes || result.exit_verification?.notes}`
                                        : category === 'unknown'
                                          ? 'No market data available from any provider'
-                                         : `Score too low: ${(result.authenticity_score * 100).toFixed(0)}% (min 70%)`
+                                         : `Score too low: ${(result.authenticity_score * 100).toFixed(0)}% (min 50%)`
                                    )}
                               </p>
                               {result.entry_verification.market_low !== null && (
-                                <p className="text-muted-foreground/70 mt-1">
-                                  Market range: ${result.entry_verification.market_low.toFixed(4)} - ${result.entry_verification.market_high?.toFixed(4)} 
-                                  {result.entry_verification.provider_used !== 'none' && ` (via ${result.entry_verification.provider_used})`}
-                                </p>
+                                <div className="text-muted-foreground/70 mt-1 space-y-0.5">
+                                  <p>
+                                    Market range: ${result.entry_verification.market_low.toFixed(4)} - ${result.entry_verification.market_high?.toFixed(4)} 
+                                    {result.entry_verification.provider_used !== 'none' && ` (via ${result.entry_verification.provider_used})`}
+                                  </p>
+                                  {result.entry_verification.tolerance_value !== null && (
+                                    <p className="text-[10px]">
+                                      Tolerance: ±{result.entry_verification.tolerance_value.toFixed(6)} | 
+                                      Deviation: {result.entry_verification.deviation_from_range !== null 
+                                        ? result.entry_verification.deviation_from_range.toFixed(6) 
+                                        : 'N/A'}
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
