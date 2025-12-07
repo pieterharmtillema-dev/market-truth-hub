@@ -28,6 +28,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     isVerifying, 
     progress: verifyProgress, 
     summary: verifySummary,
+    verificationResults,
     verifyAllTrades,
     clearVerifications 
   } = useTradeVerification();
@@ -285,7 +286,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
             </Card>
           ) : (
             <Card className="border-destructive/30 bg-destructive/5">
-              <CardContent className="py-4">
+              <CardContent className="py-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
                     <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -296,11 +297,59 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                       Only {verifySummary.verified_trades} of {verifySummary.total_trades} trades could be verified • 
                       Score: {(verifySummary.average_score * 100).toFixed(0)}%
                     </p>
-                    <p className="text-xs text-destructive/80 mt-1">
-                      {verifySummary.impossible_trades > 0 && `${verifySummary.impossible_trades} impossible trades detected. `}
-                      {verifySummary.suspicious_trades > 0 && `${verifySummary.suspicious_trades} suspicious trades flagged.`}
-                    </p>
                   </div>
+                </div>
+                
+                {/* Detailed breakdown */}
+                <div className="bg-destructive/10 rounded-lg p-3 text-sm space-y-2">
+                  <p className="font-medium text-destructive">Why verification failed:</p>
+                  <ul className="space-y-1 text-muted-foreground text-xs">
+                    {verifySummary.impossible_trades > 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-destructive">•</span>
+                        <span><strong>{verifySummary.impossible_trades} impossible trade{verifySummary.impossible_trades > 1 ? 's' : ''}</strong> — fill prices outside market range at execution time</span>
+                      </li>
+                    )}
+                    {verifySummary.suspicious_trades > 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-500">•</span>
+                        <span><strong>{verifySummary.suspicious_trades} suspicious trade{verifySummary.suspicious_trades > 1 ? 's' : ''}</strong> — prices at exact high/low or high deviation</span>
+                      </li>
+                    )}
+                    {verifySummary.unknown_trades > 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-muted-foreground">•</span>
+                        <span><strong>{verifySummary.unknown_trades} unknown trade{verifySummary.unknown_trades > 1 ? 's' : ''}</strong> — no market data available</span>
+                      </li>
+                    )}
+                    {verifySummary.average_score < 0.7 && verifySummary.impossible_trades === 0 && verifySummary.suspicious_trades === 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-muted-foreground">•</span>
+                        <span>Average authenticity score ({(verifySummary.average_score * 100).toFixed(0)}%) below 70% threshold</span>
+                      </li>
+                    )}
+                  </ul>
+                  
+                  {/* Show first few problematic trades */}
+                  {(() => {
+                    const problemTrades = Array.from(verificationResults.values())
+                      .filter(r => r.impossible_flag || r.suspicious_flag)
+                      .slice(0, 3);
+                    
+                    if (problemTrades.length > 0) {
+                      return (
+                        <div className="mt-2 pt-2 border-t border-destructive/20">
+                          <p className="font-medium text-destructive mb-1">Sample issues:</p>
+                          {problemTrades.map((trade, i) => (
+                            <p key={i} className="text-xs text-muted-foreground truncate">
+                              {trade.entry_verification.notes || trade.exit_verification?.notes || 'Price verification failed'}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </CardContent>
             </Card>
