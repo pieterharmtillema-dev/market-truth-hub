@@ -521,7 +521,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                     )}
                   </div>
                   
-                  <ScrollArea className="max-h-64">
+                  <ScrollArea className="max-h-[400px]">
                     <div className="space-y-2">
                       {filteredUnverifiedTrades.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
