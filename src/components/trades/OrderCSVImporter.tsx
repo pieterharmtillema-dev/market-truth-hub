@@ -522,7 +522,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                     )}
                   </div>
                   
-                  <ScrollArea className={expandedList ? "max-h-[70vh]" : "max-h-[250px]"}>
+                  <div className={expandedList ? "" : "max-h-[250px] overflow-y-auto"}>
                     <div className="space-y-2">
                       {filteredUnverifiedTrades.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
@@ -606,7 +606,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                         ))
                       )}
                     </div>
-                  </ScrollArea>
+                  </div>
                   
                   {/* Show more/less button */}
                   {filteredUnverifiedTrades.length > 2 && (
