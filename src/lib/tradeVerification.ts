@@ -1,9 +1,17 @@
 // Trade Verification Module - Validates fill prices against Polygon.io and Finnhub historical data
+// Uses smart tolerance model to reduce false positives while detecting real fraud
 import { getAggregates } from './polygon';
 import { getHistoricalOHLC as getFinnhubOHLC } from './finnhub';
 import { normalizeSymbol, NormalizedSymbol, getPolygonMarketType } from './symbolNormalizer';
 
 export type DataProvider = 'polygon' | 'finnhub' | 'none';
+
+export type VerificationStatus = 
+  | 'realistic'           // Within tolerance, verified
+  | 'mild_anomaly'        // Slightly outside tolerance, verified with flag
+  | 'suspicious_precision'// Exact high/low hit
+  | 'impossible'          // Far outside tolerance
+  | 'unknown';            // No market data
 
 export interface TradeLeg {
   price: number;
@@ -19,8 +27,17 @@ export interface LegVerification {
   market_high: number | null;
   market_open: number | null;
   market_close: number | null;
+  // Smart tolerance fields
+  tolerance_value: number | null;
+  deviation_value: number | null;
+  deviation_from_range: number | null; // How far outside the range (0 if inside)
+  // Flags
+  suspicious_precision: boolean;
+  suspicious_mild: boolean;
+  suspicious_strong: boolean;
+  // Legacy fields for compatibility
   deviation: number | null;
-  status: 'realistic' | 'impossible_low' | 'impossible_high' | 'suspicious_precision' | 'unknown';
+  status: VerificationStatus;
   score: number;
   notes: string;
   provider_used: DataProvider;
@@ -52,6 +69,7 @@ export interface VerificationSummary {
   impossible_trades: number;
   suspicious_trades: number;
   unknown_trades: number;
+  mild_anomaly_trades: number;
   average_score: number;
   verification_rate: number;
   // Provider breakdown
@@ -86,18 +104,36 @@ function getMarketTypeFromNormalized(normalizedSymbol: NormalizedSymbol): 'stock
   return getPolygonMarketType(normalizedSymbol.assetType);
 }
 
-// Get tolerance based on market type
-function getTolerance(price: number, marketType: 'stocks' | 'crypto' | 'forex'): number {
+/**
+ * Smart tolerance calculation based on asset type and volatility
+ * 
+ * Forex: max(0.0002, ATR * 0.2) - minimum 2 pips or 20% of candle volatility
+ * Crypto: 0.1% of mid price
+ * Stocks: 0.05% of price
+ */
+function calculateSmartTolerance(
+  price: number, 
+  marketType: 'stocks' | 'crypto' | 'forex',
+  marketData?: { low: number; high: number } | null
+): number {
   switch (marketType) {
-    case 'forex':
-      // 2 pips tolerance (assuming standard 4-decimal pairs)
-      return 0.0002;
-    case 'crypto':
-      // 0.1% tolerance
+    case 'forex': {
+      const minimumPips = 0.0002; // 2 pips
+      if (marketData) {
+        const atr = marketData.high - marketData.low; // Simple ATR approximation from candle
+        const volatilityTolerance = atr * 0.2; // 20% of candle range
+        return Math.max(minimumPips, volatilityTolerance);
+      }
+      return minimumPips;
+    }
+    case 'crypto': {
+      // 0.1% of mid price
       return price * 0.001;
-    default:
-      // Stocks: 0.05% tolerance
+    }
+    default: {
+      // Stocks: 0.05% of price
       return price * 0.0005;
+    }
   }
 }
 
@@ -235,7 +271,16 @@ async function getHistoricalPrice(
   return { data: null, provider: 'none', polygonStatus, finnhubStatus };
 }
 
-// Verify a single trade leg
+/**
+ * Smart leg verification with dynamic tolerance model
+ * 
+ * Verification levels:
+ * - realistic: Within tolerance, high score (0.8-1.0)
+ * - mild_anomaly: Slightly outside tolerance (<2x), verified with flag, medium score (0.5-0.7)
+ * - suspicious_precision: Exact high/low hit, score penalty (-0.1)
+ * - impossible: Far outside tolerance (>2x), not verified, score 0
+ * - unknown: No market data, null verification
+ */
 async function verifyLeg(
   normalizedSymbol: NormalizedSymbol,
   fillPrice: number,
@@ -253,9 +298,15 @@ async function verifyLeg(
         market_high: null,
         market_open: null,
         market_close: null,
+        tolerance_value: null,
+        deviation_value: null,
+        deviation_from_range: null,
+        suspicious_precision: false,
+        suspicious_mild: false,
+        suspicious_strong: false,
         deviation: null,
         status: 'unknown',
-        score: 0.5, // Neutral score when unsupported
+        score: 0.5,
         notes: normalizedSymbol.reason || 'Symbol not supported',
         provider_used: 'none'
       },
@@ -276,10 +327,16 @@ async function verifyLeg(
         market_high: null,
         market_open: null,
         market_close: null,
+        tolerance_value: null,
+        deviation_value: null,
+        deviation_from_range: null,
+        suspicious_precision: false,
+        suspicious_mild: false,
+        suspicious_strong: false,
         deviation: null,
         status: 'unknown',
-        score: 0.5, // Neutral score when data unavailable
-        notes: `No market data available from any provider`,
+        score: 0.5,
+        notes: 'No market data available from any provider',
         provider_used: 'none'
       },
       polygonStatus,
@@ -290,46 +347,91 @@ async function verifyLeg(
   const { low, high, open, close } = marketData;
   const midpoint = (low + high) / 2;
   const marketType = getMarketTypeFromNormalized(normalizedSymbol);
-  const tolerance = getTolerance(fillPrice, marketType);
   
-  let status: LegVerification['status'] = 'realistic';
+  // Calculate smart tolerance based on asset type and volatility
+  const tolerance = calculateSmartTolerance(fillPrice, marketType, marketData);
+  
+  // Calculate deviation from midpoint (for scoring)
+  const deviationFromMidpoint = Math.abs(fillPrice - midpoint) / midpoint;
+  
+  // Calculate deviation from range (how far outside low-high)
+  let deviationFromRange = 0;
+  if (fillPrice < low) {
+    deviationFromRange = low - fillPrice;
+  } else if (fillPrice > high) {
+    deviationFromRange = fillPrice - high;
+  }
+  
+  // Check for suspicious precision (exact high or low hit)
+  const precisionThreshold = tolerance * 0.05; // 5% of tolerance
+  const hitsExactLow = Math.abs(fillPrice - low) < precisionThreshold;
+  const hitsExactHigh = Math.abs(fillPrice - high) < precisionThreshold;
+  const suspiciousPrecision = hitsExactLow || hitsExactHigh;
+  
+  let status: VerificationStatus = 'realistic';
   let score = 1.0;
   let notes = '';
+  let suspiciousMild = false;
+  let suspiciousStrong = false;
   
-  // Calculate deviation from midpoint
-  const deviation = Math.abs(fillPrice - midpoint) / midpoint;
-  
-  // Check if price is within realistic range
-  if (fillPrice < low - tolerance) {
-    status = 'impossible_low';
-    score = 0.0;
-    notes = `Fill price ${fillPrice} is below market low ${low.toFixed(4)} (via ${provider})`;
-  } else if (fillPrice > high + tolerance) {
-    status = 'impossible_high';
-    score = 0.0;
-    notes = `Fill price ${fillPrice} is above market high ${high.toFixed(4)} (via ${provider})`;
-  } else {
-    // Check for suspicious precision (exact high or low)
-    const precisionThreshold = tolerance * 0.1;
-    if (Math.abs(fillPrice - low) < precisionThreshold || Math.abs(fillPrice - high) < precisionThreshold) {
-      status = 'suspicious_precision';
-      score = 0.3;
-      notes = `Fill price matches market ${Math.abs(fillPrice - low) < precisionThreshold ? 'low' : 'high'} suspiciously precisely (via ${provider})`;
+  // Determine status based on smart tolerance model
+  if (fillPrice >= low - tolerance && fillPrice <= high + tolerance) {
+    // WITHIN TOLERANCE - Verified
+    status = 'realistic';
+    
+    // Score based on how close to midpoint
+    if (deviationFromMidpoint < 0.001) {
+      score = 1.0;
+      notes = `Excellent fill within volatility tolerance (via ${provider})`;
+    } else if (deviationFromMidpoint < 0.003) {
+      score = 0.95;
+      notes = `Very good fill within tolerance (via ${provider})`;
+    } else if (deviationFromMidpoint < 0.005) {
+      score = 0.9;
+      notes = `Good fill within normal range (via ${provider})`;
+    } else if (deviationFromMidpoint < 0.01) {
+      score = 0.85;
+      notes = `Acceptable fill within tolerance (via ${provider})`;
     } else {
-      // Realistic trade - adjust score based on deviation
-      if (deviation < 0.001) {
-        score = 1.0;
-        notes = `Excellent fill - very close to midpoint (via ${provider})`;
-      } else if (deviation < 0.005) {
-        score = 0.9;
-        notes = `Good fill - within normal range (via ${provider})`;
-      } else if (deviation < 0.01) {
-        score = 0.75;
-        notes = `Acceptable fill - moderate deviation (via ${provider})`;
-      } else {
-        score = 0.6;
-        notes = `High deviation fill - near edge of range (via ${provider})`;
-      }
+      score = 0.8;
+      notes = `Fill at edge of range but within tolerance (via ${provider})`;
+    }
+    
+    // Apply precision penalty if hits exact high/low
+    if (suspiciousPrecision) {
+      score = Math.max(0.7, score - 0.1);
+      notes = `Fill matches exact ${hitsExactLow ? 'low' : 'high'} (minor anomaly) (via ${provider})`;
+      status = 'suspicious_precision';
+    }
+  } else if (deviationFromRange <= tolerance * 2) {
+    // SLIGHTLY OUTSIDE TOLERANCE - Verified with flag (mild anomaly)
+    status = 'mild_anomaly';
+    suspiciousMild = true;
+    
+    // Score between 0.5 and 0.7 based on how far outside
+    const severityRatio = deviationFromRange / (tolerance * 2);
+    score = 0.7 - (severityRatio * 0.2); // 0.7 to 0.5
+    
+    if (fillPrice < low) {
+      notes = `Fill ${fillPrice.toFixed(4)} slightly below range (low: ${low.toFixed(4)}) but within tolerance margin (via ${provider})`;
+    } else {
+      notes = `Fill ${fillPrice.toFixed(4)} slightly above range (high: ${high.toFixed(4)}) but within tolerance margin (via ${provider})`;
+    }
+    
+    // Additional penalty for precision
+    if (suspiciousPrecision) {
+      score = Math.max(0.5, score - 0.05);
+    }
+  } else {
+    // FAR OUTSIDE TOLERANCE - Impossible (> 2x tolerance)
+    status = 'impossible';
+    suspiciousStrong = true;
+    score = 0;
+    
+    if (fillPrice < low) {
+      notes = `Fill ${fillPrice.toFixed(4)} impossible - far below market low ${low.toFixed(4)} (deviation: ${deviationFromRange.toFixed(4)}, tolerance: ${tolerance.toFixed(4)}) (via ${provider})`;
+    } else {
+      notes = `Fill ${fillPrice.toFixed(4)} impossible - far above market high ${high.toFixed(4)} (deviation: ${deviationFromRange.toFixed(4)}, tolerance: ${tolerance.toFixed(4)}) (via ${provider})`;
     }
   }
   
@@ -342,7 +444,13 @@ async function verifyLeg(
       market_high: high,
       market_open: open,
       market_close: close,
-      deviation,
+      tolerance_value: tolerance,
+      deviation_value: deviationFromMidpoint,
+      deviation_from_range: deviationFromRange,
+      suspicious_precision: suspiciousPrecision,
+      suspicious_mild: suspiciousMild,
+      suspicious_strong: suspiciousStrong,
+      deviation: deviationFromMidpoint,
       status,
       score,
       notes,
@@ -391,16 +499,17 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
     authenticity_score = entryVerification.score;
   }
   
-  // Determine flags
+  // Determine flags based on new status model
   const impossible_flag = 
-    entryVerification.status === 'impossible_low' || 
-    entryVerification.status === 'impossible_high' ||
-    (exitVerification?.status === 'impossible_low') ||
-    (exitVerification?.status === 'impossible_high');
+    entryVerification.status === 'impossible' ||
+    exitVerification?.status === 'impossible';
   
+  // Suspicious includes mild anomalies and precision issues
   const suspicious_flag = 
-    entryVerification.status === 'suspicious_precision' ||
-    (exitVerification?.status === 'suspicious_precision');
+    entryVerification.suspicious_precision ||
+    entryVerification.suspicious_mild ||
+    exitVerification?.suspicious_precision ||
+    exitVerification?.suspicious_mild;
   
   // Determine overall provider used (prefer the one that worked)
   let provider_used: DataProvider = 'none';
@@ -420,11 +529,15 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
     : (entryFinnhubStatus === 'error' || exitFinnhubStatus === 'error' ? 'error' : 
        (entryFinnhubStatus === 'not_attempted' && exitFinnhubStatus === 'not_attempted' ? 'not_attempted' : 'empty'));
   
-  // Trade is verified if all legs are realistic and score >= 0.7
+  // Trade is verified if:
+  // - Symbol is supported
+  // - No impossible flags
+  // - Score >= 0.5 (allows mild anomalies)
+  // - Not unknown
   const verified = 
     normalizedSymbol.isSupported &&
     !impossible_flag &&
-    authenticity_score >= 0.7 &&
+    authenticity_score >= 0.5 &&
     entryVerification.status !== 'unknown' &&
     (!exitVerification || exitVerification.status !== 'unknown');
   
@@ -496,6 +609,10 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
   const verified = results.filter(r => r.verified).length;
   const impossible = results.filter(r => r.impossible_flag).length;
   const suspicious = results.filter(r => r.suspicious_flag && !r.impossible_flag).length;
+  const mildAnomaly = results.filter(r => 
+    r.entry_verification.status === 'mild_anomaly' ||
+    r.exit_verification?.status === 'mild_anomaly'
+  ).length;
   const unknown = results.filter(r => 
     r.entry_verification.status === 'unknown' ||
     (r.exit_verification?.status === 'unknown')
@@ -514,6 +631,7 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
     verified_trades: verified,
     impossible_trades: impossible,
     suspicious_trades: suspicious,
+    mild_anomaly_trades: mildAnomaly,
     unknown_trades: unknown,
     average_score: avgScore,
     verification_rate: total > 0 ? (verified / total) * 100 : 0,
