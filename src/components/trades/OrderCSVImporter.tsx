@@ -74,9 +74,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     if (selectedFile) handleFileAnalyze(selectedFile);
   };
 
-  // State for unverified trades collapsible and filter
+  // State for unverified trades collapsible, filter, and expanded view
   const [showUnverified, setShowUnverified] = useState(false);
   const [unverifiedFilter, setUnverifiedFilter] = useState<'all' | 'impossible' | 'suspicious' | 'unknown' | 'lowscore'>('all');
+  const [expandedList, setExpandedList] = useState(false);
 
   // Get only verified trades for import
   const getVerifiedTrades = useCallback(() => {
@@ -521,7 +522,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                     )}
                   </div>
                   
-                  <ScrollArea className="max-h-[400px]">
+                  <ScrollArea className={expandedList ? "max-h-[70vh]" : "max-h-[250px]"}>
                     <div className="space-y-2">
                       {filteredUnverifiedTrades.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
@@ -606,6 +607,28 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                       )}
                     </div>
                   </ScrollArea>
+                  
+                  {/* Show more/less button */}
+                  {filteredUnverifiedTrades.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); setExpandedList(!expandedList); }}
+                    >
+                      {expandedList ? (
+                        <>
+                          <ChevronUp className="h-3 w-3 mr-1" />
+                          Show less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3 mr-1" />
+                          Show more ({filteredUnverifiedTrades.length} trades)
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </CardContent>
               </CollapsibleContent>
             </Card>
