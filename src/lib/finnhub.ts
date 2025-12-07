@@ -61,7 +61,173 @@ export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
   }
 }
 
-// Get stock candles - fallback to generating from quote data since candle endpoint requires paid plan
+// Get stock candles from Finnhub API
+export async function getStockCandles(
+  symbol: string,
+  resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
+  from: number,
+  to: number
+): Promise<FinnhubCandle | null> {
+  const cacheKey = `stock-candles-${symbol}-${resolution}-${from}-${to}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL * 6) { // 1 minute cache for historical
+    return cached.data;
+  }
+  
+  try {
+    const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Finnhub stock candles API error: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.s === 'no_data' || !data.c || data.c.length === 0) {
+      return null;
+    }
+    
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching stock candles for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Get forex candles from Finnhub API
+export async function getForexCandles(
+  symbol: string,
+  resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
+  from: number,
+  to: number
+): Promise<FinnhubCandle | null> {
+  const cacheKey = `forex-candles-${symbol}-${resolution}-${from}-${to}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL * 6) {
+    return cached.data;
+  }
+  
+  try {
+    const url = `${FINNHUB_BASE_URL}/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Finnhub forex candles API error: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.s === 'no_data' || !data.c || data.c.length === 0) {
+      return null;
+    }
+    
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching forex candles for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Get crypto candles from Finnhub API
+export async function getCryptoCandles(
+  symbol: string,
+  resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
+  from: number,
+  to: number
+): Promise<FinnhubCandle | null> {
+  const cacheKey = `crypto-candles-${symbol}-${resolution}-${from}-${to}`;
+  const cached = apiCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL * 6) {
+    return cached.data;
+  }
+  
+  try {
+    const url = `${FINNHUB_BASE_URL}/crypto/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Finnhub crypto candles API error: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.s === 'no_data' || !data.c || data.c.length === 0) {
+      return null;
+    }
+    
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error(`Error fetching crypto candles for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Get historical OHLC for verification - tries appropriate endpoint based on asset type
+export async function getHistoricalOHLC(
+  symbol: string,
+  assetType: 'stocks' | 'crypto' | 'forex',
+  timestamp: Date
+): Promise<{ low: number; high: number; open: number; close: number } | null> {
+  // Calculate from/to timestamps - get the full day of the trade
+  const tradeDate = new Date(timestamp);
+  tradeDate.setHours(0, 0, 0, 0);
+  const from = Math.floor(tradeDate.getTime() / 1000);
+  const to = from + (24 * 60 * 60);
+  
+  let candles: FinnhubCandle | null = null;
+  
+  try {
+    switch (assetType) {
+      case 'forex':
+        candles = await getForexCandles(symbol, 'D', from, to);
+        break;
+      case 'crypto':
+        candles = await getCryptoCandles(symbol, 'D', from, to);
+        break;
+      default:
+        candles = await getStockCandles(symbol, 'D', from, to);
+    }
+  } catch (error) {
+    console.error(`[Finnhub] Error fetching OHLC for ${symbol}:`, error);
+    return null;
+  }
+  
+  if (!candles || !candles.c || candles.c.length === 0) {
+    return null;
+  }
+  
+  // Find the closest bar to our timestamp
+  const targetTime = Math.floor(timestamp.getTime() / 1000);
+  let closestIdx = 0;
+  let closestDiff = Math.abs((candles.t[0] || 0) - targetTime);
+  
+  for (let i = 1; i < candles.t.length; i++) {
+    const diff = Math.abs(candles.t[i] - targetTime);
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIdx = i;
+    }
+  }
+  
+  return {
+    low: candles.l[closestIdx],
+    high: candles.h[closestIdx],
+    open: candles.o[closestIdx],
+    close: candles.c[closestIdx]
+  };
+}
+
+// Legacy function for chart display - generates synthetic data from quote
 export async function getCandles(
   symbol: string,
   resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
@@ -122,8 +288,8 @@ export async function getCandles(
   };
 }
 
-// Get crypto candles - generate from quote data
-export async function getCryptoCandles(
+// Legacy function for chart display - generates synthetic crypto data from quote
+export async function getLegacyCryptoCandles(
   symbol: string,
   resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
   from: number,

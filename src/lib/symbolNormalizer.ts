@@ -1,7 +1,7 @@
 /**
  * Symbol Normalization Module
  * 
- * Converts symbols from various trading platform formats to Polygon.io-compatible tickers.
+ * Converts symbols from various trading platform formats to Polygon.io and Finnhub-compatible tickers.
  * Handles forex, crypto, stocks, and detects unsupported symbols gracefully.
  */
 
@@ -10,6 +10,7 @@ export type AssetType = 'forex' | 'crypto' | 'stocks' | 'futures' | 'options' | 
 export interface NormalizedSymbol {
   original: string;
   polygon: string | null;
+  finnhub: string | null;
   assetType: AssetType;
   base?: string;
   quote?: string;
@@ -226,6 +227,56 @@ function toPolygonTicker(symbol: string, assetType: AssetType): string | null {
 }
 
 /**
+ * Convert to Finnhub compatible ticker format
+ */
+function toFinnhubTicker(symbol: string, assetType: AssetType): string | null {
+  const pair = extractPairComponents(symbol, assetType);
+  
+  switch (assetType) {
+    case 'forex': {
+      if (pair) {
+        // Finnhub forex format: OANDA:EUR_USD
+        return `OANDA:${pair.base}_${pair.quote}`;
+      }
+      // Fallback for 6-char pairs
+      const clean = stripPrefix(symbol).toUpperCase().replace('/', '');
+      if (clean.length === 6) {
+        return `OANDA:${clean.substring(0, 3)}_${clean.substring(3, 6)}`;
+      }
+      return null;
+    }
+    
+    case 'crypto': {
+      if (pair) {
+        // Normalize quote to USDT for Finnhub/Binance
+        let quote = pair.quote;
+        if (quote === 'USD' || quote === 'USDC' || quote === 'BUSD') {
+          quote = 'USDT';
+        }
+        // Finnhub crypto format: BINANCE:BTCUSDT
+        return `BINANCE:${pair.base}${quote}`;
+      }
+      // Fallback
+      const clean = stripPrefix(symbol).toUpperCase().replace(/[-/]/g, '');
+      return `BINANCE:${clean}`;
+    }
+    
+    case 'stocks': {
+      // Just strip prefix and return clean ticker
+      return stripPrefix(symbol).toUpperCase();
+    }
+    
+    case 'futures':
+    case 'options':
+      // These are not well-supported
+      return null;
+    
+    default:
+      return null;
+  }
+}
+
+/**
  * Main normalization function - converts any symbol to Polygon.io format
  */
 export function normalizeSymbol(symbol: string, instrumentType?: string | null): NormalizedSymbol {
@@ -242,6 +293,7 @@ export function normalizeSymbol(symbol: string, instrumentType?: string | null):
     const result: NormalizedSymbol = {
       original: symbol,
       polygon: null,
+      finnhub: null,
       assetType: 'unsupported',
       isSupported: false,
       reason: 'Empty symbol'
@@ -271,6 +323,7 @@ export function normalizeSymbol(symbol: string, instrumentType?: string | null):
     const result: NormalizedSymbol = {
       original: symbol,
       polygon: null,
+      finnhub: null,
       assetType,
       isSupported: false,
       reason: `${assetType} not supported by data provider`
@@ -279,18 +332,23 @@ export function normalizeSymbol(symbol: string, instrumentType?: string | null):
     return result;
   }
   
-  // Convert to Polygon format
+  // Convert to Polygon and Finnhub formats
   const polygonTicker = toPolygonTicker(trimmed, assetType);
+  const finnhubTicker = toFinnhubTicker(trimmed, assetType);
   const pair = extractPairComponents(trimmed, assetType);
+  
+  // Symbol is supported if either provider can handle it
+  const isSupported = polygonTicker !== null || finnhubTicker !== null;
   
   const result: NormalizedSymbol = {
     original: symbol,
     polygon: polygonTicker,
+    finnhub: finnhubTicker,
     assetType,
     base: pair?.base,
     quote: pair?.quote,
-    isSupported: polygonTicker !== null,
-    reason: polygonTicker === null ? 'Could not convert to supported format' : undefined
+    isSupported,
+    reason: !isSupported ? 'Could not convert to supported format' : undefined
   };
   
   normalizationCache.set(cacheKey, result);
