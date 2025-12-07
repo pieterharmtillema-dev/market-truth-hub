@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, Trash2, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, ChevronDown, ChevronUp, Filter, Shield, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+import { useTradeVerification } from '@/hooks/useTradeVerification';
+import { TradeVerificationBadge, VerificationSummaryCard } from './TradeVerificationBadge';
+import { TradeToVerify } from '@/lib/tradeVerification';
 
 interface Trade {
   id: string;
@@ -49,6 +53,15 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
   const [filterStrategy, setFilterStrategy] = useState<string>('all');
   const { toast } = useToast();
+  
+  const { 
+    verificationResults, 
+    summary: verificationSummary, 
+    isVerifying, 
+    progress, 
+    verifyAllTrades, 
+    getTradeVerification 
+  } = useTradeVerification();
 
   const fetchTrades = async () => {
     setLoading(true);
@@ -108,6 +121,32 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   const totalCommission = filteredTrades.reduce((sum, t) => sum + (t.commission || 0), 0);
   const wins = filteredTrades.filter(t => (t.profit_loss || 0) > 0).length;
   const winRate = filteredTrades.length > 0 ? (wins / filteredTrades.length) * 100 : 0;
+  
+  // Convert trades to verification format
+  const tradesToVerify: TradeToVerify[] = useMemo(() => {
+    return filteredTrades.map(trade => ({
+      id: trade.id,
+      symbol: trade.asset,
+      side: trade.direction,
+      entry_fill_price: trade.entry_price,
+      exit_fill_price: trade.exit_price,
+      entry_timestamp: new Date(trade.entry_datetime_utc || trade.entry_date),
+      exit_timestamp: trade.exit_datetime_utc ? new Date(trade.exit_datetime_utc) : 
+                      trade.exit_date ? new Date(trade.exit_date) : null,
+      quantity: trade.quantity,
+      instrument_type: trade.instrument_type
+    }));
+  }, [filteredTrades]);
+  
+  // Handle verify button click
+  const handleVerifyTrades = () => {
+    if (tradesToVerify.length === 0) return;
+    verifyAllTrades(tradesToVerify);
+    toast({
+      title: 'Verification started',
+      description: `Verifying ${tradesToVerify.length} trades against market data...`
+    });
+  };
 
   if (loading) {
     return (
@@ -151,8 +190,30 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
         </div>
       </div>
 
+      {/* Verification Summary */}
+      {verificationSummary && (
+        <VerificationSummaryCard
+          total={verificationSummary.total_trades}
+          verified={verificationSummary.verified_trades}
+          impossible={verificationSummary.impossible_trades}
+          suspicious={verificationSummary.suspicious_trades}
+          averageScore={verificationSummary.average_score}
+        />
+      )}
+      
+      {/* Verification Progress */}
+      {isVerifying && (
+        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Verifying trades... {progress.completed}/{progress.total}</span>
+          </div>
+          <Progress value={(progress.completed / progress.total) * 100} className="h-2" />
+        </div>
+      )}
+      
       {/* Filters */}
-      <div className="flex gap-3 items-center">
+      <div className="flex gap-3 items-center flex-wrap">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <Select value={filterSymbol} onValueChange={setFilterSymbol}>
           <SelectTrigger className="w-[140px]">
@@ -176,6 +237,23 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             ))}
           </SelectContent>
         </Select>
+        
+        <div className="ml-auto">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleVerifyTrades}
+            disabled={isVerifying || filteredTrades.length === 0}
+            className="gap-2"
+          >
+            {isVerifying ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Shield className="h-4 w-4" />
+            )}
+            Verify Trades
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -191,6 +269,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                 <TableHead>Exit</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>P/L</TableHead>
+                <TableHead>Verify</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
@@ -242,6 +321,21 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         '—'
                       )}
                     </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const verification = getTradeVerification(trade.id);
+                        if (!verification) return <span className="text-muted-foreground text-xs">—</span>;
+                        return (
+                          <TradeVerificationBadge
+                            verified={verification.verified}
+                            authenticity_score={verification.authenticity_score}
+                            suspicious_flag={verification.suspicious_flag}
+                            impossible_flag={verification.impossible_flag}
+                            verification_notes={verification.verification_notes}
+                          />
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {format(new Date(trade.entry_datetime_utc || trade.entry_date), 'MMM d, yy HH:mm')}
                     </TableCell>
@@ -260,7 +354,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                   </TableRow>
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={9} className="py-3">
+                      <TableCell colSpan={10} className="py-3">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           {trade.broker_id && (
                             <div>
