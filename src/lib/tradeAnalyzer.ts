@@ -97,18 +97,19 @@ export interface TradeAnalysisResult {
 }
 
 // Field aliases for auto-detection
+// Note: 'type' is NOT included in 'side' aliases to avoid confusion with order type (Market/Limit/Stop)
 const ORDER_FIELD_ALIASES: Record<string, string[]> = {
-  symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market', 'name'],
-  side: ['side', 'direction', 'type', 'action', 'order_side', 'orderside', 'buy_sell', 'buysell', 'b/s'],
+  symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market', 'name', 'security'],
+  side: ['side', 'direction', 'action', 'order_side', 'orderside', 'buy_sell', 'buysell', 'b/s', 'trade_side', 'tradeside'],
   quantity: ['quantity', 'qty', 'size', 'positionsize', 'position_size', 'contracts', 'amount', 'volume', 'lots', 'units'],
-  fill_price: ['fill_price', 'fillprice', 'filled_price', 'price', 'execution_price', 'exec_price', 'avg_price', 'avgprice', 'entry_price', 'entryprice'],
-  placing_time: ['placing_time', 'placingtime', 'entry_time', 'entrytime', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate', 'created', 'created_at', 'order_time', 'ordertime'],
-  closing_time: ['closing_time', 'closingtime', 'exit_time', 'exittime', 'close_time', 'closetime', 'closed', 'closed_at', 'fill_time', 'filltime'],
+  fill_price: ['fill_price', 'fillprice', 'filled_price', 'price', 'execution_price', 'exec_price', 'avg_price', 'avgprice', 'entry_price', 'entryprice', 'fill'],
+  placing_time: ['placing_time', 'placingtime', 'placing time', 'entry_time', 'entrytime', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate', 'created', 'created_at', 'order_time', 'ordertime', 'open_date', 'opendate', 'entry_date', 'entrydate', 'trade_time', 'tradetime'],
+  closing_time: ['closing_time', 'closingtime', 'closing time', 'exit_time', 'exittime', 'close_time', 'closetime', 'closed', 'closed_at', 'fill_time', 'filltime', 'close_date', 'closedate', 'exit_date', 'exitdate'],
   commission: ['commission', 'fees', 'fee', 'tradecost', 'trade_cost', 'brokerfee', 'broker_fee', 'cost', 'trading_fee', 'comm'],
   leverage: ['leverage', 'lev', 'multiplier'],
   margin: ['margin', 'margin_used', 'marginused', 'collateral'],
   order_id: ['order_id', 'orderid', 'id', 'trade_id', 'tradeid', 'ticket', 'deal_id', 'dealid'],
-  order_type: ['order_type', 'ordertype', 'exec_type', 'exectype', 'market', 'limit', 'stop'],
+  order_type: ['order_type', 'ordertype', 'exec_type', 'exectype', 'type'],
 };
 
 // Normalize field name for matching
@@ -166,21 +167,40 @@ function parseOrderDateTime(value: string): Date | null {
   }
   
   // ISO format or standard date parsing
-  const date = new Date(trimmed);
+  let date = new Date(trimmed);
   if (!isNaN(date.getTime())) return date;
   
-  // Common formats: MM/DD/YYYY HH:MM:SS, DD.MM.YYYY HH:MM:SS
-  const patterns = [
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):?(\d{2})?/,
-    /^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2}):?(\d{2})?/,
-    /^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2}):?(\d{2})?/,
-  ];
+  // Try common formats manually
+  // Format: DD.MM.YYYY HH:MM:SS or DD/MM/YYYY HH:MM:SS
+  const europeanMatch = trimmed.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (europeanMatch) {
+    const [, day, month, year, hour = '0', minute = '0', second = '0'] = europeanMatch;
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    if (!isNaN(date.getTime())) return date;
+  }
   
-  for (const pattern of patterns) {
-    if (pattern.test(trimmed)) {
-      const parsed = new Date(trimmed);
-      if (!isNaN(parsed.getTime())) return parsed;
-    }
+  // Format: MM/DD/YYYY HH:MM:SS (American)
+  const americanMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (americanMatch) {
+    const [, month, day, year, hour = '0', minute = '0', second = '0'] = americanMatch;
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Format: YYYY-MM-DD HH:MM:SS
+  const isoLikeMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (isoLikeMatch) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = isoLikeMatch;
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Format: YYYY/MM/DD HH:MM:SS
+  const slashIsoMatch = trimmed.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (slashIsoMatch) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = slashIsoMatch;
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    if (!isNaN(date.getTime())) return date;
   }
   
   return null;
