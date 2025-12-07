@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -264,24 +264,47 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
           </Card>
         )}
 
-        {/* Verification Success */}
+        {/* Verification Result */}
         {isVerified && verifySummary && !isVerifying && (
-          <Card className="border-green-500/30 bg-green-500/5">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <ShieldCheck className="h-5 w-5 text-green-500" />
+          verifySummary.average_score >= 0.7 ? (
+            <Card className="border-green-500/30 bg-green-500/5">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-green-600 dark:text-green-400">Verification Passed</p>
+                    <p className="text-sm text-muted-foreground">
+                      {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
+                      Score: {(verifySummary.average_score * 100).toFixed(0)}%
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-green-600 dark:text-green-400">Verification Passed</p>
-                  <p className="text-sm text-muted-foreground">
-                    {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
-                    Score: {(verifySummary.average_score * 100).toFixed(0)}%
-                  </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-destructive">Verification Not Passed</p>
+                    <p className="text-sm text-muted-foreground">
+                      Only {verifySummary.verified_trades} of {verifySummary.total_trades} trades could be verified • 
+                      Score: {(verifySummary.average_score * 100).toFixed(0)}%
+                    </p>
+                    <p className="text-xs text-destructive/80 mt-1">
+                      {verifySummary.impossible_trades > 0 && `${verifySummary.impossible_trades} impossible trades detected. `}
+                      {verifySummary.suspicious_trades > 0 && `${verifySummary.suspicious_trades} suspicious trades flagged.`}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )
         )}
 
         {/* Actions */}
@@ -305,7 +328,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                 </>
               )}
             </Button>
-          ) : (
+          ) : verifySummary && verifySummary.average_score >= 0.7 ? (
             <Button
               onClick={handleImport}
               disabled={isImporting || analysis.matchedTrades.length === 0}
@@ -322,6 +345,15 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                   Import {analysis.matchedTrades.length} Trades
                 </>
               )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleReset}
+              variant="destructive"
+              className="flex-1"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Clear & Try Again
             </Button>
           )}
           <Button variant="outline" onClick={handleReset} disabled={isImporting || isVerifying}>
