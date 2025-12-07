@@ -280,6 +280,12 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                       {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
                       Score: {(verifySummary.average_score * 100).toFixed(0)}%
                     </p>
+                    {(verifySummary.unknown_trades > 0 || verifySummary.suspicious_trades > 0) && (
+                      <p className="text-xs text-muted-foreground/80 mt-1">
+                        {verifySummary.unknown_trades > 0 && `${verifySummary.unknown_trades} unknown (no data). `}
+                        {verifySummary.suspicious_trades > 0 && `${verifySummary.suspicious_trades} suspicious.`}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -333,8 +339,8 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                   {/* Show first few problematic trades */}
                   {(() => {
                     const problemTrades = Array.from(verificationResults.values())
-                      .filter(r => r.impossible_flag || r.suspicious_flag)
-                      .slice(0, 3);
+                      .filter(r => r.impossible_flag || r.suspicious_flag || r.unsupported_reason)
+                      .slice(0, 4);
                     
                     if (problemTrades.length > 0) {
                       return (
@@ -342,7 +348,11 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                           <p className="font-medium text-destructive mb-1">Sample issues:</p>
                           {problemTrades.map((trade, i) => (
                             <p key={i} className="text-xs text-muted-foreground truncate">
-                              {trade.entry_verification.notes || trade.exit_verification?.notes || 'Price verification failed'}
+                              <span className="font-mono">{trade.original_symbol}</span>
+                              {trade.normalized_symbol && trade.normalized_symbol !== trade.original_symbol && (
+                                <span className="text-muted-foreground/60"> → {trade.normalized_symbol}</span>
+                              )}
+                              : {trade.unsupported_reason || trade.entry_verification.notes || trade.exit_verification?.notes || 'Verification failed'}
                             </p>
                           ))}
                         </div>

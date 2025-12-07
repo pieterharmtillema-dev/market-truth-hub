@@ -1,5 +1,6 @@
 // Trade Verification Module - Validates fill prices against Polygon.io historical data
-import { getAggregates, formatPolygonTicker } from './polygon';
+import { getAggregates } from './polygon';
+import { normalizeSymbol, NormalizedSymbol, getPolygonMarketType } from './symbolNormalizer';
 
 export interface TradeLeg {
   price: number;
@@ -30,6 +31,11 @@ export interface TradeVerificationResult {
   verification_notes: string;
   suspicious_flag: boolean;
   impossible_flag: boolean;
+  // Symbol normalization info
+  original_symbol: string;
+  normalized_symbol: string | null;
+  asset_type: string;
+  unsupported_reason?: string;
 }
 
 export interface VerificationSummary {
@@ -64,31 +70,9 @@ function getPriceCacheKey(symbol: string, timestamp: Date): string {
   return `${symbol}-${minuteTimestamp.toISOString()}`;
 }
 
-// Determine market type from symbol or instrument type
-function getMarketType(symbol: string, instrumentType?: string | null): 'stocks' | 'crypto' | 'forex' {
-  if (instrumentType === 'crypto') return 'crypto';
-  if (instrumentType === 'forex') return 'forex';
-  
-  // Auto-detect from symbol format
-  const upperSymbol = symbol.toUpperCase();
-  
-  // Crypto patterns: BTC, ETH, BTCUSD, etc.
-  if (upperSymbol.includes('BTC') || upperSymbol.includes('ETH') || 
-      upperSymbol.includes('USD') && (upperSymbol.length <= 7)) {
-    // Check for forex pairs like EURUSD
-    const forexPairs = ['EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD'];
-    if (forexPairs.some(pair => upperSymbol.startsWith(pair))) {
-      return 'forex';
-    }
-    return 'crypto';
-  }
-  
-  // Forex patterns
-  if (symbol.includes('/') || (symbol.length === 6 && /^[A-Z]+$/.test(upperSymbol))) {
-    return 'forex';
-  }
-  
-  return 'stocks';
+// Get market type from normalized symbol
+function getMarketTypeFromNormalized(normalizedSymbol: NormalizedSymbol): 'stocks' | 'crypto' | 'forex' {
+  return getPolygonMarketType(normalizedSymbol.assetType);
 }
 
 // Get tolerance based on market type
@@ -108,11 +92,16 @@ function getTolerance(price: number, marketType: 'stocks' | 'crypto' | 'forex'):
 
 // Fetch historical price data for a symbol at a specific timestamp
 async function getHistoricalPrice(
-  symbol: string,
-  timestamp: Date,
-  instrumentType?: string | null
+  normalizedSymbol: NormalizedSymbol,
+  timestamp: Date
 ): Promise<{ low: number; high: number; open: number; close: number } | null> {
-  const cacheKey = getPriceCacheKey(symbol, timestamp);
+  // If symbol is not supported, return null immediately
+  if (!normalizedSymbol.isSupported || !normalizedSymbol.polygon) {
+    console.log(`[Verification] Symbol not supported: ${normalizedSymbol.original} (${normalizedSymbol.reason || 'unknown'})`);
+    return null;
+  }
+  
+  const cacheKey = getPriceCacheKey(normalizedSymbol.polygon, timestamp);
   
   // Check cache first
   if (priceCache.has(cacheKey)) {
@@ -120,8 +109,7 @@ async function getHistoricalPrice(
   }
   
   try {
-    const marketType = getMarketType(symbol, instrumentType);
-    const ticker = formatPolygonTicker(symbol, marketType);
+    const ticker = normalizedSymbol.polygon;
     
     // Get the date in YYYY-MM-DD format
     const dateStr = timestamp.toISOString().split('T')[0];
@@ -130,7 +118,7 @@ async function getHistoricalPrice(
     const data = await getAggregates(ticker, 1, 'minute', dateStr, dateStr);
     
     if (!data.results || data.results.length === 0) {
-      console.log(`[Verification] No price data for ${symbol} on ${dateStr}`);
+      console.log(`[Verification] No price data for ${normalizedSymbol.original} (${ticker}) on ${dateStr}`);
       return null;
     }
     
@@ -159,20 +147,36 @@ async function getHistoricalPrice(
     
     return result;
   } catch (error) {
-    console.error(`[Verification] Error fetching price for ${symbol}:`, error);
+    console.error(`[Verification] Error fetching price for ${normalizedSymbol.original} (${normalizedSymbol.polygon}):`, error);
     return null;
   }
 }
 
 // Verify a single trade leg
 async function verifyLeg(
-  symbol: string,
+  normalizedSymbol: NormalizedSymbol,
   fillPrice: number,
   timestamp: Date,
-  side: 'entry' | 'exit',
-  instrumentType?: string | null
+  side: 'entry' | 'exit'
 ): Promise<LegVerification> {
-  const marketData = await getHistoricalPrice(symbol, timestamp, instrumentType);
+  // If symbol is not supported, return unknown status
+  if (!normalizedSymbol.isSupported) {
+    return {
+      side,
+      fill_price: fillPrice,
+      timestamp,
+      market_low: null,
+      market_high: null,
+      market_open: null,
+      market_close: null,
+      deviation: null,
+      status: 'unknown',
+      score: 0.5, // Neutral score when unsupported
+      notes: normalizedSymbol.reason || 'Symbol not supported'
+    };
+  }
+  
+  const marketData = await getHistoricalPrice(normalizedSymbol, timestamp);
   
   if (!marketData) {
     return {
@@ -186,13 +190,13 @@ async function verifyLeg(
       deviation: null,
       status: 'unknown',
       score: 0.5, // Neutral score when data unavailable
-      notes: 'Historical price data not available'
+      notes: `No market data available for ${normalizedSymbol.polygon || normalizedSymbol.original}`
     };
   }
   
   const { low, high, open, close } = marketData;
   const midpoint = (low + high) / 2;
-  const marketType = getMarketType(symbol, instrumentType);
+  const marketType = getMarketTypeFromNormalized(normalizedSymbol);
   const tolerance = getTolerance(fillPrice, marketType);
   
   let status: LegVerification['status'] = 'realistic';
@@ -253,24 +257,25 @@ async function verifyLeg(
 
 // Verify a complete trade (entry + optional exit)
 export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificationResult> {
+  // Normalize the symbol first
+  const normalizedSymbol = normalizeSymbol(trade.symbol, trade.instrument_type);
+  
   // Verify entry leg
   const entryVerification = await verifyLeg(
-    trade.symbol,
+    normalizedSymbol,
     trade.entry_fill_price,
     trade.entry_timestamp,
-    'entry',
-    trade.instrument_type
+    'entry'
   );
   
   // Verify exit leg if exists
   let exitVerification: LegVerification | null = null;
   if (trade.exit_fill_price !== null && trade.exit_timestamp !== null) {
     exitVerification = await verifyLeg(
-      trade.symbol,
+      normalizedSymbol,
       trade.exit_fill_price,
       trade.exit_timestamp,
-      'exit',
-      trade.instrument_type
+      'exit'
     );
   }
   
@@ -295,6 +300,7 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   
   // Trade is verified if all legs are realistic and score >= 0.7
   const verified = 
+    normalizedSymbol.isSupported &&
     !impossible_flag &&
     authenticity_score >= 0.7 &&
     entryVerification.status !== 'unknown' &&
@@ -302,6 +308,9 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   
   // Build verification notes
   const notes: string[] = [];
+  if (!normalizedSymbol.isSupported) {
+    notes.push(`Symbol: ${normalizedSymbol.reason || 'Unsupported'}`);
+  }
   notes.push(`Entry: ${entryVerification.notes}`);
   if (exitVerification) {
     notes.push(`Exit: ${exitVerification.notes}`);
@@ -315,7 +324,12 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
     exit_verification: exitVerification,
     verification_notes: notes.join(' | '),
     suspicious_flag,
-    impossible_flag
+    impossible_flag,
+    // Symbol normalization info
+    original_symbol: trade.symbol,
+    normalized_symbol: normalizedSymbol.polygon,
+    asset_type: normalizedSymbol.assetType,
+    unsupported_reason: normalizedSymbol.isSupported ? undefined : normalizedSymbol.reason
   };
 }
 
