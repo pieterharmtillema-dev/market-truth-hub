@@ -10,6 +10,7 @@ import Groups from "./pages/Groups";
 import Profile from "./pages/Profile";
 import CreatePrediction from "./pages/CreatePrediction";
 import Trades from "./pages/Trades";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/trades" element={<Trades />} />
           <Route path="/create-prediction" element={<CreatePrediction />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
