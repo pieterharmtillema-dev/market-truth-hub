@@ -1,12 +1,12 @@
-import { Home, TrendingUp, Trophy, Users, User } from "lucide-react";
+import { Home, TrendingUp, Trophy, LineChart, User } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Feed", path: "/" },
   { icon: TrendingUp, label: "Markets", path: "/markets" },
+  { icon: LineChart, label: "Trades", path: "/trades" },
   { icon: Trophy, label: "Leaders", path: "/leaderboard" },
-  { icon: Users, label: "Groups", path: "/groups" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
