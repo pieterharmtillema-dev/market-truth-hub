@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      past_trades: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          exit_price: number | null
+          fill_price: number | null
+          id: string
+          platform: string | null
+          quantity: number | null
+          side: string
+          symbol: string
+          timestamp: string
+          updated_at: string
+          user_id: string
+          verification_score: number | null
+          verified_status: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          exit_price?: number | null
+          fill_price?: number | null
+          id?: string
+          platform?: string | null
+          quantity?: number | null
+          side: string
+          symbol: string
+          timestamp: string
+          updated_at?: string
+          user_id: string
+          verification_score?: number | null
+          verified_status?: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          exit_price?: number | null
+          fill_price?: number | null
+          id?: string
+          platform?: string | null
+          quantity?: number | null
+          side?: string
+          symbol?: string
+          timestamp?: string
+          updated_at?: string
+          user_id?: string
+          verification_score?: number | null
+          verified_status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
