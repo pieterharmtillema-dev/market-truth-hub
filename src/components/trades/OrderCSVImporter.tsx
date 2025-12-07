@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck, AlertTriangle, ChevronDown, ChevronUp, XCircle, HelpCircle, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck, AlertTriangle, ChevronDown, ChevronUp, XCircle, HelpCircle, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -76,27 +76,54 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
 
   // State for unverified trades collapsible, filter, and expanded view
   const [showUnverified, setShowUnverified] = useState(false);
-  const [unverifiedFilter, setUnverifiedFilter] = useState<'all' | 'impossible' | 'suspicious' | 'unknown' | 'lowscore'>('all');
+  const [unverifiedFilter, setUnverifiedFilter] = useState<'all' | 'impossible' | 'suspicious' | 'unknown' | 'lowscore' | 'old'>('all');
   const [expandedList, setExpandedList] = useState(false);
 
-  // Get only verified trades for import
+  // 7-day cutoff date
+  const sevenDaysAgo = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
+
+  // Check if trade is within last 7 days
+  const isWithinSevenDays = useCallback((trade: { entryTime: Date }) => {
+    return trade.entryTime >= sevenDaysAgo;
+  }, [sevenDaysAgo]);
+
+  // Get only verified trades for import (must be within 7 days)
   const getVerifiedTrades = useCallback(() => {
     if (!analysis || !verificationResults.size) return [];
     
-    return analysis.matchedTrades.filter((_, idx) => {
+    return analysis.matchedTrades.filter((trade, idx) => {
       const result = verificationResults.get(`temp-${idx}`);
-      return result?.verified === true;
+      return result?.verified === true && isWithinSevenDays(trade);
     });
-  }, [analysis, verificationResults]);
+  }, [analysis, verificationResults, isWithinSevenDays]);
 
-  // Get unverified trades with their verification results
-  const getUnverifiedTradesWithResults = useCallback((): Array<{ trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' }> => {
+  // Count trades older than 7 days
+  const oldTradesCount = useMemo(() => {
+    if (!analysis) return 0;
+    return analysis.matchedTrades.filter(trade => !isWithinSevenDays(trade)).length;
+  }, [analysis, isWithinSevenDays]);
+
+  // Get unverified trades with their verification results (including old trades)
+  const getUnverifiedTradesWithResults = useCallback((): Array<{ trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' | 'old' }> => {
     if (!analysis || !verificationResults.size) return [];
     
     return analysis.matchedTrades
       .map((trade, idx) => {
         const result = verificationResults.get(`temp-${idx}`);
-        if (!result || result.verified) return null;
+        if (!result) return null;
+        
+        // Check if trade is too old first
+        if (!isWithinSevenDays(trade)) {
+          return { trade, result, index: idx, category: 'old' as const };
+        }
+        
+        // Skip verified trades
+        if (result.verified) return null;
         
         // Categorize the trade
         let category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore';
@@ -112,10 +139,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
         
         return { trade, result, index: idx, category };
       })
-      .filter((item): item is { trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' } => 
+      .filter((item): item is { trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number; category: 'impossible' | 'suspicious' | 'unknown' | 'lowscore' | 'old' } => 
         item !== null
       );
-  }, [analysis, verificationResults]);
+  }, [analysis, verificationResults, isWithinSevenDays]);
 
   const verifiedTradeCount = getVerifiedTrades().length;
   const unverifiedTrades = getUnverifiedTradesWithResults();
@@ -126,6 +153,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
   const suspiciousCount = unverifiedTrades.filter(t => t.category === 'suspicious').length;
   const unknownCount = unverifiedTrades.filter(t => t.category === 'unknown').length;
   const lowScoreCount = unverifiedTrades.filter(t => t.category === 'lowscore').length;
+  const oldCount = unverifiedTrades.filter(t => t.category === 'old').length;
   
   // Filtered trades based on selected tab
   const filteredUnverifiedTrades = unverifiedFilter === 'all' 
@@ -520,6 +548,17 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                         Low Score ({lowScoreCount})
                       </Button>
                     )}
+                    {oldCount > 0 && (
+                      <Button
+                        variant={unverifiedFilter === 'old' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => { e.stopPropagation(); setUnverifiedFilter('old'); }}
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        Too Old ({oldCount})
+                      </Button>
+                    )}
                   </div>
                   
                   <div className={expandedList ? "" : "max-h-[250px] overflow-y-auto"}>
@@ -543,6 +582,8 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                                     <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
                                   ) : category === 'unknown' ? (
                                     <HelpCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  ) : category === 'old' ? (
+                                    <Clock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                   ) : (
                                     <AlertTriangle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
                                   )}
@@ -558,9 +599,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                                     category === 'impossible' ? 'bg-destructive/20 text-destructive' :
                                     category === 'suspicious' ? 'bg-yellow-500/20 text-yellow-600' :
                                     category === 'unknown' ? 'bg-muted text-muted-foreground' :
+                                    category === 'old' ? 'bg-amber-500/20 text-amber-600' :
                                     'bg-orange-500/20 text-orange-600'
                                   }`}>
-                                    {category === 'lowscore' ? 'LOW SCORE' : category.toUpperCase()}
+                                    {category === 'lowscore' ? 'LOW SCORE' : category === 'old' ? 'TOO OLD' : category.toUpperCase()}
                                   </span>
                                 </div>
                                 <div className="text-muted-foreground space-y-0.5">
@@ -583,17 +625,19 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                             </div>
                             {/* Failure reason */}
                             <div className="mt-2 pt-2 border-t border-border/30">
-                              <p className="text-destructive/90">
+                              <p className={category === 'old' ? 'text-amber-600' : 'text-destructive/90'}>
                                 <strong>Reason:</strong>{' '}
-                                {result.unsupported_reason || 
-                                 (category === 'impossible'
-                                   ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
-                                   : category === 'suspicious'
-                                     ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
-                                     : category === 'unknown'
-                                       ? 'No market data available from any provider'
-                                       : `Score too low: ${(result.authenticity_score * 100).toFixed(0)}% (min 70%)`
-                                 )}
+                                {category === 'old'
+                                  ? 'Trade is older than 7 days (only recent trades can be imported)'
+                                  : result.unsupported_reason || 
+                                   (category === 'impossible'
+                                     ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
+                                     : category === 'suspicious'
+                                       ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
+                                       : category === 'unknown'
+                                         ? 'No market data available from any provider'
+                                         : `Score too low: ${(result.authenticity_score * 100).toFixed(0)}% (min 70%)`
+                                   )}
                               </p>
                               {result.entry_verification.market_low !== null && (
                                 <p className="text-muted-foreground/70 mt-1">
@@ -730,9 +774,15 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
             </Button>
           </div>
 
-          <div className="text-xs text-muted-foreground text-center mt-4 max-w-md">
-            <p className="font-medium mb-1">Supported fields:</p>
-            <p>Symbol, Side (Buy/Sell), Qty, Fill Price, Placing Time, Commission, Leverage, Margin</p>
+          <div className="text-xs text-muted-foreground text-center mt-4 max-w-md space-y-2">
+            <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
+              <Clock className="h-3.5 w-3.5" />
+              <p className="font-medium">Only trades from the last 7 days are accepted</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1">Supported fields:</p>
+              <p>Symbol, Side (Buy/Sell), Qty, Fill Price, Placing Time, Commission, Leverage, Margin</p>
+            </div>
           </div>
         </div>
       </CardContent>
