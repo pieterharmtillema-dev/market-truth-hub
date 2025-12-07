@@ -97,12 +97,18 @@ export interface TradeAnalysisResult {
 }
 
 // Field aliases for auto-detection
+// CRITICAL: Fill Price is the ONLY price used for P/L calculation
+// Limit Price and Stop Price are OPTIONAL metadata and do NOT affect trade validity
 // Note: 'type' is NOT included in 'side' aliases to avoid confusion with order type (Market/Limit/Stop)
 const ORDER_FIELD_ALIASES: Record<string, string[]> = {
   symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market', 'name', 'security'],
   side: ['side', 'direction', 'action', 'order_side', 'orderside', 'buy_sell', 'buysell', 'b/s', 'trade_side', 'tradeside'],
   quantity: ['quantity', 'qty', 'size', 'positionsize', 'position_size', 'contracts', 'amount', 'volume', 'lots', 'units'],
-  fill_price: ['fill_price', 'fillprice', 'filled_price', 'price', 'execution_price', 'exec_price', 'avg_price', 'avgprice', 'entry_price', 'entryprice', 'fill'],
+  // Fill Price = execution price - THIS is required for trade validity and P/L
+  fill_price: ['fill_price', 'fillprice', 'fill price', 'filled_price', 'filledprice', 'filled price', 'execution_price', 'exec_price', 'executed_price', 'avg_price', 'avgprice', 'average_price', 'avg fill', 'avgfill', 'fill', 'price'],
+  // Limit Price and Stop Price are OPTIONAL - null values are acceptable
+  limit_price: ['limit_price', 'limitprice', 'limit price', 'limit'],
+  stop_price: ['stop_price', 'stopprice', 'stop price', 'stop', 'stop_loss', 'stoploss'],
   placing_time: ['placing_time', 'placingtime', 'placing time', 'entry_time', 'entrytime', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate', 'created', 'created_at', 'order_time', 'ordertime', 'open_date', 'opendate', 'entry_date', 'entrydate', 'trade_time', 'tradetime'],
   closing_time: ['closing_time', 'closingtime', 'closing time', 'exit_time', 'exittime', 'close_time', 'closetime', 'closed', 'closed_at', 'fill_time', 'filltime', 'close_date', 'closedate', 'exit_date', 'exitdate'],
   commission: ['commission', 'fees', 'fee', 'tradecost', 'trade_cost', 'brokerfee', 'broker_fee', 'cost', 'trading_fee', 'comm'],
