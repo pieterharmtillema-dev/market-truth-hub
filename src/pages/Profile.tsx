@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
@@ -26,6 +27,7 @@ const userProfile = {
 };
 
 const Profile = () => {
+  const navigate = useNavigate();
   const styleInfo = tradingStyleLabels[userProfile.traderType.style];
 
   return (
@@ -139,9 +141,9 @@ const Profile = () => {
           <TabsContent value="journal" className="mt-4">
             <Card variant="glass" className="p-8 text-center">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-sm text-muted-foreground">Your trade journal entries will appear here</p>
-              <Button variant="outline" className="mt-4">
-                Start Journaling
+              <p className="text-sm text-muted-foreground">View and manage your trading journal</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate('/journal')}>
+                Open Trading Journal
               </Button>
             </Card>
           </TabsContent>

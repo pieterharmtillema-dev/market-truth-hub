@@ -14,12 +14,12 @@ export default function TradeJournal() {
   };
 
   return (
-    <AppLayout title="Trade Journal">
+    <AppLayout title="Trading Journal">
       <div className="px-4 py-4 space-y-4 pb-24">
         {/* Private indicator */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
           <Lock className="h-4 w-4" />
-          <span>Your personal trade journal - only visible to you</span>
+          <span>Your personal trading journal - only visible to you</span>
         </div>
 
         {/* Tabs */}
