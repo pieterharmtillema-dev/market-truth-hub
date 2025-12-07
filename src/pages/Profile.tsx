@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
@@ -7,9 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const userProfile = {
   name: "Alex Chen",
@@ -26,10 +30,51 @@ const userProfile = {
   rank: 47,
 };
 
+interface Trade {
+  id: string;
+  asset: string;
+  direction: string;
+  entry_price: number;
+  exit_price: number | null;
+  profit_loss: number | null;
+  entry_date: string;
+  entry_datetime_utc?: string | null;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const styleInfo = tradingStyleLabels[userProfile.traderType.style];
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [loadingTrades, setLoadingTrades] = useState(true);
 
+  useEffect(() => {
+    const fetchRecentTrades = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoadingTrades(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('trader_trades')
+          .select('id, asset, direction, entry_price, exit_price, profit_loss, entry_date, entry_datetime_utc')
+          .eq('user_id', user.id)
+          .order('entry_date', { ascending: false })
+          .limit(5);
+
+        if (!error && data) {
+          setRecentTrades(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch trades:', err);
+      } finally {
+        setLoadingTrades(false);
+      }
+    };
+
+    fetchRecentTrades();
+  }, []);
   return (
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
@@ -138,14 +183,66 @@ const Profile = () => {
             ))}
           </TabsContent>
 
-          <TabsContent value="journal" className="mt-4">
-            <Card variant="glass" className="p-8 text-center">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-sm text-muted-foreground">View and manage your trading journal</p>
-              <Button variant="outline" className="mt-4" onClick={() => navigate('/journal')}>
-                Open Trading Journal
-              </Button>
-            </Card>
+          <TabsContent value="journal" className="mt-4 space-y-3">
+            {loadingTrades ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : recentTrades.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No trades yet. Import your first trades.</p>
+                <Button variant="outline" className="mt-4" onClick={() => navigate('/journal')}>
+                  Open Trading Journal
+                </Button>
+              </Card>
+            ) : (
+              <>
+                {recentTrades.map((trade) => (
+                  <Card key={trade.id} variant="glass" className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge 
+                          variant={trade.direction === 'long' || trade.direction === 'buy' ? 'default' : 'destructive'} 
+                          className="gap-1"
+                        >
+                          {trade.direction === 'long' || trade.direction === 'buy' ? (
+                            <ArrowUpRight className="h-3 w-3" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3" />
+                          )}
+                          {trade.direction}
+                        </Badge>
+                        <div>
+                          <span className="font-mono font-medium">{trade.asset}</span>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(trade.entry_datetime_utc || trade.entry_date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-medium ${(trade.profit_loss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {(trade.profit_loss || 0) >= 0 ? '+' : ''}${(trade.profit_loss || 0).toFixed(2)}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          ${trade.entry_price.toLocaleString()} → {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2" 
+                  onClick={() => navigate('/journal')}
+                >
+                  View All Trades
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="groups" className="mt-4">
