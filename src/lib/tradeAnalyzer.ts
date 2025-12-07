@@ -206,10 +206,53 @@ function parseOrderDateTime(value: string): Date | null {
   return null;
 }
 
-// Parse numeric value
+// Parse numeric value with robust handling for various formats
 function parseOrderNumeric(value: string | undefined): number | null {
   if (!value || value.trim() === '') return null;
-  const cleaned = value.replace(/[$€£¥,\s]/g, '').trim();
+  
+  let cleaned = value.trim();
+  
+  // Remove currency symbols and spaces
+  cleaned = cleaned.replace(/[$€£¥\s]/g, '');
+  
+  // Handle European format: 1.234,56 -> 1234.56
+  // If there's a comma and dot, determine which is the decimal separator
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+  
+  if (hasComma && hasDot) {
+    // Both present - the last one is the decimal separator
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+    
+    if (lastComma > lastDot) {
+      // European: 1.234,56 -> 1234.56
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+      // US: 1,234.56 -> 1234.56
+      cleaned = cleaned.replace(/,/g, '');
+    }
+  } else if (hasComma && !hasDot) {
+    // Only comma - could be European decimal or US thousands
+    // Check if comma appears in a decimal position (1-2 digits after)
+    const parts = cleaned.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      // Likely European decimal: 1234,56 -> 1234.56
+      cleaned = cleaned.replace(',', '.');
+    } else if (parts.length === 2 && parts[1].length > 2) {
+      // Likely European decimal with more precision: 1,16512 -> 1.16512
+      cleaned = cleaned.replace(',', '.');
+    } else {
+      // Multiple commas = thousands separators
+      cleaned = cleaned.replace(/,/g, '');
+    }
+  } else if (!hasComma && hasDot) {
+    // Only dot - likely decimal (keep as is)
+  }
+  
+  // Remove any remaining non-numeric characters except dot and minus
+  cleaned = cleaned.replace(/[^\d.\-]/g, '');
+  
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
