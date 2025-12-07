@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import CreatePrediction from "./pages/CreatePrediction";
 import Trades from "./pages/Trades";
 import TradeJournal from "./pages/TradeJournal";
+import PastTrades from "./pages/PastTrades";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/trades" element={<Trades />} />
           <Route path="/journal" element={<TradeJournal />} />
+          <Route path="/past-trades" element={<PastTrades />} />
           <Route path="/create-prediction" element={<CreatePrediction />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
