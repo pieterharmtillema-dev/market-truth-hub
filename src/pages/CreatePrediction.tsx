@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { CSVUpload } from "@/components/trades/CSVUpload";
+import { CSVImporter } from "@/components/trades/CSVImporter";
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
@@ -256,10 +256,10 @@ const CreatePrediction = () => {
           </TabsContent>
 
           <TabsContent value="import" className="mt-4">
-            <CSVUpload onUploadComplete={() => {
+            <CSVImporter onImportComplete={() => {
               toast({
                 title: "Trades imported!",
-                description: "View your trades in the Trades page",
+                description: "View your trades in the Trade History",
               });
             }} />
           </TabsContent>
