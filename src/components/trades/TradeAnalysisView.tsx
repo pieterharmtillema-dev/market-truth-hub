@@ -100,25 +100,35 @@ export function TradeAnalysisView({ analysis }: TradeAnalysisViewProps) {
             <div className="mt-4 p-3 bg-yellow-500/10 rounded-lg space-y-2">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-600">Processing Notes</p>
+                <div className="text-sm flex-1">
+                  <p className="font-medium text-yellow-600 dark:text-yellow-400">Processing Notes</p>
                   <p className="text-muted-foreground">
                     {summary.unmatchedOrders > 0 && `${summary.unmatchedOrders} unmatched orders (no matching buy/sell pair). `}
                     {summary.skippedRows > 0 && `${summary.skippedRows} rows skipped.`}
                   </p>
                 </div>
               </div>
-              {parseResult.skippedRows.length > 0 && (
-                <div className="text-xs text-muted-foreground pl-6 max-h-24 overflow-y-auto">
-                  <p className="font-medium mb-1">Skipped rows:</p>
-                  {parseResult.skippedRows.slice(0, 10).map((skip, i) => (
-                    <p key={i}>Row {skip.rowNumber}: {skip.reason}</p>
-                  ))}
-                  {parseResult.skippedRows.length > 10 && (
-                    <p>...and {parseResult.skippedRows.length - 10} more</p>
-                  )}
-                </div>
-              )}
+              {parseResult.skippedRows.length > 0 && (() => {
+                // Group skipped rows by reason
+                const reasonCounts: Record<string, number> = {};
+                parseResult.skippedRows.forEach(skip => {
+                  const reason = skip.reason.replace(/:.+$/, '').trim(); // Clean reason for grouping
+                  reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+                });
+                
+                return (
+                  <div className="text-xs text-muted-foreground pl-6">
+                    <p className="font-medium mb-1">Skip reasons:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(reasonCounts).map(([reason, count]) => (
+                        <span key={reason} className="bg-muted/50 px-2 py-0.5 rounded">
+                          {reason}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

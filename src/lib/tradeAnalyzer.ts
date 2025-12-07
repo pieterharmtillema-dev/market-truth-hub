@@ -96,37 +96,38 @@ export interface TradeAnalysisResult {
   parseResult: OrderParseResult;
 }
 
-// Field aliases for auto-detection
+// Field aliases for auto-detection - case-insensitive fuzzy matching
 // CRITICAL: Fill Price is the ONLY price used for P/L calculation
 // Limit Price and Stop Price are OPTIONAL metadata and do NOT affect trade validity
 // Note: 'type' is NOT included in 'side' aliases to avoid confusion with order type (Market/Limit/Stop)
 const ORDER_FIELD_ALIASES: Record<string, string[]> = {
-  symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market', 'name', 'security'],
-  side: ['side', 'direction', 'action', 'order_side', 'orderside', 'buy_sell', 'buysell', 'b/s', 'trade_side', 'tradeside'],
-  quantity: ['quantity', 'qty', 'size', 'positionsize', 'position_size', 'contracts', 'amount', 'volume', 'lots', 'units'],
+  symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market', 'name', 'security', 'product', 'currency_pair', 'currencypair', 'trading_pair', 'tradingpair', 'stock', 'coin', 'token'],
+  side: ['side', 'direction', 'action', 'order_side', 'orderside', 'buy_sell', 'buysell', 'b/s', 'trade_side', 'tradeside', 'position', 'order_action', 'orderaction', 'trade_direction', 'tradedirection'],
+  quantity: ['quantity', 'qty', 'size', 'positionsize', 'position_size', 'contracts', 'amount', 'volume', 'lots', 'units', 'shares', 'order_qty', 'orderqty', 'trade_size', 'tradesize', 'filled_qty', 'filledqty', 'executed_qty', 'executedqty'],
   // Fill Price = execution price - THIS is required for trade validity and P/L
-  fill_price: ['fill_price', 'fillprice', 'fill price', 'filled_price', 'filledprice', 'filled price', 'execution_price', 'exec_price', 'executed_price', 'avg_price', 'avgprice', 'average_price', 'avg fill', 'avgfill', 'fill', 'price'],
+  fill_price: ['fill_price', 'fillprice', 'fill price', 'filled_price', 'filledprice', 'filled price', 'execution_price', 'exec_price', 'executed_price', 'avg_price', 'avgprice', 'average_price', 'avg fill', 'avgfill', 'fill', 'price', 'trade_price', 'tradeprice', 'deal_price', 'dealprice', 'executed_at', 'fill_rate', 'fillrate', 'rate'],
   // Limit Price and Stop Price are OPTIONAL - null values are acceptable
-  limit_price: ['limit_price', 'limitprice', 'limit price', 'limit'],
-  stop_price: ['stop_price', 'stopprice', 'stop price', 'stop', 'stop_loss', 'stoploss'],
-  placing_time: ['placing_time', 'placingtime', 'placing time', 'entry_time', 'entrytime', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate', 'created', 'created_at', 'order_time', 'ordertime', 'open_date', 'opendate', 'entry_date', 'entrydate', 'trade_time', 'tradetime'],
+  limit_price: ['limit_price', 'limitprice', 'limit price', 'limit', 'order_price', 'orderprice'],
+  stop_price: ['stop_price', 'stopprice', 'stop price', 'stop', 'stop_loss', 'stoploss', 'sl', 'sl_price', 'slprice'],
+  placing_time: ['placing_time', 'placingtime', 'placing time', 'entry_time', 'entrytime', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate', 'created', 'created_at', 'order_time', 'ordertime', 'open_date', 'opendate', 'entry_date', 'entrydate', 'trade_time', 'tradetime', 'execution_time', 'executiontime', 'executed_at', 'filled_at', 'filledat', 'order_date', 'orderdate', 'transaction_time', 'transactiontime', 'deal_time', 'dealtime'],
   closing_time: ['closing_time', 'closingtime', 'closing time', 'exit_time', 'exittime', 'close_time', 'closetime', 'closed', 'closed_at', 'fill_time', 'filltime', 'close_date', 'closedate', 'exit_date', 'exitdate'],
-  commission: ['commission', 'fees', 'fee', 'tradecost', 'trade_cost', 'brokerfee', 'broker_fee', 'cost', 'trading_fee', 'comm'],
-  leverage: ['leverage', 'lev', 'multiplier'],
-  margin: ['margin', 'margin_used', 'marginused', 'collateral'],
-  order_id: ['order_id', 'orderid', 'id', 'trade_id', 'tradeid', 'ticket', 'deal_id', 'dealid'],
+  commission: ['commission', 'fees', 'fee', 'tradecost', 'trade_cost', 'brokerfee', 'broker_fee', 'cost', 'trading_fee', 'comm', 'transaction_fee', 'transactionfee', 'trading_cost', 'tradingcost', 'charges', 'charge', 'spread_cost', 'spreadcost'],
+  leverage: ['leverage', 'lev', 'multiplier', 'margin_multiplier', 'marginmultiplier', 'lever', 'x'],
+  margin: ['margin', 'margin_used', 'marginused', 'collateral', 'margin_required', 'marginrequired', 'initial_margin', 'initialmargin', 'used_margin', 'usedmargin'],
+  order_id: ['order_id', 'orderid', 'id', 'trade_id', 'tradeid', 'ticket', 'deal_id', 'dealid', 'transaction_id', 'transactionid', 'position_id', 'positionid', 'order_number', 'ordernumber', 'reference', 'ref', 'ticket_id', 'ticketid'],
   order_type: ['order_type', 'ordertype', 'exec_type', 'exectype', 'type'],
 };
 
-// Normalize field name for matching
+// Normalize field name for matching - removes all separators and converts to lowercase
 function normalizeFieldName(name: string): string {
-  return name.toLowerCase().replace(/[\s\-_./]/g, '').trim();
+  return name.toLowerCase().replace(/[\s\-_./()#]/g, '').trim();
 }
 
-// Match a header to a known field
+// Match a header to a known field using exact and fuzzy matching
 function matchOrderField(header: string): string | null {
   const normalized = normalizeFieldName(header);
   
+  // Exact match first
   for (const [field, aliases] of Object.entries(ORDER_FIELD_ALIASES)) {
     for (const alias of aliases) {
       if (normalizeFieldName(alias) === normalized) {
@@ -135,7 +136,7 @@ function matchOrderField(header: string): string | null {
     }
   }
   
-  // Fuzzy match
+  // Fuzzy match - check if header contains any alias or vice versa
   for (const [field, aliases] of Object.entries(ORDER_FIELD_ALIASES)) {
     for (const alias of aliases) {
       const normalizedAlias = normalizeFieldName(alias);
@@ -148,21 +149,44 @@ function matchOrderField(header: string): string | null {
   return null;
 }
 
-// Normalize side value
+/**
+ * Normalize side/direction value
+ * Handles various representations of buy/sell from different platforms
+ */
 function normalizeSide(value: string): 'buy' | 'sell' | null {
   const normalized = value.toLowerCase().trim();
   
-  if (['buy', 'b', 'long', 'l', 'bid'].includes(normalized)) return 'buy';
-  if (['sell', 's', 'short', 'sh', 'ask', 'close'].includes(normalized)) return 'sell';
+  // Buy variations
+  if (['buy', 'b', 'long', 'l', 'bid', 'bought', 'open long', 'openlong', 'go long', 'golong', '+', 'entry', 'open'].includes(normalized)) {
+    return 'buy';
+  }
+  
+  // Sell variations
+  if (['sell', 's', 'short', 'sh', 'ask', 'sold', 'close', 'exit', 'open short', 'openshort', 'go short', 'goshort', '-', 'close long', 'closelong', 'close short', 'closeshort', 'cover'].includes(normalized)) {
+    return 'sell';
+  }
   
   return null;
 }
 
-// Parse date/time with flexible format detection
+/**
+ * Parse date/time with flexible format detection
+ * Handles many common date formats from trading platforms:
+ * - ISO 8601: 2025-12-05T13:22:05Z, 2025-12-05T13:22:05+00:00
+ * - ISO-like: 2025-12-05 13:22:05
+ * - American: 12/05/2025 13:22, MM/DD/YYYY HH:MM:SS
+ * - European: 05.12.2025 13:22, DD.MM.YYYY HH:MM:SS
+ * - Date only: 2025-12-05
+ * - Unix timestamps (seconds and milliseconds)
+ * - AM/PM time formats
+ */
 function parseOrderDateTime(value: string): Date | null {
   if (!value || value.trim() === '') return null;
   
-  const trimmed = value.trim();
+  let trimmed = value.trim();
+  
+  // Handle common timezone abbreviations (remove them, treat as UTC)
+  trimmed = trimmed.replace(/\s*(UTC|GMT|EST|EDT|PST|PDT|CST|CDT|MST|MDT)$/i, '');
   
   // Unix timestamp
   const numValue = Number(trimmed);
@@ -176,58 +200,112 @@ function parseOrderDateTime(value: string): Date | null {
   let date = new Date(trimmed);
   if (!isNaN(date.getTime())) return date;
   
+  // Extract AM/PM if present
+  let isPM = false;
+  let isAM = false;
+  if (/\s*[Pp][Mm]\s*$/.test(trimmed)) {
+    isPM = true;
+    trimmed = trimmed.replace(/\s*[Pp][Mm]\s*$/, '');
+  } else if (/\s*[Aa][Mm]\s*$/.test(trimmed)) {
+    isAM = true;
+    trimmed = trimmed.replace(/\s*[Aa][Mm]\s*$/, '');
+  }
+  
   // Try common formats manually
-  // Format: DD.MM.YYYY HH:MM:SS or DD/MM/YYYY HH:MM:SS
+  // Format: DD.MM.YYYY HH:MM:SS or DD/MM/YYYY HH:MM:SS (European - when first part is > 12)
   const europeanMatch = trimmed.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (europeanMatch) {
-    const [, day, month, year, hour = '0', minute = '0', second = '0'] = europeanMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    let [, first, second, year, hour = '0', minute = '0', second2 = '0'] = europeanMatch;
+    let parsedHour = parseInt(hour);
+    if (isPM && parsedHour < 12) parsedHour += 12;
+    if (isAM && parsedHour === 12) parsedHour = 0;
+    
+    // Determine if DD/MM or MM/DD based on values
+    const firstNum = parseInt(first);
+    const secondNum = parseInt(second);
+    
+    if (firstNum > 12) {
+      // Must be DD/MM (day > 12)
+      date = new Date(parseInt(year), secondNum - 1, firstNum, parsedHour, parseInt(minute), parseInt(second2));
+    } else if (secondNum > 12) {
+      // Must be MM/DD (month slot has day > 12)
+      date = new Date(parseInt(year), firstNum - 1, secondNum, parsedHour, parseInt(minute), parseInt(second2));
+    } else {
+      // Ambiguous - assume MM/DD (American default)
+      date = new Date(parseInt(year), firstNum - 1, secondNum, parsedHour, parseInt(minute), parseInt(second2));
+    }
     if (!isNaN(date.getTime())) return date;
   }
   
-  // Format: MM/DD/YYYY HH:MM:SS (American)
-  const americanMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (americanMatch) {
-    const [, month, day, year, hour = '0', minute = '0', second = '0'] = americanMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
-    if (!isNaN(date.getTime())) return date;
-  }
-  
-  // Format: YYYY-MM-DD HH:MM:SS
-  const isoLikeMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  // Format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD
+  const isoLikeMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (isoLikeMatch) {
-    const [, year, month, day, hour = '0', minute = '0', second = '0'] = isoLikeMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+    let [, year, month, day, hour = '0', minute = '0', second = '0'] = isoLikeMatch;
+    let parsedHour = parseInt(hour);
+    if (isPM && parsedHour < 12) parsedHour += 12;
+    if (isAM && parsedHour === 12) parsedHour = 0;
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parsedHour, parseInt(minute), parseInt(second));
     if (!isNaN(date.getTime())) return date;
   }
   
-  // Format: YYYY/MM/DD HH:MM:SS
-  const slashIsoMatch = trimmed.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (slashIsoMatch) {
-    const [, year, month, day, hour = '0', minute = '0', second = '0'] = slashIsoMatch;
-    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
-    if (!isNaN(date.getTime())) return date;
+  // Format: DD-MMM-YYYY or DD-MMM-YY (e.g., 05-Dec-2025)
+  const monthNames: Record<string, number> = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  const namedMonthMatch = trimmed.match(/^(\d{1,2})[-\s]([a-zA-Z]{3})[-\s](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (namedMonthMatch) {
+    let [, day, monthStr, yearStr, hour = '0', minute = '0', second = '0'] = namedMonthMatch;
+    const monthNum = monthNames[monthStr.toLowerCase()];
+    if (monthNum !== undefined) {
+      let year = parseInt(yearStr);
+      if (year < 100) year += 2000;
+      let parsedHour = parseInt(hour);
+      if (isPM && parsedHour < 12) parsedHour += 12;
+      if (isAM && parsedHour === 12) parsedHour = 0;
+      date = new Date(year, monthNum, parseInt(day), parsedHour, parseInt(minute), parseInt(second));
+      if (!isNaN(date.getTime())) return date;
+    }
   }
   
   return null;
 }
 
-// Parse numeric value with robust handling for various formats
+/**
+ * Parse numeric value with robust handling for various messy formats
+ * Handles:
+ * - Currency symbols: $, €, £, ¥, USD, EUR, etc.
+ * - Thousands separators: 1,234.56 or 1.234,56
+ * - Percentage signs: 50%
+ * - NaN strings
+ * - Empty or whitespace values
+ */
 function parseOrderNumeric(value: string | undefined): number | null {
   if (!value || value.trim() === '') return null;
   
   let cleaned = value.trim();
   
-  // Remove currency symbols and spaces
-  cleaned = cleaned.replace(/[$€£¥\s]/g, '');
+  // Handle NaN explicitly
+  if (cleaned.toLowerCase() === 'nan' || cleaned === '-' || cleaned === '--') return null;
+  
+  // Remove currency symbols and codes
+  cleaned = cleaned.replace(/[$€£¥]/g, '');
+  cleaned = cleaned.replace(/\b(USD|EUR|GBP|JPY|CHF|AUD|CAD|NZD|HKD|SGD|CNY|KRW|INR|BRL|MXN|ZAR)\b/gi, '');
+  
+  // Remove percentage signs
+  cleaned = cleaned.replace(/%/g, '');
+  
+  // Remove extra whitespace
+  cleaned = cleaned.replace(/\s+/g, '').trim();
+  
+  // Handle empty after cleaning
+  if (cleaned === '' || cleaned === '-') return null;
   
   // Handle European format: 1.234,56 -> 1234.56
-  // If there's a comma and dot, determine which is the decimal separator
   const hasComma = cleaned.includes(',');
   const hasDot = cleaned.includes('.');
   
   if (hasComma && hasDot) {
-    // Both present - the last one is the decimal separator
     const lastComma = cleaned.lastIndexOf(',');
     const lastDot = cleaned.lastIndexOf('.');
     
@@ -239,28 +317,56 @@ function parseOrderNumeric(value: string | undefined): number | null {
       cleaned = cleaned.replace(/,/g, '');
     }
   } else if (hasComma && !hasDot) {
-    // Only comma - could be European decimal or US thousands
-    // Check if comma appears in a decimal position (1-2 digits after)
     const parts = cleaned.split(',');
-    if (parts.length === 2 && parts[1].length <= 2) {
-      // Likely European decimal: 1234,56 -> 1234.56
-      cleaned = cleaned.replace(',', '.');
-    } else if (parts.length === 2 && parts[1].length > 2) {
-      // Likely European decimal with more precision: 1,16512 -> 1.16512
+    if (parts.length === 2 && parts[1].length <= 6) {
+      // Likely decimal: 1234,56 or 1,16512 -> 1234.56 or 1.16512
       cleaned = cleaned.replace(',', '.');
     } else {
       // Multiple commas = thousands separators
       cleaned = cleaned.replace(/,/g, '');
     }
-  } else if (!hasComma && hasDot) {
-    // Only dot - likely decimal (keep as is)
   }
   
   // Remove any remaining non-numeric characters except dot and minus
   cleaned = cleaned.replace(/[^\d.\-]/g, '');
   
+  // Handle multiple decimal points (invalid)
+  const dotCount = (cleaned.match(/\./g) || []).length;
+  if (dotCount > 1) return null;
+  
   const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
+  return isNaN(num) || !isFinite(num) ? null : num;
+}
+
+/**
+ * Parse leverage value with robust handling
+ * Handles: "50:1", "100x", "5", "1:50", "50X", etc.
+ */
+function parseLeverage(value: string | undefined): number | null {
+  if (!value || value.trim() === '') return null;
+  
+  const cleaned = value.trim().toLowerCase();
+  
+  // Handle "50:1" format
+  const ratioMatch = cleaned.match(/^(\d+(?:\.\d+)?)\s*:\s*1$/);
+  if (ratioMatch) {
+    return parseFloat(ratioMatch[1]);
+  }
+  
+  // Handle "1:50" format (inverse)
+  const inverseRatioMatch = cleaned.match(/^1\s*:\s*(\d+(?:\.\d+)?)$/);
+  if (inverseRatioMatch) {
+    return parseFloat(inverseRatioMatch[1]);
+  }
+  
+  // Handle "50x" or "100X" format
+  const xMatch = cleaned.match(/^(\d+(?:\.\d+)?)\s*x$/);
+  if (xMatch) {
+    return parseFloat(xMatch[1]);
+  }
+  
+  // Plain number
+  return parseOrderNumeric(value);
 }
 
 // Parse CSV line handling quotes
@@ -381,11 +487,11 @@ export function parseOrdersCSV(text: string): OrderParseResult {
       continue;
     }
     
-    // Parse optional fields
+    // Parse optional fields - never reject rows for missing optional fields
     const closingTimeStr = getValue(raw, 'closing_time');
     const closingTime = closingTimeStr ? parseOrderDateTime(closingTimeStr) : undefined;
     const commission = parseOrderNumeric(getValue(raw, 'commission')) ?? undefined;
-    const leverage = parseOrderNumeric(getValue(raw, 'leverage')) ?? undefined;
+    const leverage = parseLeverage(getValue(raw, 'leverage')) ?? undefined;
     const margin = parseOrderNumeric(getValue(raw, 'margin')) ?? undefined;
     const orderId = getValue(raw, 'order_id')?.trim() || undefined;
     const orderType = getValue(raw, 'order_type')?.trim() || undefined;
