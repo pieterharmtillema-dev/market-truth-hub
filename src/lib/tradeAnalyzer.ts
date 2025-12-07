@@ -319,13 +319,27 @@ export function parseOrdersCSV(text: string): OrderParseResult {
   const skippedRows: { rowNumber: number; reason: string }[] = [];
   
   for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === '') continue;
+    const line = lines[i].trim();
     
-    const values = parseCSVLine(lines[i]);
+    // Skip completely blank lines
+    if (line === '') continue;
+    
+    const values = parseCSVLine(line);
     const raw: Record<string, string> = {};
     headers.forEach((header, index) => {
       raw[header] = values[index] || '';
     });
+    
+    // Check if row has any meaningful data (at least one non-empty value)
+    const hasAnyData = values.some(v => v.trim() !== '');
+    if (!hasAnyData) continue;
+    
+    // Check if row has any numeric values - if not, silently skip (likely a header repeat or notes row)
+    const hasNumericValue = values.some(v => {
+      const cleaned = v.replace(/[$€£¥,.\s\-]/g, '');
+      return /\d/.test(cleaned);
+    });
+    if (!hasNumericValue) continue;
     
     // Parse required fields
     const symbol = getValue(raw, 'symbol')?.trim().toUpperCase();
@@ -336,7 +350,10 @@ export function parseOrdersCSV(text: string): OrderParseResult {
     const placingTimeStr = getValue(raw, 'placing_time');
     const placingTime = placingTimeStr ? parseOrderDateTime(placingTimeStr) : null;
     
-    // Validate required fields
+    // If all key fields are missing/invalid, silently skip (likely metadata row)
+    if (!symbol && !side && !quantity && !fillPrice) continue;
+    
+    // Validate required fields - only report as errors if row appears to be actual trade data
     if (!symbol) {
       skippedRows.push({ rowNumber: i + 1, reason: 'Missing symbol' });
       continue;
