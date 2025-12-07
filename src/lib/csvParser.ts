@@ -3,8 +3,9 @@ const FIELD_ALIASES: Record<string, string[]> = {
   // Required fields
   symbol: ['symbol', 'instrument', 'asset', 'ticker', 'pair', 'market'],
   side: ['side', 'direction', 'type', 'action', 'order_side', 'orderside', 'tradetype', 'trade_type'],
-  entry_price: ['entry_price', 'entryprice', 'fillprice', 'fill_price', 'limitprice', 'limit_price', 'stopprice', 'stop_price', 'open_price', 'openprice', 'buy_price', 'buyprice'],
-  exit_price: ['exit_price', 'exitprice', 'closeprice', 'close_price', 'sellprice', 'sell_price', 'takeprofitprice', 'take_profit_price', 'tp_price'],
+  entry_price: ['entry_price', 'entryprice', 'open_price', 'openprice', 'buy_price', 'buyprice', 'short_price', 'shortprice'],
+  exit_price: ['exit_price', 'exitprice', 'closeprice', 'close_price', 'sellprice', 'sell_price', 'takeprofitprice', 'take_profit_price', 'tp_price', 'buyback_price', 'cover_price'],
+  fill_price: ['fillprice', 'fill_price', 'filled_price', 'filledprice', 'execution_price', 'exec_price', 'limitprice', 'limit_price', 'stopprice', 'stop_price', 'price'],
   entry_datetime: ['entry_datetime', 'entry_date', 'entrydate', 'entry_time', 'entrytime', 'open_date', 'opendate', 'open_time', 'opentime', 'date', 'datetime', 'timestamp', 'time', 'trade_date', 'tradedate'],
   
   // Optional fields
@@ -149,7 +150,7 @@ export interface ParsedRow {
   symbol: string;
   side: 'buy' | 'sell' | 'long' | 'short';
   entry_price: number;
-  exit_price: number;
+  exit_price?: number; // Optional - trade may still be open
   entry_datetime_utc: string;
   
   // Optional
@@ -333,19 +334,39 @@ function parseRow(
     }
   }
   
-  // Required: Entry price
-  const entryPrice = parseNumeric(getValue('entry_price'));
+  // Get fill price (can be used as entry or exit depending on context)
+  const fillPrice = parseNumeric(getValue('fill_price'));
+  
+  // Entry price: use entry_price, or fill_price if no exit_price exists (opening trade)
+  let entryPrice = parseNumeric(getValue('entry_price'));
+  let exitPrice = parseNumeric(getValue('exit_price'));
+  
+  // Smart price assignment for short positions:
+  // If we have fill_price but no entry_price, and we have an exit_price -> fill_price is the exit
+  // If we have fill_price but no exit_price, and we have an entry_price -> fill_price could be exit
+  // If we have only fill_price -> use as entry_price (opening trade)
+  if (fillPrice !== null && fillPrice > 0) {
+    if (entryPrice === null && exitPrice === null) {
+      // Only fill price - treat as entry (opening trade)
+      entryPrice = fillPrice;
+    } else if (entryPrice !== null && exitPrice === null) {
+      // Have entry, no exit - fill_price is the exit (closing trade)
+      exitPrice = fillPrice;
+    } else if (entryPrice === null && exitPrice !== null) {
+      // Have exit, no entry - fill_price is the entry
+      entryPrice = fillPrice;
+    }
+  }
+  
+  // Validate entry price (required)
   if (entryPrice === null || entryPrice <= 0) {
     errors.push({ field: 'entry_price', message: 'Entry price must be a positive number' });
   } else {
     data.entry_price = entryPrice;
   }
   
-  // Required: Exit price
-  const exitPrice = parseNumeric(getValue('exit_price'));
-  if (exitPrice === null || exitPrice <= 0) {
-    errors.push({ field: 'exit_price', message: 'Exit price must be a positive number' });
-  } else {
+  // Exit price is optional (trade may still be open)
+  if (exitPrice !== null && exitPrice > 0) {
     data.exit_price = exitPrice;
   }
   
@@ -430,5 +451,7 @@ AAPL,long,150.50,155.75,2024-01-15 09:30:00,2024-01-15 15:45:00,100,525.00,9.99,
 BTCUSD,short,45000,44500,2024-01-16T14:00:00Z,2024-01-16T18:30:00Z,0.5,250.00,5.00,46000,43000,Breakout,Binance,Spot,crypto,Resistance rejection
 EURUSD,buy,1.0850,1.0920,01/17/2024 08:15:00,,10000,70.00,2.50,1.0800,1.1000,Trend Follow,OANDA,Demo,forex,ECB decision
 TSLA,sell,250.00,245.00,2024-01-18 10:00:00,2024-01-18 14:30:00,50,250.00,4.99,255.00,240.00,Mean Reversion,Robinhood,Cash,stock,Overbought bounce
-ETHUSD,long,2500,2650,1705680000000,,2,300.00,3.00,2400,2800,DCA,Coinbase,Main,crypto,Weekly DCA entry`;
+ETHUSD,long,2500,2650,1705680000000,,2,300.00,3.00,2400,2800,DCA,Coinbase,Main,crypto,Weekly DCA entry
+NVDA,short,500.00,,2024-01-19 11:00:00,,25,,,510.00,480.00,Swing,Fidelity,IRA,stock,Open short position
+SPY,short,480.00,475.00,2024-01-20 09:35:00,2024-01-20 15:50:00,100,500.00,1.00,485.00,470.00,Day Trade,Interactive Brokers,Margin,stock,Short covered at fill price`;
 }
