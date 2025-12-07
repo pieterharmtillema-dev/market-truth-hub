@@ -72,6 +72,19 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     if (selectedFile) handleFileAnalyze(selectedFile);
   };
 
+  // Get only verified trades for import
+  const getVerifiedTrades = useCallback(() => {
+    if (!analysis || !verificationResults.size) return [];
+    
+    return analysis.matchedTrades.filter((_, idx) => {
+      const result = verificationResults.get(`temp-${idx}`);
+      return result?.verified === true;
+    });
+  }, [analysis, verificationResults]);
+
+  const verifiedTradeCount = getVerifiedTrades().length;
+  const unverifiedTradeCount = analysis ? analysis.matchedTrades.length - verifiedTradeCount : 0;
+
   const handleImport = async () => {
     if (!analysis) return;
 
@@ -85,9 +98,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
         return;
       }
 
-      const trades = analysis.matchedTrades;
+      // Only import verified trades
+      const trades = getVerifiedTrades();
       if (trades.length === 0) {
-        toast({ title: 'No trades to import', description: 'No matched trades found', variant: 'destructive' });
+        toast({ title: 'No verified trades', description: 'No verified trades to import', variant: 'destructive' });
         return;
       }
 
@@ -134,7 +148,7 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
 
       toast({
         title: 'Import Complete',
-        description: `Successfully imported ${imported} trades`,
+        description: `Successfully imported ${imported} verified trades${unverifiedTradeCount > 0 ? ` (${unverifiedTradeCount} unverified skipped)` : ''}`,
       });
 
       setFile(null);
@@ -396,10 +410,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                 </>
               )}
             </Button>
-          ) : verifySummary && verifySummary.average_score >= 0.7 ? (
+          ) : verifySummary && verifiedTradeCount > 0 ? (
             <Button
               onClick={handleImport}
-              disabled={isImporting || analysis.matchedTrades.length === 0}
+              disabled={isImporting || verifiedTradeCount === 0}
               className="flex-1"
             >
               {isImporting ? (
@@ -410,7 +424,10 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
               ) : (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Import {analysis.matchedTrades.length} Trades
+                  Import {verifiedTradeCount} Verified Trade{verifiedTradeCount !== 1 ? 's' : ''}
+                  {unverifiedTradeCount > 0 && (
+                    <span className="ml-1 text-xs opacity-70">({unverifiedTradeCount} skipped)</span>
+                  )}
                 </>
               )}
             </Button>
