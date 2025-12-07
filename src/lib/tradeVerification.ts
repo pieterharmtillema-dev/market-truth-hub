@@ -1,6 +1,9 @@
-// Trade Verification Module - Validates fill prices against Polygon.io historical data
+// Trade Verification Module - Validates fill prices against Polygon.io and Finnhub historical data
 import { getAggregates } from './polygon';
+import { getHistoricalOHLC as getFinnhubOHLC } from './finnhub';
 import { normalizeSymbol, NormalizedSymbol, getPolygonMarketType } from './symbolNormalizer';
+
+export type DataProvider = 'polygon' | 'finnhub' | 'none';
 
 export interface TradeLeg {
   price: number;
@@ -20,6 +23,7 @@ export interface LegVerification {
   status: 'realistic' | 'impossible_low' | 'impossible_high' | 'suspicious_precision' | 'unknown';
   score: number;
   notes: string;
+  provider_used: DataProvider;
 }
 
 export interface TradeVerificationResult {
@@ -36,6 +40,10 @@ export interface TradeVerificationResult {
   normalized_symbol: string | null;
   asset_type: string;
   unsupported_reason?: string;
+  // Provider tracking
+  provider_used: DataProvider;
+  polygon_status: 'success' | 'empty' | 'error' | 'not_attempted';
+  finnhub_status: 'success' | 'empty' | 'error' | 'not_attempted';
 }
 
 export interface VerificationSummary {
@@ -46,6 +54,9 @@ export interface VerificationSummary {
   unknown_trades: number;
   average_score: number;
   verification_rate: number;
+  // Provider breakdown
+  polygon_verified: number;
+  finnhub_verified: number;
 }
 
 export interface TradeToVerify {
@@ -61,13 +72,13 @@ export interface TradeToVerify {
 }
 
 // Cache for historical price data to minimize API calls
-const priceCache = new Map<string, { low: number; high: number; open: number; close: number }>();
+const priceCache = new Map<string, { low: number; high: number; open: number; close: number; provider: DataProvider }>();
 
 // Generate cache key for price data
-function getPriceCacheKey(symbol: string, timestamp: Date): string {
+function getPriceCacheKey(symbol: string, timestamp: Date, provider: string): string {
   const minuteTimestamp = new Date(timestamp);
   minuteTimestamp.setSeconds(0, 0);
-  return `${symbol}-${minuteTimestamp.toISOString()}`;
+  return `${provider}-${symbol}-${minuteTimestamp.toISOString()}`;
 }
 
 // Get market type from normalized symbol
@@ -90,35 +101,32 @@ function getTolerance(price: number, marketType: 'stocks' | 'crypto' | 'forex'):
   }
 }
 
-// Fetch historical price data for a symbol at a specific timestamp
-async function getHistoricalPrice(
+// Fetch historical price data from Polygon
+async function getPolygonPrice(
   normalizedSymbol: NormalizedSymbol,
   timestamp: Date
 ): Promise<{ low: number; high: number; open: number; close: number } | null> {
-  // If symbol is not supported, return null immediately
-  if (!normalizedSymbol.isSupported || !normalizedSymbol.polygon) {
-    console.log(`[Verification] Symbol not supported: ${normalizedSymbol.original} (${normalizedSymbol.reason || 'unknown'})`);
+  if (!normalizedSymbol.polygon) {
     return null;
   }
   
-  const cacheKey = getPriceCacheKey(normalizedSymbol.polygon, timestamp);
+  const cacheKey = getPriceCacheKey(normalizedSymbol.polygon, timestamp, 'polygon');
   
   // Check cache first
-  if (priceCache.has(cacheKey)) {
-    return priceCache.get(cacheKey)!;
+  const cached = priceCache.get(cacheKey);
+  if (cached && cached.provider === 'polygon') {
+    return { low: cached.low, high: cached.high, open: cached.open, close: cached.close };
   }
   
   try {
     const ticker = normalizedSymbol.polygon;
-    
-    // Get the date in YYYY-MM-DD format
     const dateStr = timestamp.toISOString().split('T')[0];
     
     // Fetch minute-level data for the day
     const data = await getAggregates(ticker, 1, 'minute', dateStr, dateStr);
     
     if (!data.results || data.results.length === 0) {
-      console.log(`[Verification] No price data for ${normalizedSymbol.original} (${ticker}) on ${dateStr}`);
+      console.log(`[Polygon] No price data for ${normalizedSymbol.original} (${ticker}) on ${dateStr}`);
       return null;
     }
     
@@ -143,13 +151,88 @@ async function getHistoricalPrice(
     };
     
     // Cache the result
-    priceCache.set(cacheKey, result);
+    priceCache.set(cacheKey, { ...result, provider: 'polygon' });
     
     return result;
   } catch (error) {
-    console.error(`[Verification] Error fetching price for ${normalizedSymbol.original} (${normalizedSymbol.polygon}):`, error);
+    console.error(`[Polygon] Error fetching price for ${normalizedSymbol.original}:`, error);
     return null;
   }
+}
+
+// Fetch historical price data from Finnhub
+async function getFinnhubPrice(
+  normalizedSymbol: NormalizedSymbol,
+  timestamp: Date
+): Promise<{ low: number; high: number; open: number; close: number } | null> {
+  if (!normalizedSymbol.finnhub) {
+    return null;
+  }
+  
+  const cacheKey = getPriceCacheKey(normalizedSymbol.finnhub, timestamp, 'finnhub');
+  
+  // Check cache first
+  const cached = priceCache.get(cacheKey);
+  if (cached && cached.provider === 'finnhub') {
+    return { low: cached.low, high: cached.high, open: cached.open, close: cached.close };
+  }
+  
+  try {
+    const marketType = getMarketTypeFromNormalized(normalizedSymbol);
+    const result = await getFinnhubOHLC(normalizedSymbol.finnhub, marketType, timestamp);
+    
+    if (!result) {
+      console.log(`[Finnhub] No price data for ${normalizedSymbol.original} (${normalizedSymbol.finnhub})`);
+      return null;
+    }
+    
+    // Cache the result
+    priceCache.set(cacheKey, { ...result, provider: 'finnhub' });
+    
+    return result;
+  } catch (error) {
+    console.error(`[Finnhub] Error fetching price for ${normalizedSymbol.original}:`, error);
+    return null;
+  }
+}
+
+// Fetch historical price data - tries Polygon first, then Finnhub
+async function getHistoricalPrice(
+  normalizedSymbol: NormalizedSymbol,
+  timestamp: Date
+): Promise<{ data: { low: number; high: number; open: number; close: number } | null; provider: DataProvider; polygonStatus: 'success' | 'empty' | 'error'; finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' }> {
+  let polygonStatus: 'success' | 'empty' | 'error' = 'empty';
+  let finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
+  
+  // Try Polygon first
+  if (normalizedSymbol.polygon) {
+    try {
+      const polygonData = await getPolygonPrice(normalizedSymbol, timestamp);
+      if (polygonData) {
+        polygonStatus = 'success';
+        return { data: polygonData, provider: 'polygon', polygonStatus, finnhubStatus };
+      }
+      polygonStatus = 'empty';
+    } catch {
+      polygonStatus = 'error';
+    }
+  }
+  
+  // Fallback to Finnhub
+  if (normalizedSymbol.finnhub) {
+    try {
+      const finnhubData = await getFinnhubPrice(normalizedSymbol, timestamp);
+      if (finnhubData) {
+        finnhubStatus = 'success';
+        return { data: finnhubData, provider: 'finnhub', polygonStatus, finnhubStatus };
+      }
+      finnhubStatus = 'empty';
+    } catch {
+      finnhubStatus = 'error';
+    }
+  }
+  
+  return { data: null, provider: 'none', polygonStatus, finnhubStatus };
 }
 
 // Verify a single trade leg
@@ -158,39 +241,49 @@ async function verifyLeg(
   fillPrice: number,
   timestamp: Date,
   side: 'entry' | 'exit'
-): Promise<LegVerification> {
+): Promise<{ verification: LegVerification; polygonStatus: 'success' | 'empty' | 'error'; finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' }> {
   // If symbol is not supported, return unknown status
   if (!normalizedSymbol.isSupported) {
     return {
-      side,
-      fill_price: fillPrice,
-      timestamp,
-      market_low: null,
-      market_high: null,
-      market_open: null,
-      market_close: null,
-      deviation: null,
-      status: 'unknown',
-      score: 0.5, // Neutral score when unsupported
-      notes: normalizedSymbol.reason || 'Symbol not supported'
+      verification: {
+        side,
+        fill_price: fillPrice,
+        timestamp,
+        market_low: null,
+        market_high: null,
+        market_open: null,
+        market_close: null,
+        deviation: null,
+        status: 'unknown',
+        score: 0.5, // Neutral score when unsupported
+        notes: normalizedSymbol.reason || 'Symbol not supported',
+        provider_used: 'none'
+      },
+      polygonStatus: 'empty',
+      finnhubStatus: 'empty'
     };
   }
   
-  const marketData = await getHistoricalPrice(normalizedSymbol, timestamp);
+  const { data: marketData, provider, polygonStatus, finnhubStatus } = await getHistoricalPrice(normalizedSymbol, timestamp);
   
   if (!marketData) {
     return {
-      side,
-      fill_price: fillPrice,
-      timestamp,
-      market_low: null,
-      market_high: null,
-      market_open: null,
-      market_close: null,
-      deviation: null,
-      status: 'unknown',
-      score: 0.5, // Neutral score when data unavailable
-      notes: `No market data available for ${normalizedSymbol.polygon || normalizedSymbol.original}`
+      verification: {
+        side,
+        fill_price: fillPrice,
+        timestamp,
+        market_low: null,
+        market_high: null,
+        market_open: null,
+        market_close: null,
+        deviation: null,
+        status: 'unknown',
+        score: 0.5, // Neutral score when data unavailable
+        notes: `No market data available from any provider`,
+        provider_used: 'none'
+      },
+      polygonStatus,
+      finnhubStatus
     };
   }
   
@@ -210,48 +303,53 @@ async function verifyLeg(
   if (fillPrice < low - tolerance) {
     status = 'impossible_low';
     score = 0.0;
-    notes = `Fill price ${fillPrice} is below market low ${low.toFixed(4)} (tolerance: ${tolerance.toFixed(6)})`;
+    notes = `Fill price ${fillPrice} is below market low ${low.toFixed(4)} (via ${provider})`;
   } else if (fillPrice > high + tolerance) {
     status = 'impossible_high';
     score = 0.0;
-    notes = `Fill price ${fillPrice} is above market high ${high.toFixed(4)} (tolerance: ${tolerance.toFixed(6)})`;
+    notes = `Fill price ${fillPrice} is above market high ${high.toFixed(4)} (via ${provider})`;
   } else {
     // Check for suspicious precision (exact high or low)
     const precisionThreshold = tolerance * 0.1;
     if (Math.abs(fillPrice - low) < precisionThreshold || Math.abs(fillPrice - high) < precisionThreshold) {
       status = 'suspicious_precision';
       score = 0.3;
-      notes = `Fill price matches market ${Math.abs(fillPrice - low) < precisionThreshold ? 'low' : 'high'} suspiciously precisely`;
+      notes = `Fill price matches market ${Math.abs(fillPrice - low) < precisionThreshold ? 'low' : 'high'} suspiciously precisely (via ${provider})`;
     } else {
       // Realistic trade - adjust score based on deviation
       if (deviation < 0.001) {
         score = 1.0;
-        notes = 'Excellent fill - very close to midpoint';
+        notes = `Excellent fill - very close to midpoint (via ${provider})`;
       } else if (deviation < 0.005) {
         score = 0.9;
-        notes = 'Good fill - within normal range';
+        notes = `Good fill - within normal range (via ${provider})`;
       } else if (deviation < 0.01) {
         score = 0.75;
-        notes = 'Acceptable fill - moderate deviation from midpoint';
+        notes = `Acceptable fill - moderate deviation (via ${provider})`;
       } else {
         score = 0.6;
-        notes = 'High deviation fill - near edge of range';
+        notes = `High deviation fill - near edge of range (via ${provider})`;
       }
     }
   }
   
   return {
-    side,
-    fill_price: fillPrice,
-    timestamp,
-    market_low: low,
-    market_high: high,
-    market_open: open,
-    market_close: close,
-    deviation,
-    status,
-    score,
-    notes
+    verification: {
+      side,
+      fill_price: fillPrice,
+      timestamp,
+      market_low: low,
+      market_high: high,
+      market_open: open,
+      market_close: close,
+      deviation,
+      status,
+      score,
+      notes,
+      provider_used: provider
+    },
+    polygonStatus,
+    finnhubStatus
   };
 }
 
@@ -261,7 +359,7 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   const normalizedSymbol = normalizeSymbol(trade.symbol, trade.instrument_type);
   
   // Verify entry leg
-  const entryVerification = await verifyLeg(
+  const { verification: entryVerification, polygonStatus: entryPolygonStatus, finnhubStatus: entryFinnhubStatus } = await verifyLeg(
     normalizedSymbol,
     trade.entry_fill_price,
     trade.entry_timestamp,
@@ -270,13 +368,19 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   
   // Verify exit leg if exists
   let exitVerification: LegVerification | null = null;
+  let exitPolygonStatus: 'success' | 'empty' | 'error' = 'empty';
+  let exitFinnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
+  
   if (trade.exit_fill_price !== null && trade.exit_timestamp !== null) {
-    exitVerification = await verifyLeg(
+    const exitResult = await verifyLeg(
       normalizedSymbol,
       trade.exit_fill_price,
       trade.exit_timestamp,
       'exit'
     );
+    exitVerification = exitResult.verification;
+    exitPolygonStatus = exitResult.polygonStatus;
+    exitFinnhubStatus = exitResult.finnhubStatus;
   }
   
   // Calculate combined authenticity score
@@ -297,6 +401,24 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   const suspicious_flag = 
     entryVerification.status === 'suspicious_precision' ||
     (exitVerification?.status === 'suspicious_precision');
+  
+  // Determine overall provider used (prefer the one that worked)
+  let provider_used: DataProvider = 'none';
+  if (entryVerification.provider_used !== 'none') {
+    provider_used = entryVerification.provider_used;
+  } else if (exitVerification?.provider_used && exitVerification.provider_used !== 'none') {
+    provider_used = exitVerification.provider_used;
+  }
+  
+  // Combine status from both legs
+  const polygonStatus = entryPolygonStatus === 'success' || exitPolygonStatus === 'success' 
+    ? 'success' 
+    : (entryPolygonStatus === 'error' || exitPolygonStatus === 'error' ? 'error' : 'empty');
+  
+  const finnhubStatus = entryFinnhubStatus === 'success' || exitFinnhubStatus === 'success'
+    ? 'success'
+    : (entryFinnhubStatus === 'error' || exitFinnhubStatus === 'error' ? 'error' : 
+       (entryFinnhubStatus === 'not_attempted' && exitFinnhubStatus === 'not_attempted' ? 'not_attempted' : 'empty'));
   
   // Trade is verified if all legs are realistic and score >= 0.7
   const verified = 
@@ -327,9 +449,13 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
     impossible_flag,
     // Symbol normalization info
     original_symbol: trade.symbol,
-    normalized_symbol: normalizedSymbol.polygon,
+    normalized_symbol: normalizedSymbol.polygon || normalizedSymbol.finnhub,
     asset_type: normalizedSymbol.assetType,
-    unsupported_reason: normalizedSymbol.isSupported ? undefined : normalizedSymbol.reason
+    unsupported_reason: normalizedSymbol.isSupported ? undefined : normalizedSymbol.reason,
+    // Provider tracking
+    provider_used,
+    polygon_status: polygonStatus,
+    finnhub_status: finnhubStatus
   };
 }
 
@@ -375,6 +501,10 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
     (r.exit_verification?.status === 'unknown')
   ).length;
   
+  // Count by provider
+  const polygonVerified = results.filter(r => r.verified && r.provider_used === 'polygon').length;
+  const finnhubVerified = results.filter(r => r.verified && r.provider_used === 'finnhub').length;
+  
   const avgScore = total > 0 
     ? results.reduce((sum, r) => sum + r.authenticity_score, 0) / total 
     : 0;
@@ -386,7 +516,9 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
     suspicious_trades: suspicious,
     unknown_trades: unknown,
     average_score: avgScore,
-    verification_rate: total > 0 ? (verified / total) * 100 : 0
+    verification_rate: total > 0 ? (verified / total) * 100 : 0,
+    polygon_verified: polygonVerified,
+    finnhub_verified: finnhubVerified
   };
 }
 

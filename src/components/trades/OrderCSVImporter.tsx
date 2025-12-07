@@ -280,12 +280,21 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                       {verifySummary.verified_trades} of {verifySummary.total_trades} trades verified • 
                       Score: {(verifySummary.average_score * 100).toFixed(0)}%
                     </p>
-                    {(verifySummary.unknown_trades > 0 || verifySummary.suspicious_trades > 0) && (
-                      <p className="text-xs text-muted-foreground/80 mt-1">
-                        {verifySummary.unknown_trades > 0 && `${verifySummary.unknown_trades} unknown (no data). `}
-                        {verifySummary.suspicious_trades > 0 && `${verifySummary.suspicious_trades} suspicious.`}
-                      </p>
-                    )}
+                    {/* Provider breakdown */}
+                    <div className="text-xs text-muted-foreground/80 mt-1 flex flex-wrap gap-x-3">
+                      {verifySummary.polygon_verified > 0 && (
+                        <span>Polygon: {verifySummary.polygon_verified}</span>
+                      )}
+                      {verifySummary.finnhub_verified > 0 && (
+                        <span>Finnhub: {verifySummary.finnhub_verified}</span>
+                      )}
+                      {verifySummary.unknown_trades > 0 && (
+                        <span>Unknown: {verifySummary.unknown_trades}</span>
+                      )}
+                      {verifySummary.suspicious_trades > 0 && (
+                        <span>Suspicious: {verifySummary.suspicious_trades}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
