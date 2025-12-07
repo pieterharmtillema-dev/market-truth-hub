@@ -10,10 +10,11 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles, Upload } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles, Upload, FileText, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { CSVImporter } from "@/components/trades/CSVImporter";
+import { OrderCSVImporter } from "@/components/trades/OrderCSVImporter";
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
@@ -61,14 +62,18 @@ const CreatePrediction = () => {
         </div>
 
         <Tabs defaultValue="manual" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="manual" className="gap-2">
               <Target className="w-4 h-4" />
-              Manual Entry
+              Manual
             </TabsTrigger>
-            <TabsTrigger value="import" className="gap-2">
-              <Upload className="w-4 h-4" />
-              Import CSV
+            <TabsTrigger value="import-trades" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Trades CSV
+            </TabsTrigger>
+            <TabsTrigger value="import-orders" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Orders CSV
             </TabsTrigger>
           </TabsList>
 
@@ -255,11 +260,28 @@ const CreatePrediction = () => {
             </p>
           </TabsContent>
 
-          <TabsContent value="import" className="mt-4">
+          <TabsContent value="import-trades" className="mt-4 space-y-3">
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <p className="font-medium mb-1">For pre-matched trades</p>
+              <p>Upload CSV with entry/exit prices already calculated per trade row.</p>
+            </div>
             <CSVImporter onImportComplete={() => {
               toast({
                 title: "Trades imported!",
                 description: "View your trades in the Trade History",
+              });
+            }} />
+          </TabsContent>
+
+          <TabsContent value="import-orders" className="mt-4 space-y-3">
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <p className="font-medium mb-1">For raw order history</p>
+              <p>Upload CSV with individual buy/sell orders. System auto-matches pairs using FIFO.</p>
+            </div>
+            <OrderCSVImporter onImportComplete={() => {
+              toast({
+                title: "Trades imported!",
+                description: "View your matched trades in the Trade History",
               });
             }} />
           </TabsContent>
