@@ -25,7 +25,8 @@ export interface FinnhubCandle {
 
 // Simple cache for API responses
 const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 10000; // 10 seconds for more real-time data
+const CACHE_TTL = 60000; // 1 minute for quotes
+const HISTORICAL_CACHE_TTL = 300000; // 5 minutes for historical data
 
 // Get real-time quote for a stock
 export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
@@ -71,7 +72,7 @@ export async function getStockCandles(
   const cacheKey = `stock-candles-${symbol}-${resolution}-${from}-${to}`;
   const cached = apiCache.get(cacheKey);
   
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL * 6) { // 1 minute cache for historical
+  if (cached && Date.now() - cached.timestamp < HISTORICAL_CACHE_TTL) {
     return cached.data;
   }
   
@@ -87,6 +88,7 @@ export async function getStockCandles(
     const data = await response.json();
     
     if (data.s === 'no_data' || !data.c || data.c.length === 0) {
+      apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
       return null;
     }
     
@@ -99,6 +101,7 @@ export async function getStockCandles(
 }
 
 // Get forex candles from Finnhub API
+// NOTE: Forex candles require paid Finnhub subscription
 export async function getForexCandles(
   symbol: string,
   resolution: "1" | "5" | "15" | "30" | "60" | "D" | "W" | "M",
@@ -108,13 +111,21 @@ export async function getForexCandles(
   const cacheKey = `forex-candles-${symbol}-${resolution}-${from}-${to}`;
   const cached = apiCache.get(cacheKey);
   
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL * 6) {
+  if (cached && Date.now() - cached.timestamp < HISTORICAL_CACHE_TTL) {
     return cached.data;
   }
   
   try {
     const url = `${FINNHUB_BASE_URL}/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
     const response = await fetch(url);
+    
+    // 403 means forex candles not available on free tier - return null silently
+    if (response.status === 403) {
+      console.log(`[Finnhub] Forex candles not available for ${symbol} (requires paid plan)`);
+      // Cache the failure to avoid repeated requests
+      apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
+      return null;
+    }
     
     if (!response.ok) {
       console.error(`Finnhub forex candles API error: ${response.status}`);
@@ -124,6 +135,7 @@ export async function getForexCandles(
     const data = await response.json();
     
     if (data.s === 'no_data' || !data.c || data.c.length === 0) {
+      apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
       return null;
     }
     

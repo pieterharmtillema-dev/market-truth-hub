@@ -58,7 +58,25 @@ export interface PolygonTickerSnapshot {
 
 // Simple cache for API responses
 const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 60000; // 1 minute
+const CACHE_TTL = 300000; // 5 minutes - extended to reduce API calls
+
+// Global rate limiter for Polygon (free tier: 5 requests/minute)
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 15000; // 15 seconds between requests to stay under 5/min
+
+async function rateLimitedFetch(url: string): Promise<Response> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+    console.log(`[Polygon] Rate limiting: waiting ${waitTime}ms...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastRequestTime = Date.now();
+  return fetch(url);
+}
 
 // Get aggregates (candlestick data) with caching and retry
 export async function getAggregates(
@@ -67,11 +85,12 @@ export async function getAggregates(
   timespan: "minute" | "hour" | "day" | "week" | "month" = "day",
   from: string,
   to: string,
-  retries: number = 3
+  retries: number = 2
 ): Promise<PolygonAggregatesResponse> {
   const cacheKey = `agg-${ticker}-${multiplier}-${timespan}-${from}-${to}`;
   const cached = apiCache.get(cacheKey);
   
+  // Use cache more aggressively
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;
   }
@@ -80,12 +99,12 @@ export async function getAggregates(
   
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetch(url);
+      const response = await rateLimitedFetch(url);
       
       if (response.status === 429) {
-        // Rate limited - wait and retry with exponential backoff
-        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-        console.log(`[Polygon] Rate limited, retrying in ${delay}ms...`);
+        // Rate limited - wait longer and retry
+        const delay = 30000 + (attempt * 15000); // 30s, 45s
+        console.log(`[Polygon] Rate limited (429), waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -102,7 +121,7 @@ export async function getAggregates(
       return data;
     } catch (error) {
       if (attempt === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
   

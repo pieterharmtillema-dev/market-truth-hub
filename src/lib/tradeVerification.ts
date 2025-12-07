@@ -578,25 +578,26 @@ export async function verifyTrades(
   onProgress?: (completed: number, total: number) => void
 ): Promise<TradeVerificationResult[]> {
   const results: TradeVerificationResult[] = [];
-  const batchSize = 5; // Process 5 trades at a time to avoid rate limiting
+  // Reduced batch size to 2 to stay under API rate limits
+  const batchSize = 2;
   
   for (let i = 0; i < trades.length; i += batchSize) {
     const batch = trades.slice(i, i + batchSize);
     
-    const batchResults = await Promise.all(
-      batch.map(trade => verifyTrade(trade))
-    );
-    
-    results.push(...batchResults);
+    // Process batch sequentially to respect rate limits
+    for (const trade of batch) {
+      const result = await verifyTrade(trade);
+      results.push(result);
+    }
     
     // Report progress
     if (onProgress) {
       onProgress(Math.min(i + batchSize, trades.length), trades.length);
     }
     
-    // Small delay between batches to avoid rate limiting
+    // Longer delay between batches to avoid rate limiting (20 seconds)
     if (i + batchSize < trades.length) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 20000));
     }
   }
   
