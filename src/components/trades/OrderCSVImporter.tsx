@@ -417,10 +417,39 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
               <CollapsibleTrigger asChild>
                 <CardHeader className="py-3 cursor-pointer hover:bg-muted/30 transition-colors">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-muted-foreground" />
-                      {unverifiedTradeCount} Unverified Trade{unverifiedTradeCount !== 1 ? 's' : ''} (will not be imported)
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-destructive" />
+                        {unverifiedTradeCount} Unverified Trade{unverifiedTradeCount !== 1 ? 's' : ''} (will not be imported)
+                      </CardTitle>
+                      {/* Breakdown by type */}
+                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                        {(() => {
+                          const impossible = unverifiedTrades.filter(t => t.result.impossible_flag).length;
+                          const suspicious = unverifiedTrades.filter(t => t.result.suspicious_flag && !t.result.impossible_flag).length;
+                          const unknown = unverifiedTrades.filter(t => 
+                            t.result.entry_verification.status === 'unknown' || 
+                            t.result.exit_verification?.status === 'unknown'
+                          ).length;
+                          const lowScore = unverifiedTrades.filter(t => 
+                            !t.result.impossible_flag && 
+                            !t.result.suspicious_flag && 
+                            t.result.entry_verification.status !== 'unknown' &&
+                            t.result.exit_verification?.status !== 'unknown' &&
+                            t.result.authenticity_score < 0.7
+                          ).length;
+                          
+                          return (
+                            <>
+                              {impossible > 0 && <span className="text-destructive">Impossible: {impossible}</span>}
+                              {suspicious > 0 && <span className="text-yellow-500">Suspicious: {suspicious}</span>}
+                              {unknown > 0 && <span>No data: {unknown}</span>}
+                              {lowScore > 0 && <span>Low score: {lowScore}</span>}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
                     {showUnverified ? (
                       <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (
