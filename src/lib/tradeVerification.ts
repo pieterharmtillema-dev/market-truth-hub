@@ -1,10 +1,11 @@
-// Trade Verification Module - Validates fill prices against Polygon.io and Finnhub historical data
+// Trade Verification Module - Validates fill prices against Polygon.io, Finnhub, and AlphaVantage historical data
 // Uses smart tolerance model to reduce false positives while detecting real fraud
 import { getAggregates } from './polygon';
 import { getHistoricalOHLC as getFinnhubOHLC } from './finnhub';
+import { getHistoricalOHLC as getAlphaVantageOHLC } from './alphaVantage';
 import { normalizeSymbol, NormalizedSymbol, getPolygonMarketType } from './symbolNormalizer';
 
-export type DataProvider = 'polygon' | 'finnhub' | 'none';
+export type DataProvider = 'polygon' | 'finnhub' | 'alphavantage' | 'none';
 
 export type VerificationStatus = 
   | 'realistic'           // Within tolerance, verified
@@ -75,6 +76,7 @@ export interface VerificationSummary {
   // Provider breakdown
   polygon_verified: number;
   finnhub_verified: number;
+  alphavantage_verified: number;
 }
 
 export interface TradeToVerify {
@@ -232,13 +234,60 @@ async function getFinnhubPrice(
   }
 }
 
-// Fetch historical price data - tries Polygon first, then Finnhub
+// Fetch historical price data from AlphaVantage
+async function getAlphaVantagePrice(
+  normalizedSymbol: NormalizedSymbol,
+  timestamp: Date
+): Promise<{ low: number; high: number; open: number; close: number } | null> {
+  const cacheKey = getPriceCacheKey(normalizedSymbol.original, timestamp, 'alphavantage');
+  
+  // Check cache first
+  const cached = priceCache.get(cacheKey);
+  if (cached && cached.provider === 'alphavantage') {
+    return { low: cached.low, high: cached.high, open: cached.open, close: cached.close };
+  }
+  
+  try {
+    const marketType = getMarketTypeFromNormalized(normalizedSymbol);
+    
+    // Extract symbol for AlphaVantage (strip prefixes)
+    let symbol = normalizedSymbol.original;
+    if (symbol.startsWith('C:')) symbol = symbol.substring(2);
+    if (symbol.startsWith('X:')) symbol = symbol.substring(2);
+    if (symbol.startsWith('FX:')) symbol = symbol.substring(3);
+    symbol = symbol.replace(/[:\-\/]/g, '');
+    
+    const result = await getAlphaVantageOHLC(symbol, marketType, timestamp);
+    
+    if (!result) {
+      console.log(`[AlphaVantage] No price data for ${normalizedSymbol.original} (${symbol})`);
+      return null;
+    }
+    
+    // Cache the result
+    priceCache.set(cacheKey, { ...result, provider: 'alphavantage' as DataProvider });
+    
+    return result;
+  } catch (error) {
+    console.error(`[AlphaVantage] Error fetching price for ${normalizedSymbol.original}:`, error);
+    return null;
+  }
+}
+
+// Fetch historical price data - tries Polygon first, then Finnhub, then AlphaVantage
 async function getHistoricalPrice(
   normalizedSymbol: NormalizedSymbol,
   timestamp: Date
-): Promise<{ data: { low: number; high: number; open: number; close: number } | null; provider: DataProvider; polygonStatus: 'success' | 'empty' | 'error'; finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' }> {
+): Promise<{ 
+  data: { low: number; high: number; open: number; close: number } | null; 
+  provider: DataProvider; 
+  polygonStatus: 'success' | 'empty' | 'error'; 
+  finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted';
+  alphavantageStatus: 'success' | 'empty' | 'error' | 'not_attempted';
+}> {
   let polygonStatus: 'success' | 'empty' | 'error' = 'empty';
   let finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
+  let alphavantageStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
   
   // Try Polygon first
   if (normalizedSymbol.polygon) {
@@ -246,7 +295,7 @@ async function getHistoricalPrice(
       const polygonData = await getPolygonPrice(normalizedSymbol, timestamp);
       if (polygonData) {
         polygonStatus = 'success';
-        return { data: polygonData, provider: 'polygon', polygonStatus, finnhubStatus };
+        return { data: polygonData, provider: 'polygon', polygonStatus, finnhubStatus, alphavantageStatus };
       }
       polygonStatus = 'empty';
     } catch {
@@ -260,7 +309,7 @@ async function getHistoricalPrice(
       const finnhubData = await getFinnhubPrice(normalizedSymbol, timestamp);
       if (finnhubData) {
         finnhubStatus = 'success';
-        return { data: finnhubData, provider: 'finnhub', polygonStatus, finnhubStatus };
+        return { data: finnhubData, provider: 'finnhub', polygonStatus, finnhubStatus, alphavantageStatus };
       }
       finnhubStatus = 'empty';
     } catch {
@@ -268,7 +317,19 @@ async function getHistoricalPrice(
     }
   }
   
-  return { data: null, provider: 'none', polygonStatus, finnhubStatus };
+  // Final fallback to AlphaVantage
+  try {
+    const alphaData = await getAlphaVantagePrice(normalizedSymbol, timestamp);
+    if (alphaData) {
+      alphavantageStatus = 'success';
+      return { data: alphaData, provider: 'alphavantage', polygonStatus, finnhubStatus, alphavantageStatus };
+    }
+    alphavantageStatus = 'empty';
+  } catch {
+    alphavantageStatus = 'error';
+  }
+  
+  return { data: null, provider: 'none', polygonStatus, finnhubStatus, alphavantageStatus };
 }
 
 /**
@@ -286,7 +347,12 @@ async function verifyLeg(
   fillPrice: number,
   timestamp: Date,
   side: 'entry' | 'exit'
-): Promise<{ verification: LegVerification; polygonStatus: 'success' | 'empty' | 'error'; finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' }> {
+): Promise<{ 
+  verification: LegVerification; 
+  polygonStatus: 'success' | 'empty' | 'error'; 
+  finnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted';
+  alphavantageStatus: 'success' | 'empty' | 'error' | 'not_attempted';
+}> {
   // If symbol is not supported, return unknown status
   if (!normalizedSymbol.isSupported) {
     return {
@@ -311,11 +377,12 @@ async function verifyLeg(
         provider_used: 'none'
       },
       polygonStatus: 'empty',
-      finnhubStatus: 'empty'
+      finnhubStatus: 'empty',
+      alphavantageStatus: 'empty'
     };
   }
   
-  const { data: marketData, provider, polygonStatus, finnhubStatus } = await getHistoricalPrice(normalizedSymbol, timestamp);
+  const { data: marketData, provider, polygonStatus, finnhubStatus, alphavantageStatus } = await getHistoricalPrice(normalizedSymbol, timestamp);
   
   if (!marketData) {
     return {
@@ -340,7 +407,8 @@ async function verifyLeg(
         provider_used: 'none'
       },
       polygonStatus,
-      finnhubStatus
+      finnhubStatus,
+      alphavantageStatus
     };
   }
   
@@ -457,7 +525,8 @@ async function verifyLeg(
       provider_used: provider
     },
     polygonStatus,
-    finnhubStatus
+    finnhubStatus,
+    alphavantageStatus
   };
 }
 
@@ -467,7 +536,12 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   const normalizedSymbol = normalizeSymbol(trade.symbol, trade.instrument_type);
   
   // Verify entry leg
-  const { verification: entryVerification, polygonStatus: entryPolygonStatus, finnhubStatus: entryFinnhubStatus } = await verifyLeg(
+  const { 
+    verification: entryVerification, 
+    polygonStatus: entryPolygonStatus, 
+    finnhubStatus: entryFinnhubStatus,
+    alphavantageStatus: entryAlphavantageStatus 
+  } = await verifyLeg(
     normalizedSymbol,
     trade.entry_fill_price,
     trade.entry_timestamp,
@@ -478,6 +552,7 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
   let exitVerification: LegVerification | null = null;
   let exitPolygonStatus: 'success' | 'empty' | 'error' = 'empty';
   let exitFinnhubStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
+  let exitAlphavantageStatus: 'success' | 'empty' | 'error' | 'not_attempted' = 'not_attempted';
   
   if (trade.exit_fill_price !== null && trade.exit_timestamp !== null) {
     const exitResult = await verifyLeg(
@@ -489,6 +564,7 @@ export async function verifyTrade(trade: TradeToVerify): Promise<TradeVerificati
     exitVerification = exitResult.verification;
     exitPolygonStatus = exitResult.polygonStatus;
     exitFinnhubStatus = exitResult.finnhubStatus;
+    exitAlphavantageStatus = exitResult.alphavantageStatus;
   }
   
   // Calculate combined authenticity score
@@ -622,6 +698,7 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
   // Count by provider
   const polygonVerified = results.filter(r => r.verified && r.provider_used === 'polygon').length;
   const finnhubVerified = results.filter(r => r.verified && r.provider_used === 'finnhub').length;
+  const alphavantageVerified = results.filter(r => r.verified && r.provider_used === 'alphavantage').length;
   
   const avgScore = total > 0 
     ? results.reduce((sum, r) => sum + r.authenticity_score, 0) / total 
@@ -637,7 +714,8 @@ export function generateVerificationSummary(results: TradeVerificationResult[]):
     average_score: avgScore,
     verification_rate: total > 0 ? (verified / total) * 100 : 0,
     polygon_verified: polygonVerified,
-    finnhub_verified: finnhubVerified
+    finnhub_verified: finnhubVerified,
+    alphavantage_verified: alphavantageVerified
   };
 }
 

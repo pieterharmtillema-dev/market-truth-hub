@@ -379,6 +379,9 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                         {verifySummary.finnhub_verified > 0 && (
                           <span>Finnhub: {verifySummary.finnhub_verified}</span>
                         )}
+                        {verifySummary.alphavantage_verified > 0 && (
+                          <span>AlphaVantage: {verifySummary.alphavantage_verified}</span>
+                        )}
                         {verifySummary.unknown_trades > 0 && (
                           <span className="text-muted-foreground">No data: {verifySummary.unknown_trades}</span>
                         )}
@@ -413,6 +416,9 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
                         )}
                         {verifySummary.finnhub_verified > 0 && (
                           <span>Finnhub: {verifySummary.finnhub_verified}</span>
+                        )}
+                        {verifySummary.alphavantage_verified > 0 && (
+                          <span>AlphaVantage: {verifySummary.alphavantage_verified}</span>
                         )}
                       </div>
                       <p className="text-xs text-yellow-600/80 mt-2">
