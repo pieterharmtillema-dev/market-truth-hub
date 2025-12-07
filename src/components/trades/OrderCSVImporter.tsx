@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Download, CheckCircle2, BarChart3, ShieldCheck, AlertTriangle, ChevronDown, ChevronUp, XCircle, HelpCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -8,7 +8,9 @@ import { analyzeTradesCSV, generateOrdersTestCSV, TradeAnalysisResult } from '@/
 import { TradeAnalysisView } from './TradeAnalysisView';
 import { Progress } from '@/components/ui/progress';
 import { useTradeVerification } from '@/hooks/useTradeVerification';
-import { TradeToVerify } from '@/lib/tradeVerification';
+import { TradeToVerify, TradeVerificationResult } from '@/lib/tradeVerification';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface OrderCSVImporterProps {
   onImportComplete?: () => void;
@@ -72,6 +74,9 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     if (selectedFile) handleFileAnalyze(selectedFile);
   };
 
+  // State for unverified trades collapsible
+  const [showUnverified, setShowUnverified] = useState(false);
+
   // Get only verified trades for import
   const getVerifiedTrades = useCallback(() => {
     if (!analysis || !verificationResults.size) return [];
@@ -82,8 +87,24 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
     });
   }, [analysis, verificationResults]);
 
+  // Get unverified trades with their verification results
+  const getUnverifiedTradesWithResults = useCallback((): Array<{ trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number }> => {
+    if (!analysis || !verificationResults.size) return [];
+    
+    return analysis.matchedTrades
+      .map((trade, idx) => ({
+        trade,
+        result: verificationResults.get(`temp-${idx}`),
+        index: idx
+      }))
+      .filter((item): item is { trade: typeof analysis.matchedTrades[0]; result: TradeVerificationResult; index: number } => 
+        item.result !== undefined && !item.result.verified
+      );
+  }, [analysis, verificationResults]);
+
   const verifiedTradeCount = getVerifiedTrades().length;
-  const unverifiedTradeCount = analysis ? analysis.matchedTrades.length - verifiedTradeCount : 0;
+  const unverifiedTrades = getUnverifiedTradesWithResults();
+  const unverifiedTradeCount = unverifiedTrades.length;
 
   const handleImport = async () => {
     if (!analysis) return;
@@ -389,7 +410,101 @@ export function OrderCSVImporter({ onImportComplete }: OrderCSVImporterProps) {
           )
         )}
 
-        {/* Actions */}
+        {/* Unverified Trades Details */}
+        {isVerified && unverifiedTradeCount > 0 && (
+          <Collapsible open={showUnverified} onOpenChange={setShowUnverified}>
+            <Card className="border-border/50 bg-card/50">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="py-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                      {unverifiedTradeCount} Unverified Trade{unverifiedTradeCount !== 1 ? 's' : ''} (will not be imported)
+                    </CardTitle>
+                    {showUnverified ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-3">
+                  <ScrollArea className="max-h-64">
+                    <div className="space-y-2">
+                      {unverifiedTrades.map(({ trade, result, index }) => (
+                        <div 
+                          key={index} 
+                          className="p-2 rounded-lg bg-muted/30 border border-border/30 text-xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {result.impossible_flag ? (
+                                  <XCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                                ) : result.suspicious_flag ? (
+                                  <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                                ) : (
+                                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                )}
+                                <span className="font-medium font-mono truncate">
+                                  {trade.symbol}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  trade.side === 'long' || trade.side === 'buy' as unknown as typeof trade.side ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
+                                }`}>
+                                  {trade.side.toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground space-y-0.5">
+                                <p>
+                                  Entry: ${trade.entryPrice.toFixed(4)} @ {trade.entryTime.toLocaleString()}
+                                </p>
+                                <p>
+                                  Exit: ${trade.exitPrice.toFixed(4)} @ {trade.exitTime.toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={`font-medium ${trade.netPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {trade.netPnL >= 0 ? '+' : ''}{trade.netPnL.toFixed(2)}
+                              </p>
+                              <p className="text-muted-foreground/70 text-[10px]">
+                                Qty: {trade.quantity}
+                              </p>
+                            </div>
+                          </div>
+                          {/* Failure reason */}
+                          <div className="mt-2 pt-2 border-t border-border/30">
+                            <p className="text-destructive/90">
+                              <strong>Reason:</strong>{' '}
+                              {result.unsupported_reason || 
+                               (result.impossible_flag 
+                                 ? `${result.entry_verification.notes}${result.exit_verification?.notes ? ` | ${result.exit_verification.notes}` : ''}`
+                                 : result.suspicious_flag
+                                   ? `Suspicious: ${result.entry_verification.notes || result.exit_verification?.notes}`
+                                   : result.entry_verification.status === 'unknown'
+                                     ? 'No market data available from any provider'
+                                     : result.verification_notes
+                               )}
+                            </p>
+                            {result.entry_verification.market_low !== null && (
+                              <p className="text-muted-foreground/70 mt-1">
+                                Market range: ${result.entry_verification.market_low.toFixed(4)} - ${result.entry_verification.market_high?.toFixed(4)} 
+                                {result.entry_verification.provider_used !== 'none' && ` (via ${result.entry_verification.provider_used})`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
         <div className="flex gap-3">
           {!isVerified ? (
             <Button
