@@ -20,6 +20,9 @@ export function TraderStatusIndicator() {
       return;
     }
 
+    // Default to inactive until we get data
+    setIsActive(false);
+
     // Fetch initial status using raw query to bypass type checking
     const fetchStatus = async () => {
       const { data, error } = await supabase
