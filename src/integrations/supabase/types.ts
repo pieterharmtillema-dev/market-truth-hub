@@ -95,6 +95,36 @@ export type Database = {
         }
         Relationships: []
       }
+      trader_activity: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_activity_at: string
+          platform: string | null
+          session_duration: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          platform?: string | null
+          session_duration?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          platform?: string | null
+          session_duration?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       trader_trades: {
         Row: {
           account_id: string | null
