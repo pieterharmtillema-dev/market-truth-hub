@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
 import { ApiKeySection } from "@/components/profile/ApiKeySection";
+import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { mockPredictions, tradingStyleLabels, marketFocusLabels, TradingStyle, MarketFocus } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +174,9 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Trader Status */}
+        <TraderStatusCard />
 
         {/* Stats Grid */}
         <DefaultStatsGrid />
