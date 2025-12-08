@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, Content-Type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, Content-Type, x-api-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -90,6 +90,62 @@ async function handleUserActivity(
   )
 }
 
+// Authenticate request - supports both JWT and API key
+async function authenticateRequest(
+  req: Request,
+  supabase: SupabaseClient
+): Promise<{ userId: string | null; error: string | null }> {
+  
+  // Check for API key first (preferred for Chrome extension)
+  const apiKey = req.headers.get('x-api-key')
+  if (apiKey) {
+    console.log('Authenticating via API key')
+    
+    // Validate API key format
+    if (!apiKey.startsWith('md_') || apiKey.length < 20) {
+      return { userId: null, error: 'Invalid API key format' }
+    }
+    
+    // Look up user by API key
+    const { data: profile, error: lookupError } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('api_key', apiKey)
+      .maybeSingle()
+    
+    if (lookupError) {
+      console.error('API key lookup error:', lookupError)
+      return { userId: null, error: 'API key validation failed' }
+    }
+    
+    if (!profile) {
+      console.log('No profile found for API key')
+      return { userId: null, error: 'Invalid API key' }
+    }
+    
+    console.log('API key authenticated for user:', profile.user_id)
+    return { userId: profile.user_id, error: null }
+  }
+  
+  // Fall back to JWT authentication
+  const authHeader = req.headers.get('Authorization')
+  if (authHeader) {
+    console.log('Authenticating via JWT')
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      console.error('JWT authentication failed:', authError?.message)
+      return { userId: null, error: 'Invalid authentication token' }
+    }
+    
+    console.log('JWT authenticated for user:', user.id)
+    return { userId: user.id, error: null }
+  }
+  
+  return { userId: null, error: 'Authentication required. Provide x-api-key header or Authorization: Bearer <token>' }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -108,28 +164,17 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // JWT verification is now required - get authenticated user
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      console.error('No authorization header provided')
-      return new Response(
-        JSON.stringify({ success: false, status: 'unauthorized', reason: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    // Authenticate request (supports API key or JWT)
+    const { userId, error: authError } = await authenticateRequest(req, supabase)
     
-    if (authError || !user) {
-      console.error('Authentication failed:', authError?.message)
+    if (authError || !userId) {
+      console.error('Authentication failed:', authError)
       return new Response(
-        JSON.stringify({ success: false, status: 'unauthorized', reason: 'Invalid authentication token' }),
+        JSON.stringify({ success: false, status: 'unauthorized', reason: authError || 'Authentication required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const userId = user.id
     console.log('Authenticated user:', userId)
 
     // Parse payload
