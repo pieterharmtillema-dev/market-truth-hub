@@ -2,6 +2,7 @@ import { Bell, Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { TraderStatusIndicator } from "./TraderStatusIndicator";
 
 interface HeaderProps {
   title?: string;
@@ -20,6 +21,7 @@ export function Header({ title = "MarketDiscussion", showSearch = true, showCrea
             <span className="text-primary-foreground font-bold text-sm">M</span>
           </div>
           <h1 className="font-semibold text-lg">{title}</h1>
+          <TraderStatusIndicator />
         </div>
         
         <div className="flex items-center gap-2">
