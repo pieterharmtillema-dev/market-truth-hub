@@ -67,6 +67,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          api_key: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -76,6 +77,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          api_key?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -85,6 +87,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          api_key?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -224,7 +227,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_api_key: { Args: never; Returns: string }
+      regenerate_user_api_key: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       instrument_type:

@@ -4,13 +4,14 @@ import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
+import { ApiKeySection } from "@/components/profile/ApiKeySection";
 import { mockPredictions, tradingStyleLabels, marketFocusLabels, TradingStyle, MarketFocus } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight } from "lucide-react";
+import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, Key } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,16 +47,32 @@ const Profile = () => {
   const styleInfo = tradingStyleLabels[userProfile.traderType.style];
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRecentTrades = async () => {
+    const fetchUserData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setLoadingTrades(false);
           return;
         }
+        
+        setUserId(user.id);
 
+        // Fetch profile with API key
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('api_key')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (profile) {
+          setApiKey(profile.api_key);
+        }
+
+        // Fetch recent trades
         const { data, error } = await supabase
           .from('trader_trades')
           .select('id, asset, direction, entry_price, exit_price, profit_loss, entry_date, entry_datetime_utc')
@@ -67,13 +84,13 @@ const Profile = () => {
           setRecentTrades(data);
         }
       } catch (err) {
-        console.error('Failed to fetch trades:', err);
+        console.error('Failed to fetch user data:', err);
       } finally {
         setLoadingTrades(false);
       }
     };
 
-    fetchRecentTrades();
+    fetchUserData();
   }, []);
   return (
     <AppLayout title="Profile">
@@ -159,6 +176,15 @@ const Profile = () => {
 
         {/* Stats Grid */}
         <DefaultStatsGrid />
+
+        {/* API Key Section */}
+        {userId && (
+          <ApiKeySection 
+            apiKey={apiKey} 
+            userId={userId} 
+            onKeyRegenerated={setApiKey} 
+          />
+        )}
 
         {/* Content Tabs */}
         <Tabs defaultValue="predictions" className="w-full">
