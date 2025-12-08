@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ export function TraderStatusIndicator() {
   const { user } = useAuth();
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [platform, setPlatform] = useState<string | null>(null);
+  const [lastActivityAt, setLastActivityAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -23,7 +25,7 @@ export function TraderStatusIndicator() {
     // Default to inactive until we get data
     setIsActive(false);
 
-    // Fetch initial status using raw query to bypass type checking
+    // Fetch initial status
     const fetchStatus = async () => {
       const { data, error } = await supabase
         .from('trader_activity' as any)
@@ -39,9 +41,11 @@ export function TraderStatusIndicator() {
         const lastActivity = new Date(activityData.last_activity_at);
         const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
         
+        setLastActivityAt(activityData.last_activity_at);
+        setPlatform(activityData.platform);
+        
         if (lastActivity > twoMinutesAgo) {
           setIsActive(activityData.is_active);
-          setPlatform(activityData.platform);
         } else {
           setIsActive(false);
         }
@@ -49,6 +53,9 @@ export function TraderStatusIndicator() {
     };
 
     fetchStatus();
+
+    // Poll every 10 seconds
+    const pollInterval = setInterval(fetchStatus, 10000);
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -66,12 +73,14 @@ export function TraderStatusIndicator() {
           if (newData && newData.user_id === user.id) {
             setIsActive(newData.is_active);
             setPlatform(newData.platform);
+            setLastActivityAt(newData.last_activity_at);
           }
         }
       )
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [user]);
@@ -80,6 +89,10 @@ export function TraderStatusIndicator() {
   if (!user || isActive === null) {
     return null;
   }
+
+  const lastSeenText = lastActivityAt 
+    ? formatDistanceToNow(new Date(lastActivityAt), { addSuffix: false })
+    : null;
 
   return (
     <div className={cn(
@@ -93,8 +106,9 @@ export function TraderStatusIndicator() {
         isActive ? "bg-gain" : "bg-loss"
       )} />
       <span>
-        {isActive ? "Trader Active" : "Trader Inactive"}
+        {isActive ? "Active" : "Inactive"}
         {isActive && platform && ` • ${platform}`}
+        {!isActive && lastSeenText && ` • ${lastSeenText} ago`}
       </span>
     </div>
   );
