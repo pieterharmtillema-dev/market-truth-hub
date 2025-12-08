@@ -145,7 +145,9 @@ Deno.serve(async (req) => {
     const payload: TradePayload = rawPayload
     console.log('Processing trade payload')
 
-    // Validate required fields
+    // ========== INPUT VALIDATION ==========
+    
+    // Validate required fields exist
     if (!payload.symbol || !payload.side || !payload.timestamp) {
       console.log('Missing required fields')
       return new Response(
@@ -158,7 +160,64 @@ Deno.serve(async (req) => {
       )
     }
 
-    // userId is already authenticated from the JWT token above
+    // Validate string lengths
+    if (typeof payload.symbol !== 'string' || payload.symbol.length > 50) {
+      return new Response(
+        JSON.stringify({ success: false, status: 'invalid_request', reason: 'symbol must be a string under 50 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (payload.platform && (typeof payload.platform !== 'string' || payload.platform.length > 100)) {
+      return new Response(
+        JSON.stringify({ success: false, status: 'invalid_request', reason: 'platform must be a string under 100 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (payload.account_id && (typeof payload.account_id !== 'string' || payload.account_id.length > 100)) {
+      return new Response(
+        JSON.stringify({ success: false, status: 'invalid_request', reason: 'account_id must be a string under 100 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate numeric fields (must be positive if provided)
+    if (payload.fill_price !== null && payload.fill_price !== undefined) {
+      if (typeof payload.fill_price !== 'number' || payload.fill_price < 0 || !isFinite(payload.fill_price)) {
+        return new Response(
+          JSON.stringify({ success: false, status: 'invalid_request', reason: 'fill_price must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+    if (payload.exit_price !== null && payload.exit_price !== undefined) {
+      if (typeof payload.exit_price !== 'number' || payload.exit_price < 0 || !isFinite(payload.exit_price)) {
+        return new Response(
+          JSON.stringify({ success: false, status: 'invalid_request', reason: 'exit_price must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+    if (payload.quantity !== null && payload.quantity !== undefined) {
+      if (typeof payload.quantity !== 'number' || payload.quantity <= 0 || !isFinite(payload.quantity)) {
+        return new Response(
+          JSON.stringify({ success: false, status: 'invalid_request', reason: 'quantity must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Validate timestamp bounds (not before 2000-01-01, not more than 1 day in future)
+    const tsMillis = payload.timestamp < 10_000_000_000 ? payload.timestamp * 1000 : payload.timestamp
+    const minValidTimestamp = new Date('2000-01-01').getTime()
+    const maxValidTimestamp = Date.now() + (24 * 60 * 60 * 1000) // 1 day in future
+    if (tsMillis < minValidTimestamp || tsMillis > maxValidTimestamp) {
+      return new Response(
+        JSON.stringify({ success: false, status: 'invalid_request', reason: 'timestamp out of valid range' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ========== END INPUT VALIDATION ==========
 
     // Normalize symbol (uppercase, trim)
     const normalizedSymbol = payload.symbol.toUpperCase().trim()
@@ -176,15 +235,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Convert timestamp to ISO string
-    const ts = payload.timestamp < 10_000_000_000 
-      ? payload.timestamp * 1000 
-      : payload.timestamp
-    const isoTimestamp = new Date(ts).toISOString()
+    // Convert timestamp to ISO string (already validated above)
+    const isoTimestamp = new Date(tsMillis).toISOString()
 
     // Check for duplicates (within 5 seconds)
     const fiveSecondsMs = 5000
-    const timestampDate = new Date(ts)
+    const timestampDate = new Date(tsMillis)
     const minTimestamp = new Date(timestampDate.getTime() - fiveSecondsMs).toISOString()
     const maxTimestamp = new Date(timestampDate.getTime() + fiveSecondsMs).toISOString()
 
