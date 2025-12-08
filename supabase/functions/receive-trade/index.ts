@@ -31,31 +31,9 @@ interface UserActivityPayload {
 async function handleUserActivity(
   supabase: SupabaseClient,
   payload: UserActivityPayload,
-  req: Request
+  userId: string
 ): Promise<Response> {
-  console.log('Processing user_activity event')
-
-  // Get user_id from payload or auth header
-  let userId = payload.user_id
-
-  if (!userId) {
-    const authHeader = req.headers.get('Authorization')
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '')
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-      if (!authError && user) {
-        userId = user.id
-      }
-    }
-  }
-
-  if (!userId) {
-    console.log('No user_id for activity event')
-    return new Response(
-      JSON.stringify({ success: false, status: 'invalid_request', reason: 'no user' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
+  console.log('Processing user_activity event for user:', userId)
 
   // Convert timestamp
   const ts = payload.timestamp < 10_000_000_000 
@@ -130,13 +108,37 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // JWT verification is now required - get authenticated user
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      console.error('No authorization header provided')
+      return new Response(
+        JSON.stringify({ success: false, status: 'unauthorized', reason: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      console.error('Authentication failed:', authError?.message)
+      return new Response(
+        JSON.stringify({ success: false, status: 'unauthorized', reason: 'Invalid authentication token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const userId = user.id
+    console.log('Authenticated user:', userId)
+
     // Parse payload
     const rawPayload = await req.json()
     console.log('Received payload:', JSON.stringify(rawPayload))
 
     // Check if this is a user_activity event
     if (rawPayload.type === 'user_activity') {
-      return await handleUserActivity(supabase, rawPayload as UserActivityPayload, req)
+      return await handleUserActivity(supabase, rawPayload as UserActivityPayload, userId)
     }
 
     // Otherwise, treat as trade payload
@@ -156,32 +158,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get user_id from payload or auth header
-    let userId = payload.user_id
-
-    if (!userId) {
-      // Try to get from auth header
-      const authHeader = req.headers.get('Authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-        if (!authError && user) {
-          userId = user.id
-        }
-      }
-    }
-
-    if (!userId) {
-      console.log('No user_id provided and no authenticated user')
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          status: 'invalid_request', 
-          reason: 'no user' 
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // userId is already authenticated from the JWT token above
 
     // Normalize symbol (uppercase, trim)
     const normalizedSymbol = payload.symbol.toUpperCase().trim()
