@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +16,100 @@ interface TradePayload {
   platform: string | null
   account_id: string | null
   user_id: string | null
+}
+
+interface UserActivityPayload {
+  type: 'user_activity'
+  platform: string
+  is_active: boolean
+  timestamp: number
+  session_duration?: number
+  user_id: string | null
+}
+
+// Handle user activity updates
+async function handleUserActivity(
+  supabase: SupabaseClient,
+  payload: UserActivityPayload,
+  req: Request
+): Promise<Response> {
+  console.log('Processing user_activity event')
+
+  // Get user_id from payload or auth header
+  let userId = payload.user_id
+
+  if (!userId) {
+    const authHeader = req.headers.get('Authorization')
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      if (!authError && user) {
+        userId = user.id
+      }
+    }
+  }
+
+  if (!userId) {
+    console.log('No user_id for activity event')
+    return new Response(
+      JSON.stringify({ success: false, status: 'invalid_request', reason: 'no user' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // Convert timestamp
+  const ts = payload.timestamp < 10_000_000_000 
+    ? payload.timestamp * 1000 
+    : payload.timestamp
+  const isoTimestamp = new Date(ts).toISOString()
+
+  // Upsert activity record (update if exists, insert if not)
+  const { data: existingActivity } = await supabase
+    .from('trader_activity')
+    .select('id')
+    .eq('user_id', userId)
+    .order('last_activity_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let result
+  if (existingActivity) {
+    // Update existing record
+    result = await supabase
+      .from('trader_activity')
+      .update({
+        is_active: payload.is_active,
+        platform: payload.platform,
+        session_duration: payload.session_duration || null,
+        last_activity_at: isoTimestamp
+      })
+      .eq('id', (existingActivity as { id: string }).id)
+  } else {
+    // Insert new record
+    result = await supabase
+      .from('trader_activity')
+      .insert({
+        user_id: userId,
+        is_active: payload.is_active,
+        platform: payload.platform,
+        session_duration: payload.session_duration || null,
+        last_activity_at: isoTimestamp
+      })
+  }
+
+  if (result.error) {
+    console.error('Error updating activity:', result.error)
+    return new Response(
+      JSON.stringify({ success: false, status: 'error', reason: result.error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  console.log('Activity updated successfully:', { userId, isActive: payload.is_active })
+  return new Response(
+    JSON.stringify({ success: true, status: 'activity_updated', user_id: userId }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
 }
 
 Deno.serve(async (req) => {
@@ -37,8 +131,17 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Parse payload
-    const payload: TradePayload = await req.json()
-    console.log('Received trade payload:', JSON.stringify(payload))
+    const rawPayload = await req.json()
+    console.log('Received payload:', JSON.stringify(rawPayload))
+
+    // Check if this is a user_activity event
+    if (rawPayload.type === 'user_activity') {
+      return await handleUserActivity(supabase, rawPayload as UserActivityPayload, req)
+    }
+
+    // Otherwise, treat as trade payload
+    const payload: TradePayload = rawPayload
+    console.log('Processing trade payload')
 
     // Validate required fields
     if (!payload.symbol || !payload.side || !payload.timestamp) {
