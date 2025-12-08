@@ -1,4 +1,4 @@
 project_id = "hbmebifvlghmhuthofnq"
 
 [functions.receive-trade]
-verify_jwt = false
+verify_jwt = true
