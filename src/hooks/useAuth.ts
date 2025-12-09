@@ -32,10 +32,13 @@ export function useAuth() {
     window.postMessage(
       {
         source: "TD_WEB",
-        type: "USER_LOGOUT"
+        type: "TD_LOGOUT"
       },
       "*"
     );
+    // Clear global variables
+    (window as any).__USER_API_KEY = undefined;
+    (window as any).__USER_ID = undefined;
     await supabase.auth.signOut();
   };
 

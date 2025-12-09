@@ -18,27 +18,33 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
+function RouterContent() {
   useTradeDetectorSync();
 
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/markets" element={<Markets />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/groups" element={<Groups />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/trades" element={<Trades />} />
+      <Route path="/journal" element={<TradeJournal />} />
+      <Route path="/past-trades" element={<PastTrades />} />
+      <Route path="/create-prediction" element={<CreatePrediction />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+function AppContent() {
   return (
     <>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/markets" element={<Markets />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/trades" element={<Trades />} />
-          <Route path="/journal" element={<TradeJournal />} />
-          <Route path="/past-trades" element={<PastTrades />} />
-          <Route path="/create-prediction" element={<CreatePrediction />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <RouterContent />
       </BrowserRouter>
     </>
   );
