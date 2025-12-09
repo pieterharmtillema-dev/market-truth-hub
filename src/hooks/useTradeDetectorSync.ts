@@ -48,6 +48,22 @@ export function useTradeDetectorSync() {
       sync();
     });
 
-    return () => subscription.unsubscribe();
+    // Notify extension when tab is closed
+    const handleBeforeUnload = () => {
+      window.postMessage(
+        {
+          source: "TD_WEB",
+          type: "WEB_TAB_CLOSED"
+        },
+        "*"
+      );
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, []);
 }
