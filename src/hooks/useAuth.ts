@@ -28,6 +28,14 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
+    // Notify Chrome extension of logout before signing out
+    window.postMessage(
+      {
+        source: "TD_WEB",
+        type: "USER_LOGOUT"
+      },
+      "*"
+    );
     await supabase.auth.signOut();
   };
 
