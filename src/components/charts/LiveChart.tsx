@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData, LineData, Time, CandlestickSeries, LineSeries } from "lightweight-charts";
-import { getAggregates, getDateString, formatPolygonTicker, PolygonAggregateBar } from "@/lib/polygon";
-import { getCurrentPrice } from "@/lib/finnhub";
+import { getAggregates, getDateString, formatPolygonTicker, PolygonAggregateBar, getCurrentPrice } from "@/lib/polygon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
