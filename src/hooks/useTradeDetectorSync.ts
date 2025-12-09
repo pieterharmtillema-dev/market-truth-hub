@@ -1,6 +1,12 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  syncExtensionWithUser,
+  sendActivityState,
+  sendPageChange,
+  sendSiteClosed,
+} from "@/utils/tdExtensionSync";
 
 // Extend Window interface for global variables
 declare global {
@@ -19,11 +25,10 @@ export function useTradeDetectorSync() {
     async function sync() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (!session?.user) {
-          console.log("[TD WEB] No user logged in, skipping sync");
-          // Clear global variables when not logged in
-          window.__USER_API_KEY = undefined;
-          window.__USER_ID = undefined;
+          console.log("[TD WEB] No user logged in, clearing extension credentials");
+          syncExtensionWithUser(null);
           return;
         }
 
@@ -36,26 +41,16 @@ export function useTradeDetectorSync() {
           .single();
 
         if (error || !profile?.api_key) {
-          console.warn("[TD WEB] No api_key found for user");
+          console.warn("[TD WEB] No api_key found for user, clearing extension credentials");
+          syncExtensionWithUser(null);
           return;
         }
 
-        // Set global variables for extension access
-        window.__USER_API_KEY = profile.api_key;
-        window.__USER_ID = userId;
-
-        // Send to extension via postMessage
-        window.postMessage(
-          {
-            source: "TD_WEB",
-            type: "SET_API_DETAILS",
-            apiKey: profile.api_key,
-            userId: userId,
-          },
-          "*"
-        );
-
-        console.log("[TD WEB] Sent api_key + user_id to extension");
+        // Sync credentials with extension
+        syncExtensionWithUser({
+          api_key: profile.api_key,
+          user_id: userId,
+        });
 
         // Fetch and send current activity state
         const { data: activity } = await supabase
@@ -64,25 +59,14 @@ export function useTradeDetectorSync() {
           .eq("user_id", userId)
           .order("last_activity_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (activity) {
-          window.__TD_LAST_PLATFORM = activity.platform || undefined;
-          window.__TD_LAST_ACTIVE = activity.is_active;
-
-          window.postMessage(
-            {
-              source: "TD_WEB",
-              type: "TD_ACTIVITY_STATE",
-              platform: activity.platform,
-              isActive: activity.is_active,
-              lastActivity: activity.last_activity_at,
-            },
-            "*"
-          );
+          sendActivityState(activity);
         }
       } catch (err) {
         console.error("[TD WEB] Error syncing details:", err);
+        syncExtensionWithUser(null);
       }
     }
 
@@ -92,23 +76,14 @@ export function useTradeDetectorSync() {
     // Re-sync on auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
-        window.__USER_API_KEY = undefined;
-        window.__USER_ID = undefined;
-        window.__TD_LAST_PLATFORM = undefined;
-        window.__TD_LAST_ACTIVE = undefined;
+        syncExtensionWithUser(null);
       }
       sync();
     });
 
     // Notify extension when tab is closed
     const handleBeforeUnload = () => {
-      window.postMessage(
-        {
-          source: "TD_WEB",
-          type: "TD_SITE_CLOSED"
-        },
-        "*"
-      );
+      sendSiteClosed();
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -122,15 +97,7 @@ export function useTradeDetectorSync() {
   // Send page change notifications
   useEffect(() => {
     if (window.__USER_ID) {
-      window.postMessage(
-        {
-          source: "TD_WEB",
-          type: "TD_PAGE_CHANGE",
-          path: location.pathname,
-          userId: window.__USER_ID,
-        },
-        "*"
-      );
+      sendPageChange(location.pathname);
     }
   }, [location.pathname]);
 }

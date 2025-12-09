@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { syncExtensionWithUser, sendLogout } from "@/utils/tdExtensionSync";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -28,17 +29,11 @@ export function useAuth() {
   }, []);
 
   const signOut = async () => {
-    // Notify Chrome extension of logout before signing out
-    window.postMessage(
-      {
-        source: "TD_WEB",
-        type: "TD_LOGOUT"
-      },
-      "*"
-    );
-    // Clear global variables
-    (window as any).__USER_API_KEY = undefined;
-    (window as any).__USER_ID = undefined;
+    // Send logout notification to Chrome extension
+    sendLogout();
+    // Clear extension credentials
+    syncExtensionWithUser(null);
+    // Sign out from Supabase
     await supabase.auth.signOut();
   };
 
