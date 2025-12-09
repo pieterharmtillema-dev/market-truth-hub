@@ -18,6 +18,14 @@ interface TradePayload {
   user_id: string | null
 }
 
+interface SimpleTradePayload {
+  event_type: 'TRADE_EXECUTION'
+  side: 'long' | 'short'
+  platform: string
+  timestamp: number
+  user_id: string
+}
+
 interface UserActivityPayload {
   type: 'user_activity'
   platform: string
@@ -186,9 +194,110 @@ Deno.serve(async (req) => {
       return await handleUserActivity(supabase, rawPayload as UserActivityPayload, userId)
     }
 
-    // Otherwise, treat as trade payload
+    // Check if this is a simple TRADE_EXECUTION event from the extension
+    if (rawPayload.event_type === 'TRADE_EXECUTION') {
+      console.log('Processing simple TRADE_EXECUTION event')
+      
+      const simpleTrade = rawPayload as SimpleTradePayload
+      
+      // Validate required fields
+      if (!simpleTrade.side || !simpleTrade.timestamp) {
+        console.log('Missing required fields for simple trade')
+        return new Response(
+          JSON.stringify({ success: false, error: 'invalid_payload' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Validate side is long or short
+      const normalizedSide = simpleTrade.side.toLowerCase().trim()
+      if (normalizedSide !== 'long' && normalizedSide !== 'short') {
+        return new Response(
+          JSON.stringify({ success: false, error: 'invalid_payload' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Validate platform if provided
+      if (simpleTrade.platform && (typeof simpleTrade.platform !== 'string' || simpleTrade.platform.length > 100)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'invalid_payload' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Validate timestamp bounds
+      const tsMillis = simpleTrade.timestamp < 10_000_000_000 ? simpleTrade.timestamp * 1000 : simpleTrade.timestamp
+      const minValidTimestamp = new Date('2000-01-01').getTime()
+      const maxValidTimestamp = Date.now() + (24 * 60 * 60 * 1000)
+      if (tsMillis < minValidTimestamp || tsMillis > maxValidTimestamp) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'invalid_payload' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      const isoTimestamp = new Date(tsMillis).toISOString()
+      
+      // Check for duplicates (within 5 seconds)
+      const fiveSecondsMs = 5000
+      const timestampDate = new Date(tsMillis)
+      const minTimestamp = new Date(timestampDate.getTime() - fiveSecondsMs).toISOString()
+      const maxTimestamp = new Date(timestampDate.getTime() + fiveSecondsMs).toISOString()
+
+      const { data: existingTrades } = await supabase
+        .from('past_trades')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('symbol', 'UNKNOWN')
+        .eq('side', normalizedSide)
+        .gte('timestamp', minTimestamp)
+        .lte('timestamp', maxTimestamp)
+        .limit(1)
+
+      if (existingTrades && existingTrades.length > 0) {
+        console.log('Duplicate simple trade detected')
+        return new Response(
+          JSON.stringify({ success: false, error: 'duplicate_trade' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Insert simplified trade record
+      const { error: insertError } = await supabase
+        .from('past_trades')
+        .insert({
+          user_id: userId,
+          symbol: 'UNKNOWN',
+          side: normalizedSide,
+          fill_price: null,
+          exit_price: null,
+          quantity: null,
+          platform: simpleTrade.platform?.trim() || null,
+          account_id: null,
+          timestamp: isoTimestamp,
+          verified_status: 'pending',
+          verification_score: null
+        })
+
+      if (insertError) {
+        console.error('Error inserting simple trade:', insertError)
+        return new Response(
+          JSON.stringify({ success: false, error: 'insert_failed' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log('Simple trade logged successfully for user:', userId)
+      return new Response(
+        JSON.stringify({ success: true, status: 'simple_trade_logged' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Otherwise, treat as full trade payload (legacy format)
     const payload: TradePayload = rawPayload
-    console.log('Processing trade payload')
+    console.log('Processing full trade payload')
 
     // ========== INPUT VALIDATION ==========
     
