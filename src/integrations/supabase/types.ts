@@ -21,13 +21,20 @@ export type Database = {
           exit_price: number | null
           fill_price: number | null
           id: string
+          order_type: string | null
           platform: string | null
+          pnl: number | null
+          position_id: string | null
           quantity: number | null
+          raw: Json | null
           side: string
+          source: string | null
           symbol: string
           timestamp: string
+          trade_mode: string | null
           updated_at: string
           user_id: string
+          user_role: string | null
           verification_score: number | null
           verified_status: string
         }
@@ -37,13 +44,20 @@ export type Database = {
           exit_price?: number | null
           fill_price?: number | null
           id?: string
+          order_type?: string | null
           platform?: string | null
+          pnl?: number | null
+          position_id?: string | null
           quantity?: number | null
+          raw?: Json | null
           side: string
+          source?: string | null
           symbol: string
           timestamp: string
+          trade_mode?: string | null
           updated_at?: string
           user_id: string
+          user_role?: string | null
           verification_score?: number | null
           verified_status?: string
         }
@@ -53,13 +67,20 @@ export type Database = {
           exit_price?: number | null
           fill_price?: number | null
           id?: string
+          order_type?: string | null
           platform?: string | null
+          pnl?: number | null
+          position_id?: string | null
           quantity?: number | null
+          raw?: Json | null
           side?: string
+          source?: string | null
           symbol?: string
           timestamp?: string
+          trade_mode?: string | null
           updated_at?: string
           user_id?: string
+          user_role?: string | null
           verification_score?: number | null
           verified_status?: string
         }
@@ -222,6 +243,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_profiles: {
@@ -251,12 +293,21 @@ export type Database = {
     }
     Functions: {
       generate_api_key: { Args: never; Returns: string }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       regenerate_user_api_key: {
         Args: { target_user_id: string }
         Returns: string
       }
     }
     Enums: {
+      app_role: "admin" | "developer" | "user"
       instrument_type:
         | "stock"
         | "crypto"
@@ -392,6 +443,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "developer", "user"],
       instrument_type: [
         "stock",
         "crypto",

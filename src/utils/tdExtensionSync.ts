@@ -3,6 +3,7 @@
 interface UserCredentials {
   api_key?: string | null;
   user_id?: string | null;
+  role?: string | null;
 }
 
 /**
@@ -14,6 +15,7 @@ export function syncExtensionWithUser(user: UserCredentials | null) {
     // Set global variables for extension access
     window.__USER_API_KEY = user.api_key;
     window.__USER_ID = user.user_id;
+    window.__USER_ROLE = user.role || 'user';
 
     window.postMessage(
       {
@@ -21,14 +23,16 @@ export function syncExtensionWithUser(user: UserCredentials | null) {
         type: "SET_API_DETAILS",
         apiKey: user.api_key,
         userId: user.user_id,
+        role: user.role || 'user',
       },
       "*"
     );
-    console.log("[TD WEB] Sent SET_API_DETAILS to extension");
+    console.log("[TD WEB] Sent SET_API_DETAILS to extension with role:", user.role || 'user');
   } else {
     // Clear global variables
     window.__USER_API_KEY = undefined;
     window.__USER_ID = undefined;
+    window.__USER_ROLE = undefined;
     window.__TD_LAST_PLATFORM = undefined;
     window.__TD_LAST_ACTIVE = undefined;
 
