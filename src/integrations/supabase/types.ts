@@ -17,6 +17,7 @@ export type Database = {
       past_trades: {
         Row: {
           account_id: string | null
+          avg_entry_after: number | null
           created_at: string
           exit_price: number | null
           fill_price: number | null
@@ -25,6 +26,7 @@ export type Database = {
           platform: string | null
           pnl: number | null
           position_id: string | null
+          position_size_after: number | null
           quantity: number | null
           raw: Json | null
           side: string
@@ -40,6 +42,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          avg_entry_after?: number | null
           created_at?: string
           exit_price?: number | null
           fill_price?: number | null
@@ -48,6 +51,7 @@ export type Database = {
           platform?: string | null
           pnl?: number | null
           position_id?: string | null
+          position_size_after?: number | null
           quantity?: number | null
           raw?: Json | null
           side: string
@@ -63,6 +67,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          avg_entry_after?: number | null
           created_at?: string
           exit_price?: number | null
           fill_price?: number | null
@@ -71,6 +76,7 @@ export type Database = {
           platform?: string | null
           pnl?: number | null
           position_id?: string | null
+          position_size_after?: number | null
           quantity?: number | null
           raw?: Json | null
           side?: string
@@ -83,6 +89,39 @@ export type Database = {
           user_role?: string | null
           verification_score?: number | null
           verified_status?: string
+        }
+        Relationships: []
+      }
+      positions: {
+        Row: {
+          avg_entry: number
+          created_at: string | null
+          id: string
+          net_size: number
+          realized_pnl: number
+          symbol: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_entry?: number
+          created_at?: string | null
+          id?: string
+          net_size?: number
+          realized_pnl?: number
+          symbol: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_entry?: number
+          created_at?: string | null
+          id?: string
+          net_size?: number
+          realized_pnl?: number
+          symbol?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
