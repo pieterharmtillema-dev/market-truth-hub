@@ -33,14 +33,13 @@ const userProfile = {
 };
 
 interface Trade {
-  id: string;
-  asset: string;
-  direction: string;
+  id: number;
+  symbol: string;
+  side: string;
   entry_price: number;
   exit_price: number | null;
-  profit_loss: number | null;
-  entry_date: string;
-  entry_datetime_utc?: string | null;
+  pnl: number | null;
+  entry_timestamp: string;
 }
 
 const Profile = () => {
@@ -73,12 +72,12 @@ const Profile = () => {
           setApiKey(profile.api_key);
         }
 
-        // Fetch recent trades
+        // Fetch recent trades from positions table
         const { data, error } = await supabase
-          .from('trader_trades')
-          .select('id, asset, direction, entry_price, exit_price, profit_loss, entry_date, entry_datetime_utc')
+          .from('positions')
+          .select('id, symbol, side, entry_price, exit_price, pnl, entry_timestamp')
           .eq('user_id', user.id)
-          .order('entry_date', { ascending: false })
+          .order('entry_timestamp', { ascending: false })
           .limit(5);
 
         if (!error && data) {
@@ -230,31 +229,31 @@ const Profile = () => {
               </Card>
             ) : (
               <>
-                {recentTrades.map((trade) => (
+              {recentTrades.map((trade) => (
                   <Card key={trade.id} variant="glass" className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Badge 
-                          variant={trade.direction === 'long' || trade.direction === 'buy' ? 'default' : 'destructive'} 
+                          variant={trade.side === 'long' ? 'default' : 'destructive'} 
                           className="gap-1"
                         >
-                          {trade.direction === 'long' || trade.direction === 'buy' ? (
+                          {trade.side === 'long' ? (
                             <ArrowUpRight className="h-3 w-3" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3" />
                           )}
-                          {trade.direction}
+                          {trade.side}
                         </Badge>
                         <div>
-                          <span className="font-mono font-medium">{trade.asset}</span>
+                          <span className="font-mono font-medium">{trade.symbol}</span>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(trade.entry_datetime_utc || trade.entry_date), 'MMM d, yyyy')}
+                            {format(new Date(trade.entry_timestamp), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`font-medium ${(trade.profit_loss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {(trade.profit_loss || 0) >= 0 ? '+' : ''}${(trade.profit_loss || 0).toFixed(2)}
+                        <span className={`font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
                         </span>
                         <p className="text-xs text-muted-foreground">
                           ${trade.entry_price.toLocaleString()} → {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : '—'}
