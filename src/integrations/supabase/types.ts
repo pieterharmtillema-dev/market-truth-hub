@@ -214,6 +214,30 @@ export type Database = {
         }
         Relationships: []
       }
+      trader_activity: {
+        Row: {
+          id: number | null
+          is_active: boolean | null
+          last_activity_at: string | null
+          platform: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: number | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          platform?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: number | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          platform?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_api_key: { Args: never; Returns: string }
