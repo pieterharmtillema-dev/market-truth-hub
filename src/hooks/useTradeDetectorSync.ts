@@ -61,17 +61,21 @@ export function useTradeDetectorSync() {
           role: userRole,
         });
 
-        // Fetch and send current activity state
+        // Fetch and send current activity state from user_activity table
         const { data: activity } = await supabase
-          .from("trader_activity")
-          .select("is_active, platform, last_activity_at")
+          .from("user_activity")
+          .select("is_active, platform, timestamp")
           .eq("user_id", userId)
-          .order("last_activity_at", { ascending: false })
+          .order("timestamp", { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (activity) {
-          sendActivityState(activity);
+          sendActivityState({
+            platform: activity.platform,
+            is_active: activity.is_active,
+            last_activity_at: activity.timestamp,
+          });
         }
       } catch (err) {
         console.error("[TD WEB] Error syncing details:", err);

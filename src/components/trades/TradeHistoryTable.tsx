@@ -15,30 +15,18 @@ import { useTradeVerification } from '@/hooks/useTradeVerification';
 import { TradeVerificationBadge, VerificationSummaryCard } from './TradeVerificationBadge';
 import { TradeToVerify } from '@/lib/tradeVerification';
 
-interface Trade {
-  id: string;
-  asset: string;
-  direction: string;
+interface Position {
+  id: number;
+  symbol: string;
+  side: string;
+  quantity: number;
   entry_price: number;
+  entry_timestamp: string;
   exit_price: number | null;
-  entry_date: string;
-  exit_date: string | null;
-  quantity: number | null;
-  profit_loss: number | null;
-  profit_loss_percent: number | null;
-  notes: string | null;
-  user_id: string;
-  broker_id?: string | null;
-  account_id?: string | null;
-  strategy?: string | null;
-  instrument_type?: string | null;
-  stop_loss?: number | null;
-  take_profit?: number | null;
-  commission?: number | null;
-  leverage?: number | null;
-  margin?: number | null;
-  entry_datetime_utc?: string | null;
-  exit_datetime_utc?: string | null;
+  exit_timestamp: string | null;
+  pnl: number | null;
+  platform: string | null;
+  open: boolean;
 }
 
 interface TradeHistoryTableProps {
@@ -46,12 +34,12 @@ interface TradeHistoryTableProps {
 }
 
 export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
-  const [filterStrategy, setFilterStrategy] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const { toast } = useToast();
   
   const { 
@@ -63,16 +51,16 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     getTradeVerification 
   } = useTradeVerification();
 
-  const fetchTrades = async () => {
+  const fetchPositions = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
       let query = supabase
-        .from('trader_trades')
+        .from('positions')
         .select('*')
-        .order('entry_date', { ascending: false })
+        .order('entry_timestamp', { ascending: false })
         .limit(100);
 
       if (user?.id) {
@@ -82,61 +70,49 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       const { data, error } = await query;
 
       if (error) throw error;
-      setTrades(data || []);
+      setPositions(data || []);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to fetch trades', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to fetch positions', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTrades();
+    fetchPositions();
   }, [refreshTrigger]);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase.from('trader_trades').delete().eq('id', id);
-      if (error) throw error;
-      setTrades(trades.filter(t => t.id !== id));
-      toast({ title: 'Trade deleted' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete trade', variant: 'destructive' });
-    }
-  };
+  // Get unique symbols for filters
+  const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Get unique symbols and strategies for filters
-  const symbols = [...new Set(trades.map(t => t.asset))].sort();
-  const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort();
-
-  // Filter trades
-  const filteredTrades = trades.filter(trade => {
-    if (filterSymbol !== 'all' && trade.asset !== filterSymbol) return false;
-    if (filterStrategy !== 'all' && trade.strategy !== filterStrategy) return false;
+  // Filter positions
+  const filteredPositions = positions.filter(position => {
+    if (filterSymbol !== 'all' && position.symbol !== filterSymbol) return false;
+    if (filterStatus === 'open' && !position.open) return false;
+    if (filterStatus === 'closed' && position.open) return false;
     return true;
   });
 
   // Calculate summary stats
-  const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
-  const totalCommission = filteredTrades.reduce((sum, t) => sum + (t.commission || 0), 0);
-  const wins = filteredTrades.filter(t => (t.profit_loss || 0) > 0).length;
-  const winRate = filteredTrades.length > 0 ? (wins / filteredTrades.length) * 100 : 0;
+  const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
+  const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
+  const winRate = filteredPositions.filter(p => !p.open).length > 0 
+    ? (wins / filteredPositions.filter(p => !p.open).length) * 100 
+    : 0;
   
-  // Convert trades to verification format
+  // Convert positions to verification format
   const tradesToVerify: TradeToVerify[] = useMemo(() => {
-    return filteredTrades.map(trade => ({
-      id: trade.id,
-      symbol: trade.asset,
-      side: trade.direction,
-      entry_fill_price: trade.entry_price,
-      exit_fill_price: trade.exit_price,
-      entry_timestamp: new Date(trade.entry_datetime_utc || trade.entry_date),
-      exit_timestamp: trade.exit_datetime_utc ? new Date(trade.exit_datetime_utc) : 
-                      trade.exit_date ? new Date(trade.exit_date) : null,
-      quantity: trade.quantity,
-      instrument_type: trade.instrument_type
+    return filteredPositions.filter(p => !p.open).map(position => ({
+      id: String(position.id),
+      symbol: position.symbol,
+      side: position.side,
+      entry_fill_price: position.entry_price,
+      exit_fill_price: position.exit_price,
+      entry_timestamp: new Date(position.entry_timestamp),
+      exit_timestamp: position.exit_timestamp ? new Date(position.exit_timestamp) : null,
+      quantity: position.quantity,
     }));
-  }, [filteredTrades]);
+  }, [filteredPositions]);
   
   // Handle verify button click
   const handleVerifyTrades = () => {
@@ -158,10 +134,10 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     );
   }
 
-  if (trades.length === 0) {
+  if (positions.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>No trades yet. Upload a CSV to get started.</p>
+        <p>No positions yet. Connect your extension to start tracking.</p>
       </div>
     );
   }
@@ -181,12 +157,12 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
           <p className="text-lg font-bold">{winRate.toFixed(1)}%</p>
         </div>
         <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Trades</p>
-          <p className="text-lg font-bold">{filteredTrades.length}</p>
+          <p className="text-xs text-muted-foreground">Positions</p>
+          <p className="text-lg font-bold">{filteredPositions.length}</p>
         </div>
         <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Commission</p>
-          <p className="text-lg font-bold text-orange-500">${totalCommission.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">Open</p>
+          <p className="text-lg font-bold text-amber-500">{filteredPositions.filter(p => p.open).length}</p>
         </div>
       </div>
 
@@ -226,15 +202,14 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterStrategy} onValueChange={setFilterStrategy}>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="All Strategies" />
+            <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Strategies</SelectItem>
-            {strategies.map(s => (
-              <SelectItem key={s} value={s!}>{s}</SelectItem>
-            ))}
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
         
@@ -243,7 +218,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             variant="outline" 
             size="sm" 
             onClick={handleVerifyTrades}
-            disabled={isVerifying || filteredTrades.length === 0}
+            disabled={isVerifying || tradesToVerify.length === 0}
             className="gap-2"
           >
             {isVerifying ? (
@@ -263,7 +238,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-8"></TableHead>
-                <TableHead>Asset</TableHead>
+                <TableHead>Symbol</TableHead>
                 <TableHead>Side</TableHead>
                 <TableHead>Entry</TableHead>
                 <TableHead>Exit</TableHead>
@@ -271,17 +246,16 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                 <TableHead>P/L</TableHead>
                 <TableHead>Verify</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTrades.map((trade) => (
-                <Collapsible key={trade.id} open={expandedRow === trade.id} onOpenChange={(open) => setExpandedRow(open ? trade.id : null)}>
+              {filteredPositions.map((position) => (
+                <Collapsible key={position.id} open={expandedRow === position.id} onOpenChange={(open) => setExpandedRow(open ? position.id : null)}>
                   <TableRow className="group">
                     <TableCell>
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6">
-                          {expandedRow === trade.id ? (
+                          {expandedRow === position.id ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
                             <ChevronDown className="h-3 w-3" />
@@ -291,31 +265,31 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <span className="font-mono font-medium">{trade.asset}</span>
-                        {trade.strategy && (
-                          <Badge variant="outline" className="ml-2 text-[10px]">{trade.strategy}</Badge>
+                        <span className="font-mono font-medium">{position.symbol}</span>
+                        {position.open && (
+                          <Badge variant="outline" className="ml-2 text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={trade.direction === 'long' || trade.direction === 'buy' ? 'default' : 'destructive'} className="gap-1">
-                        {trade.direction === 'long' || trade.direction === 'buy' ? (
+                      <Badge variant={position.side === 'long' ? 'default' : 'destructive'} className="gap-1">
+                        {position.side === 'long' ? (
                           <ArrowUpRight className="h-3 w-3" />
                         ) : (
                           <ArrowDownRight className="h-3 w-3" />
                         )}
-                        {trade.direction}
+                        {position.side}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono">${trade.entry_price.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono">${position.entry_price.toLocaleString()}</TableCell>
                     <TableCell className="font-mono">
-                      {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : '—'}
+                      {position.exit_price ? `$${position.exit_price.toLocaleString()}` : '—'}
                     </TableCell>
-                    <TableCell>{trade.quantity || '—'}</TableCell>
+                    <TableCell>{position.quantity}</TableCell>
                     <TableCell>
-                      {trade.profit_loss != null ? (
-                        <span className={trade.profit_loss >= 0 ? 'text-green-500' : 'text-red-500'}>
-                          {trade.profit_loss >= 0 ? '+' : ''}${trade.profit_loss.toLocaleString()}
+                      {position.pnl != null ? (
+                        <span className={position.pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
+                          {position.pnl >= 0 ? '+' : ''}${position.pnl.toLocaleString()}
                         </span>
                       ) : (
                         '—'
@@ -323,7 +297,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                     </TableCell>
                     <TableCell>
                       {(() => {
-                        const verification = getTradeVerification(trade.id);
+                        const verification = getTradeVerification(String(position.id));
                         if (!verification) return <span className="text-muted-foreground text-xs">—</span>;
                         return (
                           <TradeVerificationBadge
@@ -337,77 +311,23 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                       })()}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(trade.entry_datetime_utc || trade.entry_date), 'MMM d, yy HH:mm')}
-                    </TableCell>
-                    <TableCell>
-                      {currentUserId === trade.user_id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(trade.id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {format(new Date(position.entry_timestamp), 'MMM d, yy HH:mm')}
                     </TableCell>
                   </TableRow>
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={10} className="py-3">
+                      <TableCell colSpan={9} className="py-3">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          {trade.broker_id && (
+                          {position.platform && (
                             <div>
-                              <span className="text-muted-foreground">Broker:</span>{' '}
-                              <span className="font-medium">{trade.broker_id}</span>
+                              <span className="text-muted-foreground">Platform:</span>{' '}
+                              <span className="font-medium">{position.platform}</span>
                             </div>
                           )}
-                          {trade.account_id && (
+                          {position.exit_timestamp && (
                             <div>
-                              <span className="text-muted-foreground">Account:</span>{' '}
-                              <span className="font-medium">{trade.account_id}</span>
-                            </div>
-                          )}
-                          {trade.instrument_type && (
-                            <div>
-                              <span className="text-muted-foreground">Type:</span>{' '}
-                              <Badge variant="secondary">{trade.instrument_type}</Badge>
-                            </div>
-                          )}
-                          {trade.stop_loss && (
-                            <div>
-                              <span className="text-muted-foreground">Stop Loss:</span>{' '}
-                              <span className="font-mono text-red-500">${trade.stop_loss}</span>
-                            </div>
-                          )}
-                          {trade.take_profit && (
-                            <div>
-                              <span className="text-muted-foreground">Take Profit:</span>{' '}
-                              <span className="font-mono text-green-500">${trade.take_profit}</span>
-                            </div>
-                          )}
-                          {trade.commission && (
-                            <div>
-                              <span className="text-muted-foreground">Commission:</span>{' '}
-                              <span className="font-mono text-orange-500">${trade.commission}</span>
-                            </div>
-                          )}
-                          {trade.leverage && (
-                            <div>
-                              <span className="text-muted-foreground">Leverage:</span>{' '}
-                              <span className="font-medium">{trade.leverage}x</span>
-                            </div>
-                          )}
-                          {trade.margin && (
-                            <div>
-                              <span className="text-muted-foreground">Margin:</span>{' '}
-                              <span className="font-mono">${trade.margin}</span>
-                            </div>
-                          )}
-                          {trade.notes && (
-                            <div className="col-span-full">
-                              <span className="text-muted-foreground">Notes:</span>{' '}
-                              <span>{trade.notes}</span>
+                              <span className="text-muted-foreground">Exit Time:</span>{' '}
+                              <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
                             </div>
                           )}
                         </div>
