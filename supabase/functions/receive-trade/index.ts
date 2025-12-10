@@ -35,6 +35,96 @@ interface UserActivityPayload {
   user_id: string | null
 }
 
+interface Position {
+  id?: string
+  user_id: string
+  symbol: string
+  net_size: number
+  avg_entry: number
+  realized_pnl: number
+}
+
+interface PnLResult {
+  realized_pnl: number
+  position_size_after: number
+  avg_entry_after: number
+}
+
+// PnL calculation engine
+function calculatePnL(
+  currentPosition: Position | null,
+  side: string,
+  quantity: number,
+  price: number
+): PnLResult {
+  // Default position if none exists
+  const pos: Position = currentPosition || {
+    user_id: '',
+    symbol: '',
+    net_size: 0,
+    avg_entry: 0,
+    realized_pnl: 0
+  }
+
+  // Determine trade direction: positive for long/buy, negative for short/sell
+  const sideNormalized = side.toLowerCase()
+  const isLong = sideNormalized === 'long' || sideNormalized === 'buy'
+  const tradeDelta = isLong ? quantity : -quantity
+
+  let realized_pnl = 0
+  let new_net_size = pos.net_size
+  let new_avg_entry = pos.avg_entry
+
+  const currentNetSize = pos.net_size
+  const currentAvgEntry = pos.avg_entry
+
+  // Case 1: Opening or adding to position (same direction)
+  if ((currentNetSize >= 0 && tradeDelta > 0) || (currentNetSize <= 0 && tradeDelta < 0)) {
+    // Adding to position - calculate new weighted average entry
+    const totalCost = Math.abs(currentNetSize) * currentAvgEntry + quantity * price
+    new_net_size = currentNetSize + tradeDelta
+    new_avg_entry = Math.abs(new_net_size) > 0 ? totalCost / Math.abs(new_net_size) : price
+    realized_pnl = 0
+  }
+  // Case 2: Reducing position (opposite direction)
+  else {
+    const absCurrentSize = Math.abs(currentNetSize)
+    const absTradeQty = quantity
+
+    if (absTradeQty <= absCurrentSize) {
+      // Partial or full close - realize PnL on closed portion
+      if (currentNetSize > 0) {
+        // Was long, now selling (closing)
+        realized_pnl = absTradeQty * (price - currentAvgEntry)
+      } else {
+        // Was short, now buying (closing)
+        realized_pnl = absTradeQty * (currentAvgEntry - price)
+      }
+      new_net_size = currentNetSize + tradeDelta
+      // Keep same avg entry for remaining position
+      new_avg_entry = Math.abs(new_net_size) > 0 ? currentAvgEntry : 0
+    } else {
+      // Position flip - close entire old position + open new position
+      // First, realize PnL on closing the entire old position
+      if (currentNetSize > 0) {
+        realized_pnl = absCurrentSize * (price - currentAvgEntry)
+      } else {
+        realized_pnl = absCurrentSize * (currentAvgEntry - price)
+      }
+      // Then open new position with remaining quantity
+      const remainingQty = absTradeQty - absCurrentSize
+      new_net_size = tradeDelta > 0 ? remainingQty : -remainingQty
+      new_avg_entry = price // New position starts at current price
+    }
+  }
+
+  return {
+    realized_pnl: Math.round(realized_pnl * 100) / 100, // Round to 2 decimal places
+    position_size_after: Math.round(new_net_size * 100000) / 100000, // Handle floating point
+    avg_entry_after: Math.round(new_avg_entry * 100) / 100
+  }
+}
+
 // Handle user activity updates
 async function handleUserActivity(
   supabase: SupabaseClient,
@@ -152,6 +242,45 @@ async function authenticateRequest(
   }
   
   return { userId: null, error: 'Authentication required. Provide x-api-key header or Authorization: Bearer <token>' }
+}
+
+// Update or create position
+async function updatePosition(
+  supabase: SupabaseClient,
+  userId: string,
+  symbol: string,
+  pnlResult: PnLResult
+): Promise<void> {
+  const { data: existingPosition } = await supabase
+    .from('positions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('symbol', symbol)
+    .maybeSingle()
+
+  if (existingPosition) {
+    // Update existing position
+    await supabase
+      .from('positions')
+      .update({
+        net_size: pnlResult.position_size_after,
+        avg_entry: pnlResult.avg_entry_after,
+        realized_pnl: (existingPosition.realized_pnl || 0) + pnlResult.realized_pnl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingPosition.id)
+  } else {
+    // Create new position
+    await supabase
+      .from('positions')
+      .insert({
+        user_id: userId,
+        symbol: symbol,
+        net_size: pnlResult.position_size_after,
+        avg_entry: pnlResult.avg_entry_after,
+        realized_pnl: pnlResult.realized_pnl
+      })
+  }
 }
 
 Deno.serve(async (req) => {
@@ -318,7 +447,34 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Insert trade with all new fields
+    // Calculate PnL if we have price and quantity
+    let pnlResult: PnLResult = {
+      realized_pnl: 0,
+      position_size_after: 0,
+      avg_entry_after: 0
+    }
+
+    const quantity = payload.quantity || 0
+    const price = fillPrice || 0
+
+    if (quantity > 0 && price > 0 && symbol !== 'UNKNOWN') {
+      // Fetch current position for this symbol
+      const { data: currentPosition } = await supabase
+        .from('positions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('symbol', symbol)
+        .maybeSingle()
+
+      // Calculate PnL
+      pnlResult = calculatePnL(currentPosition as Position | null, normalizedSide, quantity, price)
+      console.log('PnL calculated:', pnlResult)
+
+      // Update position in database
+      await updatePosition(supabase, userId, symbol, pnlResult)
+    }
+
+    // Insert trade with PnL data
     const { data: insertedTrade, error: insertError } = await supabase
       .from('past_trades')
       .insert({
@@ -339,7 +495,9 @@ Deno.serve(async (req) => {
         position_id: payload.position_id || null,
         source: payload.source || null,
         raw: payload.raw || null,
-        pnl: null // Will be calculated later or by client
+        pnl: pnlResult.realized_pnl || null,
+        position_size_after: pnlResult.position_size_after,
+        avg_entry_after: pnlResult.avg_entry_after
       })
       .select('id')
       .single()
@@ -356,14 +514,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Trade inserted successfully:', insertedTrade.id, 'mode:', tradeMode)
+    console.log('Trade inserted successfully:', insertedTrade.id, 'mode:', tradeMode, 'pnl:', pnlResult.realized_pnl)
     return new Response(
       JSON.stringify({ 
         success: true, 
         trade_id: insertedTrade.id, 
         status: 'stored',
         trade_mode: tradeMode,
-        user_id: userId
+        user_id: userId,
+        pnl: pnlResult.realized_pnl,
+        position_size_after: pnlResult.position_size_after,
+        avg_entry_after: pnlResult.avg_entry_after
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
