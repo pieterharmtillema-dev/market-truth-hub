@@ -15,19 +15,18 @@ import {
   Target, 
   Calendar,
   DollarSign,
-  Percent,
   CheckCircle2
 } from 'lucide-react';
 
-interface Trade {
-  id: string;
-  asset: string;
-  direction: string;
+interface Position {
+  id: number;
+  symbol: string;
+  side: string;
   entry_price: number;
   exit_price: number | null;
-  entry_date: string;
-  profit_loss: number | null;
-  commission?: number | null;
+  entry_timestamp: string;
+  pnl: number | null;
+  open: boolean;
 }
 
 interface TradeJournalSummaryProps {
@@ -52,53 +51,52 @@ interface SymbolSummary {
 }
 
 export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchTrades = useCallback(async () => {
+  const fetchPositions = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setTrades([]);
+        setPositions([]);
         return;
       }
 
       const { data, error } = await supabase
-        .from('trader_trades')
-        .select('id, asset, direction, entry_price, exit_price, entry_date, profit_loss, commission')
+        .from('positions')
+        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, pnl, open')
         .eq('user_id', user.id)
-        .order('entry_date', { ascending: false });
+        .eq('open', false)
+        .order('entry_timestamp', { ascending: false });
 
       if (error) throw error;
-      setTrades(data || []);
+      setPositions(data || []);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to fetch trades', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to fetch positions', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchTrades();
-  }, [refreshTrigger, fetchTrades]);
+    fetchPositions();
+  }, [refreshTrigger, fetchPositions]);
 
   // Calculate summaries
-  const { totalPnL, totalCommission, wins, losses, winRate, avgPnL, bestTrade, worstTrade } = useMemo(() => {
-    const pnlValues = trades.map(t => t.profit_loss || 0);
+  const { totalPnL, wins, losses, winRate, avgPnL, bestTrade, worstTrade } = useMemo(() => {
+    const pnlValues = positions.map(p => p.pnl || 0);
     const total = pnlValues.reduce((sum, v) => sum + v, 0);
-    const commission = trades.reduce((sum, t) => sum + (t.commission || 0), 0);
-    const w = trades.filter(t => (t.profit_loss || 0) > 0).length;
-    const l = trades.filter(t => (t.profit_loss || 0) < 0).length;
-    const rate = trades.length > 0 ? (w / trades.length) * 100 : 0;
-    const avg = trades.length > 0 ? total / trades.length : 0;
+    const w = positions.filter(p => (p.pnl || 0) > 0).length;
+    const l = positions.filter(p => (p.pnl || 0) < 0).length;
+    const rate = positions.length > 0 ? (w / positions.length) * 100 : 0;
+    const avg = positions.length > 0 ? total / positions.length : 0;
     const best = pnlValues.length > 0 ? Math.max(...pnlValues) : 0;
     const worst = pnlValues.length > 0 ? Math.min(...pnlValues) : 0;
     
     return { 
       totalPnL: total, 
-      totalCommission: commission,
       wins: w, 
       losses: l, 
       winRate: rate, 
@@ -106,57 +104,57 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
       bestTrade: best,
       worstTrade: worst
     };
-  }, [trades]);
+  }, [positions]);
 
   // Daily summaries
   const dailySummaries = useMemo((): DailySummary[] => {
-    const byDate: Record<string, Trade[]> = {};
-    trades.forEach(trade => {
-      const date = format(new Date(trade.entry_date), 'yyyy-MM-dd');
+    const byDate: Record<string, Position[]> = {};
+    positions.forEach(position => {
+      const date = format(new Date(position.entry_timestamp), 'yyyy-MM-dd');
       if (!byDate[date]) byDate[date] = [];
-      byDate[date].push(trade);
+      byDate[date].push(position);
     });
 
     return Object.entries(byDate)
-      .map(([date, dayTrades]) => {
-        const pnl = dayTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
-        const w = dayTrades.filter(t => (t.profit_loss || 0) > 0).length;
-        const l = dayTrades.filter(t => (t.profit_loss || 0) < 0).length;
+      .map(([date, dayPositions]) => {
+        const pnl = dayPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
+        const w = dayPositions.filter(p => (p.pnl || 0) > 0).length;
+        const l = dayPositions.filter(p => (p.pnl || 0) < 0).length;
         return {
           date,
-          trades: dayTrades.length,
+          trades: dayPositions.length,
           pnl,
           wins: w,
           losses: l,
-          winRate: dayTrades.length > 0 ? (w / dayTrades.length) * 100 : 0
+          winRate: dayPositions.length > 0 ? (w / dayPositions.length) * 100 : 0
         };
       })
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 14); // Last 14 days
-  }, [trades]);
+  }, [positions]);
 
   // Symbol summaries
   const symbolSummaries = useMemo((): SymbolSummary[] => {
-    const bySymbol: Record<string, Trade[]> = {};
-    trades.forEach(trade => {
-      if (!bySymbol[trade.asset]) bySymbol[trade.asset] = [];
-      bySymbol[trade.asset].push(trade);
+    const bySymbol: Record<string, Position[]> = {};
+    positions.forEach(position => {
+      if (!bySymbol[position.symbol]) bySymbol[position.symbol] = [];
+      bySymbol[position.symbol].push(position);
     });
 
     return Object.entries(bySymbol)
-      .map(([symbol, symbolTrades]) => {
-        const pnl = symbolTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
-        const w = symbolTrades.filter(t => (t.profit_loss || 0) > 0).length;
+      .map(([symbol, symbolPositions]) => {
+        const pnl = symbolPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
+        const w = symbolPositions.filter(p => (p.pnl || 0) > 0).length;
         return {
           symbol,
-          trades: symbolTrades.length,
+          trades: symbolPositions.length,
           pnl,
           wins: w,
-          winRate: symbolTrades.length > 0 ? (w / symbolTrades.length) * 100 : 0
+          winRate: symbolPositions.length > 0 ? (w / symbolPositions.length) * 100 : 0
         };
       })
       .sort((a, b) => b.pnl - a.pnl);
-  }, [trades]);
+  }, [positions]);
 
   if (loading) {
     return (
@@ -168,12 +166,12 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
     );
   }
 
-  if (trades.length === 0) {
+  if (positions.length === 0) {
     return (
       <Card className="border-border/50 bg-card/50">
         <CardContent className="py-12 text-center text-muted-foreground">
           <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No trades to analyze. Import some trades first.</p>
+          <p className="text-sm">No closed positions to analyze yet.</p>
         </CardContent>
       </Card>
     );
@@ -192,8 +190,8 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-muted/50 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-primary">{trades.length}</p>
-              <p className="text-sm text-muted-foreground">Total Trades</p>
+              <p className="text-3xl font-bold text-primary">{positions.length}</p>
+              <p className="text-sm text-muted-foreground">Closed Positions</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -225,11 +223,6 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
               <TrendingDown className="h-4 w-4 text-red-500" />
               <span className="text-muted-foreground">Losses:</span>
               <span className="font-medium">{losses}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Commission:</span>
-              <span className="font-medium">${totalCommission.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-green-500" />

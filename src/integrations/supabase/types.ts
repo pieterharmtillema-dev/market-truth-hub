@@ -14,111 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      past_trades: {
-        Row: {
-          account_id: string | null
-          avg_entry_after: number | null
-          created_at: string
-          exit_price: number | null
-          fill_price: number | null
-          id: string
-          order_type: string | null
-          platform: string | null
-          pnl: number | null
-          position_id: string | null
-          position_size_after: number | null
-          quantity: number | null
-          raw: Json | null
-          side: string
-          source: string | null
-          symbol: string
-          timestamp: string
-          trade_mode: string | null
-          updated_at: string
-          user_id: string
-          user_role: string | null
-          verification_score: number | null
-          verified_status: string
-        }
-        Insert: {
-          account_id?: string | null
-          avg_entry_after?: number | null
-          created_at?: string
-          exit_price?: number | null
-          fill_price?: number | null
-          id?: string
-          order_type?: string | null
-          platform?: string | null
-          pnl?: number | null
-          position_id?: string | null
-          position_size_after?: number | null
-          quantity?: number | null
-          raw?: Json | null
-          side: string
-          source?: string | null
-          symbol: string
-          timestamp: string
-          trade_mode?: string | null
-          updated_at?: string
-          user_id: string
-          user_role?: string | null
-          verification_score?: number | null
-          verified_status?: string
-        }
-        Update: {
-          account_id?: string | null
-          avg_entry_after?: number | null
-          created_at?: string
-          exit_price?: number | null
-          fill_price?: number | null
-          id?: string
-          order_type?: string | null
-          platform?: string | null
-          pnl?: number | null
-          position_id?: string | null
-          position_size_after?: number | null
-          quantity?: number | null
-          raw?: Json | null
-          side?: string
-          source?: string | null
-          symbol?: string
-          timestamp?: string
-          trade_mode?: string | null
-          updated_at?: string
-          user_id?: string
-          user_role?: string | null
-          verification_score?: number | null
-          verified_status?: string
-        }
-        Relationships: []
-      }
       positions: {
         Row: {
-          avg_entry: number
           created_at: string | null
-          id: string
-          net_size: number
-          realized_pnl: number
+          entry_price: number
+          entry_timestamp: string
+          exit_price: number | null
+          exit_timestamp: string | null
+          id: number
+          open: boolean
+          platform: string | null
+          pnl: number | null
+          quantity: number
+          side: string
           symbol: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
-          avg_entry?: number
           created_at?: string | null
-          id?: string
-          net_size?: number
-          realized_pnl?: number
+          entry_price: number
+          entry_timestamp: string
+          exit_price?: number | null
+          exit_timestamp?: string | null
+          id?: never
+          open?: boolean
+          platform?: string | null
+          pnl?: number | null
+          quantity: number
+          side: string
           symbol: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
-          avg_entry?: number
           created_at?: string | null
-          id?: string
-          net_size?: number
-          realized_pnl?: number
+          entry_price?: number
+          entry_timestamp?: string
+          exit_price?: number | null
+          exit_timestamp?: string | null
+          id?: never
+          open?: boolean
+          platform?: string | null
+          pnl?: number | null
+          quantity?: number
+          side?: string
           symbol?: string
           updated_at?: string | null
           user_id?: string
@@ -158,126 +98,71 @@ export type Database = {
         }
         Relationships: []
       }
-      trader_activity: {
+      trade_log: {
         Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          last_activity_at: string
+          created_at: string | null
+          event_type: string
+          id: number
           platform: string | null
-          session_duration: number | null
+          price: number | null
+          quantity: number | null
+          raw: Json | null
+          side: string | null
+          symbol: string | null
+          timestamp: string
           user_id: string
         }
         Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_activity_at?: string
+          created_at?: string | null
+          event_type: string
+          id?: never
           platform?: string | null
-          session_duration?: number | null
+          price?: number | null
+          quantity?: number | null
+          raw?: Json | null
+          side?: string | null
+          symbol?: string | null
+          timestamp: string
           user_id: string
         }
         Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_activity_at?: string
+          created_at?: string | null
+          event_type?: string
+          id?: never
           platform?: string | null
-          session_duration?: number | null
+          price?: number | null
+          quantity?: number | null
+          raw?: Json | null
+          side?: string | null
+          symbol?: string | null
+          timestamp?: string
           user_id?: string
         }
         Relationships: []
       }
-      trader_trades: {
+      user_activity: {
         Row: {
-          account_id: string | null
-          asset: string
-          broker_id: string | null
-          commission: number | null
-          created_at: string
-          direction: string
-          entry_date: string
-          entry_datetime_utc: string | null
-          entry_price: number
-          exit_date: string | null
-          exit_datetime_utc: string | null
-          exit_price: number | null
-          group_strategy: string | null
-          group_symbol: string | null
-          id: string
-          instrument_type: Database["public"]["Enums"]["instrument_type"] | null
-          leverage: number | null
-          margin: number | null
-          notes: string | null
-          profit_loss: number | null
-          profit_loss_percent: number | null
-          quantity: number | null
-          raw_row: Json | null
-          stop_loss: number | null
-          strategy: string | null
-          take_profit: number | null
+          created_at: string | null
+          id: number
+          is_active: boolean
+          platform: string
+          timestamp: string
           user_id: string
         }
         Insert: {
-          account_id?: string | null
-          asset: string
-          broker_id?: string | null
-          commission?: number | null
-          created_at?: string
-          direction: string
-          entry_date: string
-          entry_datetime_utc?: string | null
-          entry_price: number
-          exit_date?: string | null
-          exit_datetime_utc?: string | null
-          exit_price?: number | null
-          group_strategy?: string | null
-          group_symbol?: string | null
-          id?: string
-          instrument_type?:
-            | Database["public"]["Enums"]["instrument_type"]
-            | null
-          leverage?: number | null
-          margin?: number | null
-          notes?: string | null
-          profit_loss?: number | null
-          profit_loss_percent?: number | null
-          quantity?: number | null
-          raw_row?: Json | null
-          stop_loss?: number | null
-          strategy?: string | null
-          take_profit?: number | null
+          created_at?: string | null
+          id?: never
+          is_active?: boolean
+          platform: string
+          timestamp: string
           user_id: string
         }
         Update: {
-          account_id?: string | null
-          asset?: string
-          broker_id?: string | null
-          commission?: number | null
-          created_at?: string
-          direction?: string
-          entry_date?: string
-          entry_datetime_utc?: string | null
-          entry_price?: number
-          exit_date?: string | null
-          exit_datetime_utc?: string | null
-          exit_price?: number | null
-          group_strategy?: string | null
-          group_symbol?: string | null
-          id?: string
-          instrument_type?:
-            | Database["public"]["Enums"]["instrument_type"]
-            | null
-          leverage?: number | null
-          margin?: number | null
-          notes?: string | null
-          profit_loss?: number | null
-          profit_loss_percent?: number | null
-          quantity?: number | null
-          raw_row?: Json | null
-          stop_loss?: number | null
-          strategy?: string | null
-          take_profit?: number | null
+          created_at?: string | null
+          id?: never
+          is_active?: boolean
+          platform?: string
+          timestamp?: string
           user_id?: string
         }
         Relationships: []

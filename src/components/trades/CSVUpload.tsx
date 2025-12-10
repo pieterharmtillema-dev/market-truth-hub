@@ -5,17 +5,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-interface ParsedTrade {
-  asset: string;
-  direction: string;
+interface ParsedPosition {
+  symbol: string;
+  side: string;
   entry_price: number;
-  entry_date: string;
+  entry_timestamp: string;
   exit_price?: number;
-  exit_date?: string;
-  quantity?: number;
-  profit_loss?: number;
-  profit_loss_percent?: number;
-  notes?: string;
+  exit_timestamp?: string;
+  quantity: number;
+  pnl?: number;
+  platform?: string;
 }
 
 interface CSVUploadProps {
@@ -28,19 +27,19 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const parseCSV = (text: string): ParsedTrade[] => {
+  const parseCSV = (text: string): ParsedPosition[] => {
     const lines = text.trim().split('\n');
     if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row');
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
     
-    const requiredColumns = ['asset', 'direction', 'entry_price', 'entry_date'];
+    const requiredColumns = ['symbol', 'side', 'entry_price', 'entry_timestamp', 'quantity'];
     const missingColumns = requiredColumns.filter(col => !headers.includes(col));
     if (missingColumns.length > 0) {
       throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
     }
 
-    const trades: ParsedTrade[] = [];
+    const positions: ParsedPosition[] = [];
     
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim());
@@ -51,24 +50,23 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
         row[header] = values[index];
       });
 
-      const trade: ParsedTrade = {
-        asset: row.asset,
-        direction: row.direction.toLowerCase(),
+      const position: ParsedPosition = {
+        symbol: row.symbol.toUpperCase(),
+        side: row.side.toLowerCase(),
         entry_price: parseFloat(row.entry_price),
-        entry_date: new Date(row.entry_date).toISOString(),
+        entry_timestamp: new Date(row.entry_timestamp).toISOString(),
+        quantity: parseFloat(row.quantity),
       };
 
-      if (row.exit_price) trade.exit_price = parseFloat(row.exit_price);
-      if (row.exit_date) trade.exit_date = new Date(row.exit_date).toISOString();
-      if (row.quantity) trade.quantity = parseFloat(row.quantity);
-      if (row.profit_loss) trade.profit_loss = parseFloat(row.profit_loss);
-      if (row.profit_loss_percent) trade.profit_loss_percent = parseFloat(row.profit_loss_percent);
-      if (row.notes) trade.notes = row.notes;
+      if (row.exit_price) position.exit_price = parseFloat(row.exit_price);
+      if (row.exit_timestamp) position.exit_timestamp = new Date(row.exit_timestamp).toISOString();
+      if (row.pnl) position.pnl = parseFloat(row.pnl);
+      if (row.platform) position.platform = row.platform;
 
-      trades.push(trade);
+      positions.push(position);
     }
 
-    return trades;
+    return positions;
   };
 
   const handleUpload = async () => {
@@ -78,23 +76,24 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast({ title: 'Error', description: 'You must be logged in to upload trades', variant: 'destructive' });
+        toast({ title: 'Error', description: 'You must be logged in to upload positions', variant: 'destructive' });
         return;
       }
 
       const text = await file.text();
-      const trades = parseCSV(text);
+      const positions = parseCSV(text);
 
-      const tradesWithUserId = trades.map(trade => ({
-        ...trade,
+      const positionsWithUserId = positions.map(position => ({
+        ...position,
         user_id: user.id,
+        open: !position.exit_price,
       }));
 
-      const { error } = await supabase.from('trader_trades').insert(tradesWithUserId);
+      const { error } = await supabase.from('positions').insert(positionsWithUserId);
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: `Imported ${trades.length} trades successfully` });
+      toast({ title: 'Success', description: `Imported ${positions.length} positions successfully` });
       setFile(null);
       onUploadComplete?.();
     } catch (error) {
@@ -178,7 +177,7 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
                     Importing...
                   </>
                 ) : (
-                  'Import Trades'
+                  'Import Positions'
                 )}
               </Button>
             )}
@@ -187,9 +186,9 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
 
         <div className="mt-4 text-xs text-muted-foreground">
           <p className="font-medium mb-1">Required columns:</p>
-          <p>asset, direction, entry_price, entry_date</p>
+          <p>symbol, side, entry_price, entry_timestamp, quantity</p>
           <p className="font-medium mt-2 mb-1">Optional columns:</p>
-          <p>exit_price, exit_date, quantity, profit_loss, profit_loss_percent, notes</p>
+          <p>exit_price, exit_timestamp, pnl, platform</p>
         </div>
       </CardContent>
     </Card>

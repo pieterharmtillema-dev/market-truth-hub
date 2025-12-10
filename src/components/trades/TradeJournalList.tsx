@@ -12,25 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface Trade {
-  id: string;
-  asset: string;
-  direction: string;
+interface Position {
+  id: number;
+  symbol: string;
+  side: string;
+  quantity: number;
   entry_price: number;
+  entry_timestamp: string;
   exit_price: number | null;
-  entry_date: string;
-  exit_date: string | null;
-  quantity: number | null;
-  profit_loss: number | null;
-  profit_loss_percent: number | null;
-  notes: string | null;
-  user_id: string;
-  strategy?: string | null;
-  instrument_type?: string | null;
-  commission?: number | null;
-  leverage?: number | null;
-  entry_datetime_utc?: string | null;
-  exit_datetime_utc?: string | null;
+  exit_timestamp: string | null;
+  pnl: number | null;
+  platform: string | null;
+  open: boolean;
 }
 
 interface TradeJournalListProps {
@@ -38,99 +31,54 @@ interface TradeJournalListProps {
 }
 
 export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedTrade, setExpandedTrade] = useState<string | null>(null);
-  const [editingNotes, setEditingNotes] = useState<string | null>(null);
-  const [notesValue, setNotesValue] = useState('');
-  const [savingNotes, setSavingNotes] = useState(false);
+  const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
   const { toast } = useToast();
 
-  const fetchTrades = useCallback(async () => {
+  const fetchPositions = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setTrades([]);
+        setPositions([]);
         return;
       }
 
       const { data, error } = await supabase
-        .from('trader_trades')
+        .from('positions')
         .select('*')
         .eq('user_id', user.id)
-        .order('entry_date', { ascending: false })
+        .order('entry_timestamp', { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      setTrades(data || []);
+      setPositions(data || []);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to fetch trades', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to fetch positions', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchTrades();
-  }, [refreshTrigger, fetchTrades]);
-
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase.from('trader_trades').delete().eq('id', id);
-      if (error) throw error;
-      setTrades(trades.filter(t => t.id !== id));
-      toast({ title: 'Trade deleted' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete trade', variant: 'destructive' });
-    }
-  };
-
-  const handleStartEditNotes = (trade: Trade) => {
-    setEditingNotes(trade.id);
-    setNotesValue(trade.notes || '');
-  };
-
-  const handleSaveNotes = async (tradeId: string) => {
-    setSavingNotes(true);
-    try {
-      const { error } = await supabase
-        .from('trader_trades')
-        .update({ notes: notesValue })
-        .eq('id', tradeId);
-
-      if (error) throw error;
-      
-      setTrades(trades.map(t => 
-        t.id === tradeId ? { ...t, notes: notesValue } : t
-      ));
-      setEditingNotes(null);
-      toast({ title: 'Notes saved' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save notes', variant: 'destructive' });
-    } finally {
-      setSavingNotes(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingNotes(null);
-    setNotesValue('');
-  };
+    fetchPositions();
+  }, [refreshTrigger, fetchPositions]);
 
   // Get unique symbols for filter
-  const symbols = [...new Set(trades.map(t => t.asset))].sort();
+  const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Filter trades
-  const filteredTrades = filterSymbol === 'all' 
-    ? trades 
-    : trades.filter(t => t.asset === filterSymbol);
+  // Filter positions
+  const filteredPositions = filterSymbol === 'all' 
+    ? positions 
+    : positions.filter(p => p.symbol === filterSymbol);
 
   // Calculate summary stats
-  const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
-  const wins = filteredTrades.filter(t => (t.profit_loss || 0) > 0).length;
-  const winRate = filteredTrades.length > 0 ? (wins / filteredTrades.length) * 100 : 0;
+  const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
+  const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
+  const closedCount = filteredPositions.filter(p => !p.open).length;
+  const winRate = closedCount > 0 ? (wins / closedCount) * 100 : 0;
 
   if (loading) {
     return (
@@ -142,12 +90,12 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
     );
   }
 
-  if (trades.length === 0) {
+  if (positions.length === 0) {
     return (
       <Card className="border-border/50 bg-card/50">
         <CardContent className="py-12 text-center text-muted-foreground">
           <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No trades yet. Import a CSV to get started.</p>
+          <p className="text-sm">No positions yet. Connect your extension to get started.</p>
         </CardContent>
       </Card>
     );
@@ -168,8 +116,8 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
           <p className="text-lg font-bold">{winRate.toFixed(1)}%</p>
         </div>
         <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Trades</p>
-          <p className="text-lg font-bold">{filteredTrades.length}</p>
+          <p className="text-xs text-muted-foreground">Positions</p>
+          <p className="text-lg font-bold">{filteredPositions.length}</p>
         </div>
       </div>
 
@@ -189,14 +137,14 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
         </Select>
       </div>
 
-      {/* Trade Cards */}
+      {/* Position Cards */}
       <ScrollArea className="h-[calc(100vh-380px)]">
         <div className="space-y-3 pr-2">
-          {filteredTrades.map((trade) => (
+          {filteredPositions.map((position) => (
             <Collapsible 
-              key={trade.id} 
-              open={expandedTrade === trade.id} 
-              onOpenChange={(open) => setExpandedTrade(open ? trade.id : null)}
+              key={position.id} 
+              open={expandedTrade === position.id} 
+              onOpenChange={(open) => setExpandedTrade(open ? position.id : null)}
             >
               <Card className="border-border/50 bg-card/50 overflow-hidden">
                 <CollapsibleTrigger asChild>
@@ -204,23 +152,26 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Badge 
-                          variant={trade.direction === 'long' || trade.direction === 'buy' ? 'default' : 'destructive'} 
+                          variant={position.side === 'long' ? 'default' : 'destructive'} 
                           className="gap-1"
                         >
-                          {trade.direction === 'long' || trade.direction === 'buy' ? (
+                          {position.side === 'long' ? (
                             <ArrowUpRight className="h-3 w-3" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3" />
                           )}
-                          {trade.direction}
+                          {position.side}
                         </Badge>
-                        <span className="font-mono font-medium">{trade.asset}</span>
+                        <span className="font-mono font-medium">{position.symbol}</span>
+                        {position.open && (
+                          <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`font-medium ${(trade.profit_loss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {(trade.profit_loss || 0) >= 0 ? '+' : ''}${(trade.profit_loss || 0).toFixed(2)}
+                        <span className={`font-medium ${(position.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {(position.pnl || 0) >= 0 ? '+' : ''}${(position.pnl || 0).toFixed(2)}
                         </span>
-                        {expandedTrade === trade.id ? (
+                        {expandedTrade === position.id ? (
                           <ChevronUp className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -228,118 +179,33 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>Entry: ${trade.entry_price.toLocaleString()}</span>
-                      <span>Exit: {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : '—'}</span>
-                      <span>{format(new Date(trade.entry_datetime_utc || trade.entry_date), 'MMM d, yy')}</span>
+                      <span>Entry: ${position.entry_price.toLocaleString()}</span>
+                      <span>Exit: {position.exit_price ? `$${position.exit_price.toLocaleString()}` : '—'}</span>
+                      <span>{format(new Date(position.entry_timestamp), 'MMM d, yy')}</span>
                     </div>
                   </CardContent>
                 </CollapsibleTrigger>
                 
                 <CollapsibleContent>
                   <div className="border-t border-border/50 p-3 bg-muted/20 space-y-3">
-                    {/* Trade Details */}
+                    {/* Position Details */}
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {trade.quantity && (
-                        <div>
-                          <span className="text-muted-foreground">Quantity:</span>{' '}
-                          <span className="font-medium">{trade.quantity}</span>
-                        </div>
-                      )}
-                      {trade.commission && (
-                        <div>
-                          <span className="text-muted-foreground">Commission:</span>{' '}
-                          <span className="font-medium text-orange-500">${trade.commission}</span>
-                        </div>
-                      )}
-                      {trade.leverage && (
-                        <div>
-                          <span className="text-muted-foreground">Leverage:</span>{' '}
-                          <span className="font-medium">{trade.leverage}x</span>
-                        </div>
-                      )}
-                      {trade.strategy && (
-                        <div>
-                          <span className="text-muted-foreground">Strategy:</span>{' '}
-                          <Badge variant="secondary">{trade.strategy}</Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Journal Notes */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium flex items-center gap-1.5">
-                          <PenLine className="h-3.5 w-3.5" />
-                          Journal Notes
-                        </span>
-                        {editingNotes !== trade.id && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleStartEditNotes(trade)}
-                            className="h-7 text-xs"
-                          >
-                            Edit
-                          </Button>
-                        )}
+                      <div>
+                        <span className="text-muted-foreground">Quantity:</span>{' '}
+                        <span className="font-medium">{position.quantity}</span>
                       </div>
-                      
-                      {editingNotes === trade.id ? (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={notesValue}
-                            onChange={(e) => setNotesValue(e.target.value)}
-                            placeholder="Add your thoughts, analysis, lessons learned..."
-                            className="min-h-[100px] text-sm"
-                          />
-                          <div className="flex gap-2 justify-end">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={handleCancelEdit}
-                              disabled={savingNotes}
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleSaveNotes(trade.id)}
-                              disabled={savingNotes}
-                            >
-                              {savingNotes ? (
-                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              ) : (
-                                <Save className="h-4 w-4 mr-1" />
-                              )}
-                              Save
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-background/50 rounded-lg p-3 min-h-[60px]">
-                          {trade.notes ? (
-                            <p className="text-sm whitespace-pre-wrap">{trade.notes}</p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic">
-                              No notes yet. Click edit to add your thoughts.
-                            </p>
-                          )}
+                      {position.platform && (
+                        <div>
+                          <span className="text-muted-foreground">Platform:</span>{' '}
+                          <span className="font-medium">{position.platform}</span>
                         </div>
                       )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex justify-end pt-2 border-t border-border/50">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(trade.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
+                      {position.exit_timestamp && (
+                        <div>
+                          <span className="text-muted-foreground">Exit Time:</span>{' '}
+                          <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CollapsibleContent>

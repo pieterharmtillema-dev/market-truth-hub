@@ -9,7 +9,7 @@ import { Activity } from "lucide-react";
 interface TraderActivity {
   is_active: boolean;
   platform: string | null;
-  last_activity_at: string;
+  timestamp: string;
 }
 
 export function TraderStatusCard() {
@@ -26,10 +26,10 @@ export function TraderStatusCard() {
       }
 
       const { data, error: fetchError } = await supabase
-        .from("trader_activity")
-        .select("is_active, platform, last_activity_at")
+        .from("user_activity")
+        .select("is_active, platform, timestamp")
         .eq("user_id", session.user.id)
-        .order("last_activity_at", { ascending: false })
+        .order("timestamp", { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -113,7 +113,7 @@ export function TraderStatusCard() {
     );
   }
 
-  const lastSeenText = formatDistanceToNow(new Date(activity.last_activity_at), { addSuffix: true });
+  const lastSeenText = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true });
 
   return (
     <Card variant="glass">
