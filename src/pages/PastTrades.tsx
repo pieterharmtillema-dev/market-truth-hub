@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search } from "lucide-react";
+import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search, Zap, TestTube } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Pagination,
@@ -36,6 +36,9 @@ interface PastTrade {
   created_at: string;
   verified_status: string;
   verification_score: number | null;
+  trade_mode: string | null;
+  pnl: number | null;
+  user_role: string | null;
 }
 
 type SortField = 'timestamp' | 'symbol' | 'pnl';
@@ -49,11 +52,13 @@ export default function PastTrades() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [userRole, setUserRole] = useState<string>('user');
 
   // Filters
   const [symbolFilter, setSymbolFilter] = useState('');
   const [sideFilter, setSideFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [modeFilter, setModeFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
 
@@ -67,6 +72,7 @@ export default function PastTrades() {
   useEffect(() => {
     if (user) {
       fetchPlatforms();
+      fetchUserRole();
     }
   }, [user]);
 
@@ -74,7 +80,12 @@ export default function PastTrades() {
     if (user) {
       fetchTrades();
     }
-  }, [user, currentPage, symbolFilter, sideFilter, platformFilter, dateFrom, dateTo, sortField, sortDirection]);
+  }, [user, currentPage, symbolFilter, sideFilter, platformFilter, modeFilter, dateFrom, dateTo, sortField, sortDirection]);
+
+  const fetchUserRole = async () => {
+    const { data } = await supabase.rpc('get_user_role', { _user_id: user!.id });
+    setUserRole(data || 'user');
+  };
 
   const fetchPlatforms = async () => {
     const { data } = await supabase
@@ -107,6 +118,9 @@ export default function PastTrades() {
     if (platformFilter !== 'all') {
       query = query.eq('platform', platformFilter);
     }
+    if (modeFilter !== 'all') {
+      query = query.eq('trade_mode', modeFilter);
+    }
     if (dateFrom) {
       query = query.gte('timestamp', dateFrom.toISOString());
     }
@@ -118,8 +132,7 @@ export default function PastTrades() {
 
     // Apply sorting
     if (sortField === 'pnl') {
-      // For P/L sorting, we need to calculate it - for now just sort by timestamp
-      query = query.order('timestamp', { ascending: sortDirection === 'asc' });
+      query = query.order('pnl', { ascending: sortDirection === 'asc', nullsFirst: false });
     } else {
       query = query.order(sortField, { ascending: sortDirection === 'asc' });
     }
@@ -151,10 +164,14 @@ export default function PastTrades() {
   };
 
   const calculatePnL = (trade: PastTrade): number | null => {
+    // Use stored PnL if available
+    if (trade.pnl !== null) return trade.pnl;
+    
+    // Calculate from prices
     if (trade.fill_price == null || trade.exit_price == null || trade.quantity == null) {
       return null;
     }
-    const multiplier = trade.side === 'buy' ? 1 : -1;
+    const multiplier = trade.side === 'buy' || trade.side === 'long' ? 1 : -1;
     return (trade.exit_price - trade.fill_price) * trade.quantity * multiplier;
   };
 
@@ -164,6 +181,7 @@ export default function PastTrades() {
     setSymbolFilter('');
     setSideFilter('all');
     setPlatformFilter('all');
+    setModeFilter('all');
     setDateFrom(undefined);
     setDateTo(undefined);
     setCurrentPage(1);
@@ -182,6 +200,16 @@ export default function PastTrades() {
   return (
     <AppLayout title="Past Trades">
       <div className="px-4 py-4 space-y-4 pb-24">
+        {/* Developer Mode Banner */}
+        {userRole === 'developer' && (
+          <Card className="border-amber-500/50 bg-amber-500/10">
+            <CardContent className="py-3 flex items-center gap-2">
+              <TestTube className="h-4 w-4 text-amber-500" />
+              <span className="text-sm text-amber-200">Developer mode – simulations allowed</span>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Filters Card */}
         <Card>
           <CardHeader className="pb-3">
@@ -205,8 +233,8 @@ export default function PastTrades() {
               />
             </div>
 
-            {/* Side & Platform Filters */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Side, Platform & Mode Filters */}
+            <div className="grid grid-cols-3 gap-2">
               <Select value={sideFilter} onValueChange={(v) => { setSideFilter(v); setCurrentPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Side" />
@@ -215,6 +243,8 @@ export default function PastTrades() {
                   <SelectItem value="all">All Sides</SelectItem>
                   <SelectItem value="buy">Buy</SelectItem>
                   <SelectItem value="sell">Sell</SelectItem>
+                  <SelectItem value="long">Long</SelectItem>
+                  <SelectItem value="short">Short</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -227,6 +257,17 @@ export default function PastTrades() {
                   {platforms.map((p) => (
                     <SelectItem key={p} value={p}>{p}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setCurrentPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modes</SelectItem>
+                  <SelectItem value="real">Real</SelectItem>
+                  <SelectItem value="simulation">Simulation</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -290,6 +331,15 @@ export default function PastTrades() {
               Symbol
               {sortField === 'symbol' && <ArrowUpDown className="h-3 w-3" />}
             </Button>
+            <Button
+              variant={sortField === 'pnl' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => handleSort('pnl')}
+              className="gap-1"
+            >
+              P/L
+              {sortField === 'pnl' && <ArrowUpDown className="h-3 w-3" />}
+            </Button>
           </div>
         </div>
 
@@ -312,39 +362,49 @@ export default function PastTrades() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Mode</TableHead>
                       <TableHead>Symbol</TableHead>
                       <TableHead>Side</TableHead>
-                      <TableHead className="text-right">Fill</TableHead>
-                      <TableHead className="text-right">Exit</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Size</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
                       <TableHead className="text-right">P/L</TableHead>
                       <TableHead>Platform</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Time</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {trades.map((trade) => {
                       const pnl = calculatePnL(trade);
+                      const isSimulation = trade.trade_mode === 'simulation';
                       return (
-                        <TableRow key={trade.id}>
+                        <TableRow key={trade.id} className={cn(isSimulation && "opacity-70")}>
+                          <TableCell>
+                            {isSimulation ? (
+                              <Badge variant="outline" className="border-amber-500/50 text-amber-400 bg-amber-500/10 gap-1">
+                                <TestTube className="h-3 w-3" />
+                                Sim
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-emerald-500/50 text-emerald-400 bg-emerald-500/10 gap-1">
+                                <Zap className="h-3 w-3" />
+                                Real
+                              </Badge>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{trade.symbol}</TableCell>
                           <TableCell>
-                            <Badge variant={trade.side === 'buy' ? 'default' : 'secondary'} className={cn(
-                              trade.side === 'buy' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                            <Badge variant={['buy', 'long'].includes(trade.side) ? 'default' : 'secondary'} className={cn(
+                              ['buy', 'long'].includes(trade.side) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
                             )}>
-                              {trade.side === 'buy' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                              {['buy', 'long'].includes(trade.side) ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                               {trade.side.toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm">
-                            {trade.fill_price != null ? `$${trade.fill_price.toLocaleString()}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
-                            {trade.exit_price != null ? `$${trade.exit_price.toLocaleString()}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
                             {trade.quantity != null ? trade.quantity.toLocaleString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {trade.fill_price != null ? `$${trade.fill_price.toLocaleString()}` : '-'}
                           </TableCell>
                           <TableCell className={cn(
                             "text-right font-mono text-sm",
@@ -355,15 +415,6 @@ export default function PastTrades() {
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
                             {trade.platform || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={cn(
-                              trade.verified_status === 'verified' && 'border-emerald-500 text-emerald-400',
-                              trade.verified_status === 'pending' && 'border-yellow-500 text-yellow-400',
-                              trade.verified_status === 'failed' && 'border-red-500 text-red-400'
-                            )}>
-                              {trade.verified_status}
-                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                             {format(new Date(trade.timestamp), "MMM d, HH:mm")}

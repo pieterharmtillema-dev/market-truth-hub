@@ -13,6 +13,7 @@ declare global {
   interface Window {
     __USER_API_KEY?: string;
     __USER_ID?: string;
+    __USER_ROLE?: string;
     __TD_LAST_PLATFORM?: string;
     __TD_LAST_ACTIVE?: boolean;
   }
@@ -34,22 +35,30 @@ export function useTradeDetectorSync() {
 
         const userId = session.user.id;
 
-        const { data: profile, error } = await supabase
+        // Fetch profile with api_key
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("api_key")
           .eq("user_id", userId)
           .single();
 
-        if (error || !profile?.api_key) {
+        if (profileError || !profile?.api_key) {
           console.warn("[TD WEB] No api_key found for user, clearing extension credentials");
           syncExtensionWithUser(null);
           return;
         }
 
-        // Sync credentials with extension
+        // Fetch user's role from user_roles table using the security definer function
+        const { data: roleData } = await supabase
+          .rpc('get_user_role', { _user_id: userId });
+
+        const userRole = roleData || 'user';
+
+        // Sync credentials with extension (including role)
         syncExtensionWithUser({
           api_key: profile.api_key,
           user_id: userId,
+          role: userRole,
         });
 
         // Fetch and send current activity state

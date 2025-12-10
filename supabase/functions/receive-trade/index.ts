@@ -7,23 +7,23 @@ const corsHeaders = {
 }
 
 interface TradePayload {
-  symbol: string
+  event_type?: string
+  trade_mode?: 'real' | 'simulation'
+  symbol?: string
   side: string
-  fill_price: number | null
-  exit_price: number | null
-  quantity: number | null
+  fill_price?: number | null
+  exit_price?: number | null
+  price?: number | null
+  quantity?: number | null
   timestamp: number
-  platform: string | null
-  account_id: string | null
-  user_id: string | null
-}
-
-interface SimpleTradePayload {
-  event_type: 'TRADE_EXECUTION'
-  side: 'long' | 'short'
-  platform: string
-  timestamp: number
-  user_id: string
+  platform?: string | null
+  account_id?: string | null
+  user_id?: string | null
+  user_role?: string | null
+  order_type?: string | null
+  position_id?: string | null
+  source?: string | null
+  raw?: Record<string, unknown> | null
 }
 
 interface UserActivityPayload {
@@ -194,155 +194,70 @@ Deno.serve(async (req) => {
       return await handleUserActivity(supabase, rawPayload as UserActivityPayload, userId)
     }
 
-    // Check if this is a simple TRADE_EXECUTION event from the extension
-    if (rawPayload.event_type === 'TRADE_EXECUTION') {
-      console.log('Processing simple TRADE_EXECUTION event')
-      
-      const simpleTrade = rawPayload as SimpleTradePayload
-      
-      // Validate required fields
-      if (!simpleTrade.side || !simpleTrade.timestamp) {
-        console.log('Missing required fields for simple trade')
-        return new Response(
-          JSON.stringify({ success: false, error: 'invalid_payload' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      // Validate side is long or short
-      const normalizedSide = simpleTrade.side.toLowerCase().trim()
-      if (normalizedSide !== 'long' && normalizedSide !== 'short') {
-        return new Response(
-          JSON.stringify({ success: false, error: 'invalid_payload' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      // Validate platform if provided
-      if (simpleTrade.platform && (typeof simpleTrade.platform !== 'string' || simpleTrade.platform.length > 100)) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'invalid_payload' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      // Validate timestamp bounds
-      const tsMillis = simpleTrade.timestamp < 10_000_000_000 ? simpleTrade.timestamp * 1000 : simpleTrade.timestamp
-      const minValidTimestamp = new Date('2000-01-01').getTime()
-      const maxValidTimestamp = Date.now() + (24 * 60 * 60 * 1000)
-      if (tsMillis < minValidTimestamp || tsMillis > maxValidTimestamp) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'invalid_payload' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      const isoTimestamp = new Date(tsMillis).toISOString()
-      
-      // Check for duplicates (within 5 seconds)
-      const fiveSecondsMs = 5000
-      const timestampDate = new Date(tsMillis)
-      const minTimestamp = new Date(timestampDate.getTime() - fiveSecondsMs).toISOString()
-      const maxTimestamp = new Date(timestampDate.getTime() + fiveSecondsMs).toISOString()
-
-      const { data: existingTrades } = await supabase
-        .from('past_trades')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('symbol', 'UNKNOWN')
-        .eq('side', normalizedSide)
-        .gte('timestamp', minTimestamp)
-        .lte('timestamp', maxTimestamp)
-        .limit(1)
-
-      if (existingTrades && existingTrades.length > 0) {
-        console.log('Duplicate simple trade detected')
-        return new Response(
-          JSON.stringify({ success: false, error: 'duplicate_trade' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      // Insert simplified trade record
-      const { error: insertError } = await supabase
-        .from('past_trades')
-        .insert({
-          user_id: userId,
-          symbol: 'UNKNOWN',
-          side: normalizedSide,
-          fill_price: null,
-          exit_price: null,
-          quantity: null,
-          platform: simpleTrade.platform?.trim() || null,
-          account_id: null,
-          timestamp: isoTimestamp,
-          verified_status: 'pending',
-          verification_score: null
-        })
-
-      if (insertError) {
-        console.error('Error inserting simple trade:', insertError)
-        return new Response(
-          JSON.stringify({ success: false, error: 'insert_failed' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      console.log('Simple trade logged successfully for user:', userId)
-      return new Response(
-        JSON.stringify({ success: true, status: 'simple_trade_logged' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Otherwise, treat as full trade payload (legacy format)
+    // Process trade payload (supports both TRADE_EXECUTION and TRADE_SIMULATION)
     const payload: TradePayload = rawPayload
-    console.log('Processing full trade payload')
-
-    // ========== INPUT VALIDATION ==========
+    const eventType = payload.event_type || 'TRADE_EXECUTION'
+    const tradeMode = payload.trade_mode || (eventType === 'TRADE_SIMULATION' ? 'simulation' : 'real')
     
-    // Validate required fields exist
-    if (!payload.symbol || !payload.side || !payload.timestamp) {
+    console.log('Processing trade event:', eventType, 'mode:', tradeMode)
+
+    // Validate required fields
+    if (!payload.side || !payload.timestamp) {
       console.log('Missing required fields')
       return new Response(
         JSON.stringify({ 
           success: false, 
           status: 'invalid_request', 
-          reason: 'missing required fields (symbol, side, timestamp)' 
+          reason: 'missing required fields (side, timestamp)' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Validate string lengths
-    if (typeof payload.symbol !== 'string' || payload.symbol.length > 50) {
+    // Normalize side (long/short or buy/sell)
+    const sideInput = payload.side.toLowerCase().trim()
+    let normalizedSide: string
+    if (sideInput === 'long' || sideInput === 'buy') {
+      normalizedSide = sideInput
+    } else if (sideInput === 'short' || sideInput === 'sell') {
+      normalizedSide = sideInput
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          status: 'invalid_request', 
+          reason: 'side must be "buy", "sell", "long", or "short"' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate symbol if provided
+    const symbol = payload.symbol?.toUpperCase().trim() || 'UNKNOWN'
+    if (payload.symbol && (typeof payload.symbol !== 'string' || payload.symbol.length > 50)) {
       return new Response(
         JSON.stringify({ success: false, status: 'invalid_request', reason: 'symbol must be a string under 50 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Validate platform if provided
     if (payload.platform && (typeof payload.platform !== 'string' || payload.platform.length > 100)) {
       return new Response(
         JSON.stringify({ success: false, status: 'invalid_request', reason: 'platform must be a string under 100 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    if (payload.account_id && (typeof payload.account_id !== 'string' || payload.account_id.length > 100)) {
+
+    // Validate numeric fields
+    const fillPrice = payload.fill_price ?? payload.price ?? null
+    if (fillPrice !== null && (typeof fillPrice !== 'number' || fillPrice < 0 || !isFinite(fillPrice))) {
       return new Response(
-        JSON.stringify({ success: false, status: 'invalid_request', reason: 'account_id must be a string under 100 characters' }),
+        JSON.stringify({ success: false, status: 'invalid_request', reason: 'fill_price/price must be a positive number' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Validate numeric fields (must be positive if provided)
-    if (payload.fill_price !== null && payload.fill_price !== undefined) {
-      if (typeof payload.fill_price !== 'number' || payload.fill_price < 0 || !isFinite(payload.fill_price)) {
-        return new Response(
-          JSON.stringify({ success: false, status: 'invalid_request', reason: 'fill_price must be a positive number' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    }
     if (payload.exit_price !== null && payload.exit_price !== undefined) {
       if (typeof payload.exit_price !== 'number' || payload.exit_price < 0 || !isFinite(payload.exit_price)) {
         return new Response(
@@ -351,6 +266,7 @@ Deno.serve(async (req) => {
         )
       }
     }
+
     if (payload.quantity !== null && payload.quantity !== undefined) {
       if (typeof payload.quantity !== 'number' || payload.quantity <= 0 || !isFinite(payload.quantity)) {
         return new Response(
@@ -360,10 +276,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Validate timestamp bounds (not before 2000-01-01, not more than 1 day in future)
+    // Validate timestamp bounds
     const tsMillis = payload.timestamp < 10_000_000_000 ? payload.timestamp * 1000 : payload.timestamp
     const minValidTimestamp = new Date('2000-01-01').getTime()
-    const maxValidTimestamp = Date.now() + (24 * 60 * 60 * 1000) // 1 day in future
+    const maxValidTimestamp = Date.now() + (24 * 60 * 60 * 1000)
     if (tsMillis < minValidTimestamp || tsMillis > maxValidTimestamp) {
       return new Response(
         JSON.stringify({ success: false, status: 'invalid_request', reason: 'timestamp out of valid range' }),
@@ -371,25 +287,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // ========== END INPUT VALIDATION ==========
-
-    // Normalize symbol (uppercase, trim)
-    const normalizedSymbol = payload.symbol.toUpperCase().trim()
-
-    // Normalize side (buy/sell)
-    const normalizedSide = payload.side.toLowerCase().trim()
-    if (normalizedSide !== 'buy' && normalizedSide !== 'sell') {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          status: 'invalid_request', 
-          reason: 'side must be "buy" or "sell"' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Convert timestamp to ISO string (already validated above)
     const isoTimestamp = new Date(tsMillis).toISOString()
 
     // Check for duplicates (within 5 seconds)
@@ -402,8 +299,9 @@ Deno.serve(async (req) => {
       .from('past_trades')
       .select('id')
       .eq('user_id', userId)
-      .eq('symbol', normalizedSymbol)
+      .eq('symbol', symbol)
       .eq('side', normalizedSide)
+      .eq('trade_mode', tradeMode)
       .gte('timestamp', minTimestamp)
       .lte('timestamp', maxTimestamp)
       .limit(1)
@@ -420,21 +318,28 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Insert trade
+    // Insert trade with all new fields
     const { data: insertedTrade, error: insertError } = await supabase
       .from('past_trades')
       .insert({
         user_id: userId,
-        symbol: normalizedSymbol,
+        symbol: symbol,
         side: normalizedSide,
-        fill_price: payload.fill_price,
-        exit_price: payload.exit_price,
-        quantity: payload.quantity,
+        fill_price: fillPrice,
+        exit_price: payload.exit_price ?? null,
+        quantity: payload.quantity ?? null,
         platform: payload.platform?.trim() || null,
         account_id: payload.account_id?.trim() || null,
         timestamp: isoTimestamp,
         verified_status: 'pending',
-        verification_score: null
+        verification_score: null,
+        trade_mode: tradeMode,
+        user_role: payload.user_role || 'user',
+        order_type: payload.order_type || null,
+        position_id: payload.position_id || null,
+        source: payload.source || null,
+        raw: payload.raw || null,
+        pnl: null // Will be calculated later or by client
       })
       .select('id')
       .single()
@@ -451,12 +356,13 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Trade inserted successfully:', insertedTrade.id)
+    console.log('Trade inserted successfully:', insertedTrade.id, 'mode:', tradeMode)
     return new Response(
       JSON.stringify({ 
         success: true, 
         trade_id: insertedTrade.id, 
         status: 'stored',
+        trade_mode: tradeMode,
         user_id: userId
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
