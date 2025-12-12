@@ -210,18 +210,15 @@ function calculatePnL(
 
   // FOREX
   if (assetClass === "forex") {
-    pipSize = symbol?.endsWith("JPY")
-      ? 0.01
-      : symbol?.startsWith("XAU")
-        ? 0.1
-        : symbol?.startsWith("XAG")
-          ? 0.01
-          : 0.0001;
+    // Price difference (long or short already handled above)
+    pnl = priceDiff * quantity;
+    pnl = Math.round(pnl * 100) / 100; // round to cents
 
-    pipValuePerUnit = pipSize; // 1 pip = pipSize per unit
-    pips = priceDiff / pipSize;
+    // TradingView-style metadata (optional)
+    pipSize = symbol?.endsWith("JPY") ? 0.01 : 0.0001;
 
-    pnl = Math.round(pips * quantity * pipValuePerUnit * 100) / 100;
+    pips = priceDiff / pipSize; // how many pips the move was
+    pipValue = quantity * pipSize; // pip value per "pip"
   }
 
   // METALS
