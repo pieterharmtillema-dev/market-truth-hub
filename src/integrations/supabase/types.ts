@@ -27,6 +27,7 @@ export type Database = {
           platform: string | null
           pnl: number | null
           quantity: number
+          quantity_lots: number | null
           side: string
           symbol: string
           updated_at: string | null
@@ -44,6 +45,7 @@ export type Database = {
           platform?: string | null
           pnl?: number | null
           quantity: number
+          quantity_lots?: number | null
           side: string
           symbol: string
           updated_at?: string | null
@@ -61,6 +63,7 @@ export type Database = {
           platform?: string | null
           pnl?: number | null
           quantity?: number
+          quantity_lots?: number | null
           side?: string
           symbol?: string
           updated_at?: string | null
@@ -110,7 +113,9 @@ export type Database = {
           platform: string | null
           price: number | null
           quantity: number | null
+          quantity_lots: number | null
           raw: Json | null
+          raw_quantity: number | null
           side: string | null
           symbol: string | null
           timestamp: string
@@ -124,7 +129,9 @@ export type Database = {
           platform?: string | null
           price?: number | null
           quantity?: number | null
+          quantity_lots?: number | null
           raw?: Json | null
+          raw_quantity?: number | null
           side?: string | null
           symbol?: string | null
           timestamp: string
@@ -138,7 +145,9 @@ export type Database = {
           platform?: string | null
           price?: number | null
           quantity?: number | null
+          quantity_lots?: number | null
           raw?: Json | null
+          raw_quantity?: number | null
           side?: string | null
           symbol?: string | null
           timestamp?: string
