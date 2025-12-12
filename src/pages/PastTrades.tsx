@@ -12,8 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search, Zap, TestTube } from "lucide-react";
+import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search, Zap, TestTube, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import {
   Pagination,
   PaginationContent,
@@ -190,9 +192,51 @@ export default function PastTrades() {
         {/* Developer Mode Banner */}
         {userRole === 'developer' && (
           <Card className="border-amber-500/50 bg-amber-500/10">
-            <CardContent className="py-3 flex items-center gap-2">
-              <TestTube className="h-4 w-4 text-amber-500" />
-              <span className="text-sm text-amber-200">Developer mode – simulations allowed</span>
+            <CardContent className="py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TestTube className="h-4 w-4 text-amber-500" />
+                <span className="text-sm text-amber-200">Developer mode – simulations allowed</span>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="gap-1">
+                    <Trash2 className="h-3 w-3" />
+                    Delete All Trades
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete all past trades?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all your positions and trade logs. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error: posError } = await supabase
+                          .from('positions')
+                          .delete()
+                          .eq('user_id', user!.id);
+                        const { error: logError } = await supabase
+                          .from('trade_log')
+                          .delete()
+                          .eq('user_id', user!.id);
+                        if (posError || logError) {
+                          toast.error('Failed to delete trades');
+                        } else {
+                          toast.success('All trades deleted');
+                          fetchPositions();
+                        }
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         )}
