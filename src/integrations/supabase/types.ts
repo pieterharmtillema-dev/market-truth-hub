@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       positions: {
         Row: {
+          asset_class: string | null
           created_at: string | null
           entry_price: number
           entry_timestamp: string
@@ -24,16 +25,24 @@ export type Database = {
           id: number
           is_simulation: boolean
           open: boolean
+          pip_size: number | null
+          pip_value: number | null
+          pips: number | null
           platform: string | null
           pnl: number | null
+          pnl_pct: number | null
           quantity: number
           quantity_lots: number | null
           side: string
           symbol: string
+          tick_size: number | null
+          tick_value: number | null
+          ticks: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          asset_class?: string | null
           created_at?: string | null
           entry_price: number
           entry_timestamp: string
@@ -42,16 +51,24 @@ export type Database = {
           id?: never
           is_simulation?: boolean
           open?: boolean
+          pip_size?: number | null
+          pip_value?: number | null
+          pips?: number | null
           platform?: string | null
           pnl?: number | null
+          pnl_pct?: number | null
           quantity: number
           quantity_lots?: number | null
           side: string
           symbol: string
+          tick_size?: number | null
+          tick_value?: number | null
+          ticks?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          asset_class?: string | null
           created_at?: string | null
           entry_price?: number
           entry_timestamp?: string
@@ -60,12 +77,19 @@ export type Database = {
           id?: never
           is_simulation?: boolean
           open?: boolean
+          pip_size?: number | null
+          pip_value?: number | null
+          pips?: number | null
           platform?: string | null
           pnl?: number | null
+          pnl_pct?: number | null
           quantity?: number
           quantity_lots?: number | null
           side?: string
           symbol?: string
+          tick_size?: number | null
+          tick_value?: number | null
+          ticks?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -106,11 +130,16 @@ export type Database = {
       }
       trade_log: {
         Row: {
+          asset_class: string | null
           created_at: string | null
           event_type: string
           id: number
           is_simulation: boolean
+          pip_size: number | null
+          pip_value: number | null
           platform: string | null
+          pnl: number | null
+          pnl_pct: number | null
           price: number | null
           quantity: number | null
           quantity_lots: number | null
@@ -118,15 +147,22 @@ export type Database = {
           raw_quantity: number | null
           side: string | null
           symbol: string | null
+          tick_size: number | null
+          tick_value: number | null
           timestamp: string
           user_id: string
         }
         Insert: {
+          asset_class?: string | null
           created_at?: string | null
           event_type: string
           id?: never
           is_simulation?: boolean
+          pip_size?: number | null
+          pip_value?: number | null
           platform?: string | null
+          pnl?: number | null
+          pnl_pct?: number | null
           price?: number | null
           quantity?: number | null
           quantity_lots?: number | null
@@ -134,15 +170,22 @@ export type Database = {
           raw_quantity?: number | null
           side?: string | null
           symbol?: string | null
+          tick_size?: number | null
+          tick_value?: number | null
           timestamp: string
           user_id: string
         }
         Update: {
+          asset_class?: string | null
           created_at?: string | null
           event_type?: string
           id?: never
           is_simulation?: boolean
+          pip_size?: number | null
+          pip_value?: number | null
           platform?: string | null
+          pnl?: number | null
+          pnl_pct?: number | null
           price?: number | null
           quantity?: number | null
           quantity_lots?: number | null
@@ -150,6 +193,8 @@ export type Database = {
           raw_quantity?: number | null
           side?: string | null
           symbol?: string | null
+          tick_size?: number | null
+          tick_value?: number | null
           timestamp?: string
           user_id?: string
         }

@@ -10,15 +10,21 @@ const corsHeaders = {
 // SYMBOL NORMALIZATION
 // ============================================================================
 
-/**
- * Normalize symbol by removing broker prefixes and converting to uppercase
- * Handles prefixes like: TICKMILL:, OANDA:, FX:, BINANCE:, etc.
- */
 function normalizeSymbol(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  // Remove any prefix like "BROKER:" or "EXCHANGE:"
-  const normalized = raw.replace(/^[A-Z0-9_]+:/i, "").toUpperCase().trim();
-  return normalized || null;
+  return raw.replace(/^[A-Z0-9_]+:/i, "").toUpperCase().trim() || null;
+}
+
+// ============================================================================
+// SIDE NORMALIZATION
+// ============================================================================
+
+function normalizeSide(raw: string | null | undefined): "long" | "short" | null {
+  if (!raw) return null;
+  const s = raw.toLowerCase().trim();
+  if (s === "buy" || s === "long") return "long";
+  if (s === "sell" || s === "short") return "short";
+  return null;
 }
 
 // ============================================================================
@@ -27,9 +33,6 @@ function normalizeSymbol(raw: string | null | undefined): string | null {
 
 type AssetClass = "forex" | "crypto" | "stock" | "index" | "metal" | "commodity";
 
-/**
- * Detect asset class from normalized symbol
- */
 function getAssetClass(symbol: string): AssetClass {
   const s = symbol.toUpperCase();
   
@@ -50,7 +53,7 @@ function getAssetClass(symbol: string): AssetClass {
     "NAS", "NAS100", "US100", "NDX", "USTEC",
     "DJI", "US30", "DJ30",
     "DAX", "GER30", "GER40", "DE30", "DE40",
-    "UK100", "FTSE", "UK100",
+    "UK100", "FTSE",
     "JP225", "JPN225", "NIKKEI",
     "AUS200", "ASX200",
     "FRA40", "CAC40",
@@ -80,7 +83,6 @@ function getAssetClass(symbol: string): AssetClass {
     }
   }
   
-  // Default to stock
   return "stock";
 }
 
@@ -88,61 +90,108 @@ function getAssetClass(symbol: string): AssetClass {
 // PIP / TICK SIZE
 // ============================================================================
 
-/**
- * Get pip/tick size for forex and metals
- */
 function getPipSize(symbol: string): number {
   const s = symbol.toUpperCase();
-  
-  // JPY pairs have 2 decimal places
   if (s.endsWith("JPY")) return 0.01;
-  
-  // Gold (XAU) - 0.1 pip
   if (s.startsWith("XAU")) return 0.1;
-  
-  // Silver (XAG) - 0.01 pip
   if (s.startsWith("XAG")) return 0.01;
-  
-  // Default forex pip size (4 decimal places)
   return 0.0001;
 }
 
+function getTickSize(assetClass: AssetClass, symbol: string): number {
+  if (assetClass === "forex") return getPipSize(symbol);
+  if (assetClass === "metal") {
+    if (symbol.startsWith("XAU")) return 0.1;
+    if (symbol.startsWith("XAG")) return 0.01;
+    return 0.01;
+  }
+  if (assetClass === "index" || assetClass === "commodity") return 0.01;
+  return 0.01; // stocks, crypto
+}
+
 // ============================================================================
-// PNL CALCULATION
+// PNL CALCULATION - TradingView Accurate
 // ============================================================================
 
-/**
- * Calculate PnL based on asset class and position details
- * Matches TradingView PaperTrading calculation exactly
- * 
- * Formula: (exit_price - entry_price) × units for longs
- *          (entry_price - exit_price) × units for shorts
- */
+interface PnLResult {
+  pnl: number;
+  pnlPct: number;
+  pipSize: number | null;
+  pipValue: number | null;
+  pips: number | null;
+  tickSize: number | null;
+  tickValue: number | null;
+  ticks: number | null;
+}
+
 function calculatePnL(
   side: string,
   entryPrice: number,
   exitPrice: number,
   quantity: number,
-  assetClass: AssetClass
-): number {
-  const isLong = side.toLowerCase() === "long" || side.toLowerCase() === "buy";
+  assetClass: AssetClass,
+  symbol?: string
+): PnLResult {
+  const isLong = side === "long";
   const priceDiff = isLong ? exitPrice - entryPrice : entryPrice - exitPrice;
   
-  // TradingView PaperTrading uses contract size = 1 for all assets
-  // PnL = price_difference × quantity
-  const pnl = priceDiff * quantity;
-  
-  // Round to 2 decimal places
-  return Math.round(pnl * 100) / 100;
+  let pnl = 0;
+  let pipSize: number | null = null;
+  let pipValue: number | null = null;
+  let pips: number | null = null;
+  let tickSize: number | null = null;
+  let tickValue: number | null = null;
+  let ticks: number | null = null;
+
+  // FOREX (TradingView accurate)
+  if (assetClass === "forex") {
+    pipSize = symbol?.endsWith("JPY") ? 0.01 :
+              symbol?.startsWith("XAU") ? 0.1 :
+              symbol?.startsWith("XAG") ? 0.01 : 0.0001;
+    
+    const pipDistance = priceDiff / pipSize;
+    pipValue = quantity * pipSize;
+    pips = pipDistance;
+    pnl = Math.round(pipDistance * pipValue * 100) / 100;
+  }
+  // METALS (XAU, XAG)
+  else if (assetClass === "metal") {
+    tickSize = symbol?.startsWith("XAU") ? 0.1 : 0.01;
+    tickValue = quantity;
+    ticks = priceDiff / tickSize;
+    pnl = Math.round(ticks * tickValue * 100) / 100;
+  }
+  // INDICES + COMMODITIES
+  else if (assetClass === "index" || assetClass === "commodity") {
+    tickSize = 0.01;
+    tickValue = quantity;
+    ticks = priceDiff / tickSize;
+    pnl = Math.round(ticks * tickValue * 100) / 100;
+  }
+  // CRYPTO
+  else if (assetClass === "crypto") {
+    pnl = Math.round(priceDiff * quantity * 100) / 100;
+  }
+  // STOCKS
+  else if (assetClass === "stock") {
+    pnl = Math.round(priceDiff * quantity * 100) / 100;
+  }
+  // Fallback
+  else {
+    pnl = Math.round(priceDiff * quantity * 100) / 100;
+  }
+
+  // Calculate percentage PnL
+  const cost = entryPrice * quantity;
+  const pnlPct = cost > 0 ? Math.round((pnl / cost) * 10000) / 100 : 0;
+
+  return { pnl, pnlPct, pipSize, pipValue, pips, tickSize, tickValue, ticks };
 }
 
 // ============================================================================
 // TIMESTAMP NORMALIZATION
 // ============================================================================
 
-/**
- * Normalize timestamp to ISO string
- */
 function normalizeTimestamp(ts: unknown): string {
   if (!ts) return new Date().toISOString();
   
@@ -152,7 +201,6 @@ function normalizeTimestamp(ts: unknown): string {
   }
   
   if (typeof ts === "number") {
-    // Handle unix seconds vs milliseconds
     const timestamp = ts > 9999999999 ? ts : ts * 1000;
     return new Date(timestamp).toISOString();
   }
@@ -171,6 +219,10 @@ function jsonResponse(data: Record<string, unknown>, status = 200): Response {
   });
 }
 
+function errorResponse(status: string, reason: string, httpCode = 400): Response {
+  return jsonResponse({ success: false, status, reason }, httpCode);
+}
+
 // ============================================================================
 // AUTHENTICATION
 // ============================================================================
@@ -181,10 +233,6 @@ interface AuthResult {
   error?: string;
 }
 
-/**
- * Authenticate via x-api-key header
- * Looks up profiles.api_key and returns matching user_id
- */
 async function authenticateRequest(
   serviceClient: SupabaseClient,
   apiKey: string | null
@@ -219,9 +267,6 @@ async function authenticateRequest(
 // EVENT LOGGING
 // ============================================================================
 
-/**
- * Log every event to trade_log table for audit trail
- */
 async function logEvent(
   serviceClient: SupabaseClient,
   userId: string,
@@ -236,22 +281,46 @@ async function logEvent(
     timestamp?: string;
     isSimulation?: boolean;
     raw?: unknown;
-  }
+    pnl?: number | null;
+    pnlPct?: number | null;
+  },
+  nowIso: string
 ): Promise<void> {
   try {
+    const assetClass = data.symbol ? getAssetClass(data.symbol) : null;
+    const pipSize = data.symbol ? getPipSize(data.symbol) : null;
+    const tickSize = assetClass && data.symbol ? getTickSize(assetClass, data.symbol) : null;
+    
+    let pipValue: number | null = null;
+    let tickValue: number | null = null;
+    
+    if (assetClass === "forex" && data.quantity && pipSize) {
+      pipValue = data.quantity * pipSize;
+    }
+    if ((assetClass === "metal" || assetClass === "index" || assetClass === "commodity") && data.quantity) {
+      tickValue = data.quantity;
+    }
+
     const { error } = await serviceClient.from("trade_log").insert({
       user_id: userId,
       event_type: eventType,
       symbol: data.symbol,
       side: data.side,
       price: data.price,
-      quantity: data.quantityLots, // Store lots in quantity field for compatibility
-      raw_quantity: data.quantity, // Store raw units
+      quantity: data.quantityLots,
+      raw_quantity: data.quantity,
       quantity_lots: data.quantityLots,
       platform: data.platform || "TradingView",
-      timestamp: data.timestamp || new Date().toISOString(),
+      timestamp: data.timestamp || nowIso,
       is_simulation: data.isSimulation || false,
       raw: data.raw,
+      asset_class: assetClass,
+      pip_size: pipSize,
+      pip_value: pipValue,
+      tick_size: tickSize,
+      tick_value: tickValue,
+      pnl: data.pnl,
+      pnl_pct: data.pnlPct,
     });
     
     if (error) {
@@ -268,70 +337,66 @@ async function logEvent(
 // TRADE ENTRY HANDLER
 // ============================================================================
 
-/**
- * Handle TRADE_ENTRY - create new open position
- * Allows multiple open positions per symbol (for scaling in)
- */
 async function handleTradeEntry(
   serviceClient: SupabaseClient,
   userId: string,
   payload: {
     symbol: string;
-    side: string;
+    side: "long" | "short";
     price: number;
     quantity: number;
     quantityLots?: number;
     platform: string;
     timestamp: string;
     isSimulation: boolean;
-  }
+  },
+  nowIso: string
 ): Promise<Response> {
   const { symbol, side, price, quantity, quantityLots, platform, timestamp, isSimulation } = payload;
   
   console.log("Processing TRADE_ENTRY:", { userId, symbol, side, price, quantity, quantityLots });
   
-  // Validate and normalize side
-  const normalizedSide = side.toLowerCase();
-  if (!["long", "short", "buy", "sell"].includes(normalizedSide)) {
-    return jsonResponse({
-      success: false,
-      status: "invalid_request",
-      reason: "side must be 'long', 'short', 'buy', or 'sell'",
-    }, 400);
+  const assetClass = getAssetClass(symbol);
+  const pipSize = getPipSize(symbol);
+  const tickSize = getTickSize(assetClass, symbol);
+  
+  let pipValue: number | null = null;
+  let tickValue: number | null = null;
+  
+  if (assetClass === "forex") {
+    pipValue = quantity * pipSize;
+  }
+  if (assetClass === "metal" || assetClass === "index" || assetClass === "commodity") {
+    tickValue = quantity;
   }
   
-  // Normalize buy/sell to long/short
-  const positionSide = normalizedSide === "buy" ? "long" : normalizedSide === "sell" ? "short" : normalizedSide;
-  
-  // Get asset class for reference
-  const assetClass = getAssetClass(symbol);
   console.log(`Asset class detected: ${assetClass}`);
   
-  // Insert new position
   const { data: position, error } = await serviceClient
     .from("positions")
     .insert({
       user_id: userId,
       symbol: symbol,
       platform: platform,
-      side: positionSide,
+      side: side,
       quantity: quantity,
       quantity_lots: quantityLots || quantity,
       entry_price: price,
       entry_timestamp: timestamp,
       open: true,
       is_simulation: isSimulation,
+      asset_class: assetClass,
+      pip_size: assetClass === "forex" ? pipSize : null,
+      pip_value: pipValue,
+      tick_size: tickSize,
+      tick_value: tickValue,
     })
     .select("id")
     .single();
   
   if (error) {
     console.error("Position insert error:", error);
-    return jsonResponse({
-      success: false,
-      status: "server_error",
-      reason: error.message,
-    }, 500);
+    return errorResponse("server_error", error.message, 500);
   }
   
   console.log("Position created:", position.id);
@@ -341,6 +406,10 @@ async function handleTradeEntry(
     status: "position_created",
     position_id: position.id,
     asset_class: assetClass,
+    pip_size: assetClass === "forex" ? pipSize : null,
+    pip_value: pipValue,
+    tick_size: tickSize,
+    tick_value: tickValue,
   });
 }
 
@@ -358,12 +427,9 @@ interface OpenPosition {
   entry_timestamp: string;
   platform: string;
   is_simulation: boolean;
+  asset_class: string | null;
 }
 
-/**
- * Handle TRADE_EXIT - close positions using FIFO matching
- * Supports partial closes and multiple position closes
- */
 async function handleTradeExit(
   serviceClient: SupabaseClient,
   userId: string,
@@ -375,16 +441,16 @@ async function handleTradeExit(
     platform: string;
     timestamp: string;
     isSimulation: boolean;
-  }
+  },
+  nowIso: string
 ): Promise<Response> {
   const { symbol, price: exitPrice, quantity: exitQuantity, quantityLots: exitLots, timestamp } = payload;
   
   console.log("Processing TRADE_EXIT:", { userId, symbol, exitPrice, exitQuantity, exitLots });
   
-  // Get all open positions for this user + symbol, ordered by entry time (FIFO)
   const { data: openPositions, error: fetchError } = await serviceClient
     .from("positions")
-    .select("id, symbol, side, quantity, quantity_lots, entry_price, entry_timestamp, platform, is_simulation")
+    .select("id, symbol, side, quantity, quantity_lots, entry_price, entry_timestamp, platform, is_simulation, asset_class")
     .eq("user_id", userId)
     .eq("symbol", symbol)
     .eq("open", true)
@@ -392,27 +458,23 @@ async function handleTradeExit(
   
   if (fetchError) {
     console.error("Fetch positions error:", fetchError);
-    return jsonResponse({
-      success: false,
-      status: "server_error",
-      reason: fetchError.message,
-    }, 500);
+    return errorResponse("server_error", fetchError.message, 500);
   }
   
   if (!openPositions || openPositions.length === 0) {
     console.log("No open positions found for symbol:", symbol);
-    return jsonResponse({
-      success: false,
-      status: "no_open_position",
-      reason: `No open position found for ${symbol}`,
-    }, 404);
+    return errorResponse("no_open_position", `No open position found for ${symbol}`, 404);
   }
   
   const assetClass = getAssetClass(symbol);
   let remainingQuantity = exitQuantity;
   let totalPnL = 0;
-  const closedPositions: Array<{ id: number; pnl: number; quantity: number }> = [];
+  let totalPnLPct = 0;
+  const closedPositions: Array<{ id: number; pnl: number; pnlPct: number; quantity: number }> = [];
   let partialCloseCount = 0;
+  
+  // PnL metadata for response
+  let lastPnLResult: PnLResult | null = null;
   
   console.log(`Found ${openPositions.length} open positions for ${symbol}, closing ${remainingQuantity} units (FIFO)`);
   
@@ -429,20 +491,28 @@ async function handleTradeExit(
     
     if (remainingQuantity >= positionQty) {
       // ========================================
-      // FULL CLOSE - close entire position
+      // FULL CLOSE
       // ========================================
-      const pnl = calculatePnL(position.side, position.entry_price, exitPrice, positionQty, assetClass);
+      const pnlResult = calculatePnL(position.side, position.entry_price, exitPrice, positionQty, assetClass, symbol);
+      lastPnLResult = pnlResult;
       
-      console.log(`Closing FULL position ${position.id}: qty=${positionQty}, entry=${position.entry_price}, exit=${exitPrice}, pnl=${pnl}`);
+      console.log(`Closing FULL position ${position.id}: qty=${positionQty}, entry=${position.entry_price}, exit=${exitPrice}, pnl=${pnlResult.pnl}`);
       
       const { error: updateError } = await serviceClient
         .from("positions")
         .update({
           exit_price: exitPrice,
           exit_timestamp: timestamp,
-          pnl: pnl,
+          pnl: pnlResult.pnl,
+          pnl_pct: pnlResult.pnlPct,
           open: false,
-          updated_at: new Date().toISOString(),
+          updated_at: nowIso,
+          pip_size: pnlResult.pipSize,
+          pip_value: pnlResult.pipValue,
+          pips: pnlResult.pips,
+          tick_size: pnlResult.tickSize,
+          tick_value: pnlResult.tickValue,
+          ticks: pnlResult.ticks,
         })
         .eq("id", position.id);
       
@@ -452,24 +522,25 @@ async function handleTradeExit(
       }
       
       remainingQuantity -= positionQty;
-      totalPnL += pnl;
-      closedPositions.push({ id: position.id, pnl, quantity: positionQty });
+      totalPnL += pnlResult.pnl;
+      totalPnLPct += pnlResult.pnlPct;
+      closedPositions.push({ id: position.id, pnl: pnlResult.pnl, pnlPct: pnlResult.pnlPct, quantity: positionQty });
       
     } else {
       // ========================================
-      // PARTIAL CLOSE - close part of position
-      // TradingView style: split into closed + remaining
+      // PARTIAL CLOSE
       // ========================================
       const closedQty = remainingQuantity;
       const remainingPosQty = positionQty - closedQty;
       
-      const pnl = calculatePnL(position.side, position.entry_price, exitPrice, closedQty, assetClass);
+      const pnlResult = calculatePnL(position.side, position.entry_price, exitPrice, closedQty, assetClass, symbol);
+      lastPnLResult = pnlResult;
       
-      // Calculate proportional lots
-      const closedLots = positionLots > 0 ? (closedQty / positionQty) * positionLots : closedQty;
-      const remainingLots = positionLots > 0 ? positionLots - closedLots : remainingPosQty;
+      // Calculate proportional lots with precision
+      const closedLots = Number(((closedQty / positionQty) * positionLots).toFixed(8));
+      const remainingLots = Number((positionLots - closedLots).toFixed(8));
       
-      console.log(`PARTIAL close position ${position.id}: closing ${closedQty} units (${closedLots} lots), remaining ${remainingPosQty} units, pnl=${pnl}`);
+      console.log(`PARTIAL close position ${position.id}: closing ${closedQty} units (${closedLots} lots), remaining ${remainingPosQty} units, pnl=${pnlResult.pnl}`);
       
       // Update original position with remaining quantity
       const { error: updateError } = await serviceClient
@@ -477,7 +548,7 @@ async function handleTradeExit(
         .update({
           quantity: remainingPosQty,
           quantity_lots: remainingLots,
-          updated_at: new Date().toISOString(),
+          updated_at: nowIso,
         })
         .eq("id", position.id);
       
@@ -486,7 +557,7 @@ async function handleTradeExit(
         continue;
       }
       
-      // Create a new closed position record for the closed portion
+      // Create closed position record
       const { data: closedPos, error: insertError } = await serviceClient
         .from("positions")
         .insert({
@@ -500,9 +571,17 @@ async function handleTradeExit(
           entry_timestamp: position.entry_timestamp,
           exit_price: exitPrice,
           exit_timestamp: timestamp,
-          pnl: pnl,
+          pnl: pnlResult.pnl,
+          pnl_pct: pnlResult.pnlPct,
           open: false,
           is_simulation: position.is_simulation,
+          asset_class: assetClass,
+          pip_size: pnlResult.pipSize,
+          pip_value: pnlResult.pipValue,
+          pips: pnlResult.pips,
+          tick_size: pnlResult.tickSize,
+          tick_value: pnlResult.tickValue,
+          ticks: pnlResult.ticks,
         })
         .select("id")
         .single();
@@ -510,56 +589,60 @@ async function handleTradeExit(
       if (insertError) {
         console.error("Failed to create closed portion:", insertError);
       } else if (closedPos) {
-        closedPositions.push({ id: closedPos.id, pnl, quantity: closedQty });
+        closedPositions.push({ id: closedPos.id, pnl: pnlResult.pnl, pnlPct: pnlResult.pnlPct, quantity: closedQty });
       }
       
       remainingQuantity = 0;
-      totalPnL += pnl;
+      totalPnL += pnlResult.pnl;
+      totalPnLPct += pnlResult.pnlPct;
       partialCloseCount++;
     }
   }
   
   if (closedPositions.length === 0) {
-    return jsonResponse({
-      success: false,
-      status: "close_failed",
-      reason: "Failed to close any positions",
-    }, 500);
+    return errorResponse("close_failed", "Failed to close any positions", 500);
   }
   
   const roundedTotalPnL = Math.round(totalPnL * 100) / 100;
+  const avgPnLPct = closedPositions.length > 0 ? Math.round((totalPnLPct / closedPositions.length) * 100) / 100 : 0;
+  
   console.log(`Exit complete: ${closedPositions.length} positions closed, ${partialCloseCount} partial, total PnL: ${roundedTotalPnL}`);
   
-  // Return response based on number of positions closed
-  if (closedPositions.length === 1) {
-    return jsonResponse({
-      success: true,
-      status: "position_closed",
-      position_id: closedPositions[0].id,
-      pnl: closedPositions[0].pnl,
-      quantity_closed: closedPositions[0].quantity,
-      asset_class: assetClass,
-    });
+  const responseData: Record<string, unknown> = {
+    success: true,
+    asset_class: assetClass,
+    pnl: roundedTotalPnL,
+    pnl_pct: avgPnLPct,
+  };
+  
+  // Add pip/tick metadata from last result
+  if (lastPnLResult) {
+    responseData.pip_size = lastPnLResult.pipSize;
+    responseData.pip_value = lastPnLResult.pipValue;
+    responseData.pips = lastPnLResult.pips;
+    responseData.tick_size = lastPnLResult.tickSize;
+    responseData.tick_value = lastPnLResult.tickValue;
+    responseData.ticks = lastPnLResult.ticks;
   }
   
-  return jsonResponse({
-    success: true,
-    status: "positions_closed",
-    positions_closed: closedPositions.length,
-    partial_closes: partialCloseCount,
-    positions: closedPositions,
-    pnl: roundedTotalPnL,
-    asset_class: assetClass,
-  });
+  if (closedPositions.length === 1) {
+    responseData.status = "position_closed";
+    responseData.position_id = closedPositions[0].id;
+    responseData.quantity_closed = closedPositions[0].quantity;
+  } else {
+    responseData.status = "positions_closed";
+    responseData.positions_closed = closedPositions.length;
+    responseData.partial_closes = partialCloseCount;
+    responseData.positions = closedPositions;
+  }
+  
+  return jsonResponse(responseData);
 }
 
 // ============================================================================
 // USER ACTIVITY HANDLER
 // ============================================================================
 
-/**
- * Handle USER_ACTIVITY - log platform activity status
- */
 async function handleUserActivity(
   serviceClient: SupabaseClient,
   userId: string,
@@ -571,7 +654,6 @@ async function handleUserActivity(
 ): Promise<Response> {
   const { platform, isActive, timestamp } = payload;
   
-  // Normalize platform name
   let normalizedPlatform = platform;
   if (platform.toLowerCase().includes("tradingview")) {
     normalizedPlatform = "TradingView";
@@ -590,18 +672,11 @@ async function handleUserActivity(
   
   if (error) {
     console.error("Activity insert error:", error);
-    return jsonResponse({
-      success: false,
-      status: "server_error",
-      reason: error.message,
-    }, 500);
+    return errorResponse("server_error", error.message, 500);
   }
   
   console.log("Activity recorded");
-  return jsonResponse({
-    success: true,
-    status: "activity_logged",
-  });
+  return jsonResponse({ success: true, status: "activity_logged" });
 }
 
 // ============================================================================
@@ -609,115 +684,96 @@ async function handleUserActivity(
 // ============================================================================
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   
   if (req.method !== "POST") {
-    return jsonResponse({
-      success: false,
-      status: "method_not_allowed",
-      reason: "Only POST requests are accepted",
-    }, 405);
+    return errorResponse("method_not_allowed", "Only POST requests are accepted", 405);
   }
   
+  // Single timestamp for this request
+  const nowIso = new Date().toISOString();
+  
   try {
-    // Get environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("Missing environment variables");
-      return jsonResponse({
-        success: false,
-        status: "server_error",
-        reason: "Server configuration error",
-      }, 500);
+      return errorResponse("server_error", "Server configuration error", 500);
     }
     
-    // Create service client (bypasses RLS for privileged operations)
     const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     
-    // Authenticate via x-api-key header
     const apiKey = req.headers.get("x-api-key");
     const authResult = await authenticateRequest(serviceClient, apiKey);
     
     if (!authResult.success || !authResult.userId) {
       console.log("Authentication failed:", authResult.error);
-      return jsonResponse({
-        success: false,
-        status: "unauthorized",
-        reason: authResult.error || "Authentication failed",
-      }, 401);
+      return errorResponse("unauthorized", authResult.error || "Authentication failed", 401);
     }
     
     const userId = authResult.userId;
     
-    // Parse request body
     let body: Record<string, unknown>;
     try {
       body = await req.json();
     } catch {
-      return jsonResponse({
-        success: false,
-        status: "invalid_request",
-        reason: "Invalid JSON body",
-      }, 400);
+      return errorResponse("invalid_request", "Invalid JSON body", 400);
     }
     
     console.log("Received payload:", JSON.stringify(body));
     
-    // Extract event type (support both 'type' and 'event_type')
     const rawType = body.type ?? body.event_type;
     const eventType = rawType ? String(rawType).toUpperCase() : null;
     
     if (!eventType) {
-      return jsonResponse({
-        success: false,
-        status: "invalid_request",
-        reason: "Missing type or event_type field",
-      }, 400);
+      return errorResponse("invalid_request", "Missing type or event_type field", 400);
     }
     
     // Normalize symbol
     const rawSymbol = body.symbol as string | undefined;
     const symbol = normalizeSymbol(rawSymbol);
     
-    // Extract and validate quantity (raw units)
+    // Normalize side
+    const rawSide = body.side as string | undefined;
+    const side = normalizeSide(rawSide);
+    
+    // Validate and extract quantity
     let quantity: number | null = null;
     if (body.quantity !== undefined && body.quantity !== null) {
       quantity = Number(body.quantity);
-      if (isNaN(quantity)) {
-        return jsonResponse({
-          success: false,
-          status: "invalid_quantity",
-          reason: "Quantity must be a valid number",
-        }, 400);
+      if (isNaN(quantity) || quantity <= 0) {
+        return errorResponse("invalid_quantity", "Quantity must be a positive number", 400);
       }
     }
     
-    // Extract quantity_lots (normalized lots)
+    // Extract quantity_lots
     let quantityLots: number | null = null;
     if (body.quantity_lots !== undefined && body.quantity_lots !== null) {
       quantityLots = Number(body.quantity_lots);
-      if (isNaN(quantityLots)) {
-        quantityLots = quantity; // Fallback to raw quantity
-      }
+      if (isNaN(quantityLots)) quantityLots = quantity;
     } else {
-      quantityLots = quantity; // Use raw quantity as lots if not provided
+      quantityLots = quantity;
     }
     
-    // Extract other common fields
+    // Extract price with validation
+    let price: number | null = null;
+    if (body.price !== undefined && body.price !== null) {
+      price = Number(body.price);
+      if (isNaN(price) || price <= 0) {
+        return errorResponse("invalid_price", "Price must be a positive number", 400);
+      }
+    }
+    
     const timestamp = normalizeTimestamp(body.timestamp);
-    const side = body.side as string | null;
-    const price = body.price !== undefined ? Number(body.price) : null;
     const platform = (body.platform as string) || "TradingView";
     const isSimulation = Boolean(body.is_simulation || body.isSimulation);
     
-    // Log every event to trade_log for audit trail
+    // Log every event
     await logEvent(serviceClient, userId, eventType, {
       symbol,
       side,
@@ -728,17 +784,13 @@ Deno.serve(async (req: Request) => {
       timestamp,
       isSimulation,
       raw: body,
-    });
+    }, nowIso);
     
-    // Route to appropriate handler based on event type
+    // Route to appropriate handler
     switch (eventType) {
       case "TRADE_ENTRY": {
         if (!symbol || !side || price === null || quantity === null) {
-          return jsonResponse({
-            success: false,
-            status: "invalid_request",
-            reason: "TRADE_ENTRY requires symbol, side, price, and quantity",
-          }, 400);
+          return errorResponse("invalid_request", "TRADE_ENTRY requires symbol, side, price, and quantity", 400);
         }
         
         return await handleTradeEntry(serviceClient, userId, {
@@ -750,16 +802,12 @@ Deno.serve(async (req: Request) => {
           platform,
           timestamp,
           isSimulation,
-        });
+        }, nowIso);
       }
       
       case "TRADE_EXIT": {
         if (!symbol || price === null || quantity === null) {
-          return jsonResponse({
-            success: false,
-            status: "invalid_request",
-            reason: "TRADE_EXIT requires symbol, price, and quantity",
-          }, 400);
+          return errorResponse("invalid_request", "TRADE_EXIT requires symbol, price, and quantity", 400);
         }
         
         return await handleTradeExit(serviceClient, userId, {
@@ -770,11 +818,10 @@ Deno.serve(async (req: Request) => {
           platform,
           timestamp,
           isSimulation,
-        });
+        }, nowIso);
       }
       
       case "USER_ACTIVITY": {
-        // Handle nested data structure
         const activityData = (body.data as Record<string, unknown>) || body;
         const activityPlatform = (activityData.platform as string) || platform;
         const isActive = activityData.is_active !== undefined 
@@ -791,20 +838,12 @@ Deno.serve(async (req: Request) => {
       
       default: {
         console.log("Unknown event type:", eventType);
-        return jsonResponse({
-          success: false,
-          status: "unknown_event_type",
-          reason: `Unknown event type: ${eventType}`,
-        }, 400);
+        return errorResponse("unknown_event_type", `Unknown event type: ${eventType}`, 400);
       }
     }
     
   } catch (error) {
     console.error("Unhandled error:", error);
-    return jsonResponse({
-      success: false,
-      status: "server_error",
-      reason: error instanceof Error ? error.message : "Unknown error",
-    }, 500);
+    return errorResponse("server_error", error instanceof Error ? error.message : "Unknown error", 500);
   }
 });
