@@ -9,22 +9,9 @@ const corsHeaders = {
 // Normalize symbol by removing broker prefixes and converting to uppercase
 function normalizeSymbol(symbol: string | null | undefined): string | null {
   if (!symbol) return null;
-  
-  const prefixes = [
-    "OANDA:", "FX:", "FOREX:", "BINANCE:", "COINBASE:", 
-    "KRAKEN:", "CRYPTO:", "NYSE:", "NASDAQ:", "AMEX:",
-    "LSE:", "TSE:", "ASX:", "C:", "X:", "BITSTAMP:",
-  ];
-  
-  let normalized = symbol.trim();
-  for (const prefix of prefixes) {
-    if (normalized.toUpperCase().startsWith(prefix)) {
-      normalized = normalized.slice(prefix.length);
-      break;
-    }
-  }
-  
-  return normalized.toUpperCase();
+  // Remove any prefix like "BROKER:" or "EXCHANGE:"
+  const normalized = symbol.replace(/^[A-Z0-9_]+:/i, "").toUpperCase();
+  return normalized || null;
 }
 
 // Normalize timestamp to Date object
@@ -200,9 +187,9 @@ async function handleTradeExit(
     console.log("No open position found for symbol:", symbol);
     return jsonResponse({
       success: false,
-      status: "invalid_request",
-      reason: `No open position found for ${symbol}`,
-    }, 400);
+      status: "no_open_position",
+      reason: `No open position found for symbol`,
+    }, 404);
   }
 
   // Determine quantity to close
@@ -392,7 +379,19 @@ Deno.serve(async (req) => {
     const timestamp = normalizeTimestamp(body.timestamp);
     const side = body.side as string | null;
     const price = body.price as number | null;
-    const quantity = body.quantity as number | null;
+    
+    // Ensure quantity is always a number
+    let quantity: number | null = null;
+    if (body.quantity !== undefined && body.quantity !== null) {
+      quantity = Number(body.quantity);
+      if (isNaN(quantity)) {
+        return jsonResponse({
+          success: false,
+          status: "invalid_quantity",
+          reason: "Quantity must be a number",
+        }, 400);
+      }
+    }
 
     // Log every event to trade_log
     await logEvent(
