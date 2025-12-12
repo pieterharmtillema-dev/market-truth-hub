@@ -218,7 +218,7 @@ function calculatePnL(
     pipSize = symbol?.endsWith("JPY") ? 0.01 : 0.0001;
 
     pips = priceDiff / pipSize; // how many pips the move was
-    pipValue = quantity * pipSize; // pip value per "pip"
+    pipValuePerUnit = quantity * pipSize; // pip value per "pip"
   }
 
   // METALS
