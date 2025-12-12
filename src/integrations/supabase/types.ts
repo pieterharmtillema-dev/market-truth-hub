@@ -22,6 +22,7 @@ export type Database = {
           exit_price: number | null
           exit_timestamp: string | null
           id: number
+          is_simulation: boolean
           open: boolean
           platform: string | null
           pnl: number | null
@@ -38,6 +39,7 @@ export type Database = {
           exit_price?: number | null
           exit_timestamp?: string | null
           id?: never
+          is_simulation?: boolean
           open?: boolean
           platform?: string | null
           pnl?: number | null
@@ -54,6 +56,7 @@ export type Database = {
           exit_price?: number | null
           exit_timestamp?: string | null
           id?: never
+          is_simulation?: boolean
           open?: boolean
           platform?: string | null
           pnl?: number | null
@@ -103,6 +106,7 @@ export type Database = {
           created_at: string | null
           event_type: string
           id: number
+          is_simulation: boolean
           platform: string | null
           price: number | null
           quantity: number | null
@@ -116,6 +120,7 @@ export type Database = {
           created_at?: string | null
           event_type: string
           id?: never
+          is_simulation?: boolean
           platform?: string | null
           price?: number | null
           quantity?: number | null
@@ -129,6 +134,7 @@ export type Database = {
           created_at?: string | null
           event_type?: string
           id?: never
+          is_simulation?: boolean
           platform?: string | null
           price?: number | null
           quantity?: number | null
