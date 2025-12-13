@@ -4,33 +4,17 @@ import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { PredictionCard } from "@/components/predictions/PredictionCard";
-import { ApiKeySection } from "@/components/profile/ApiKeySection";
+import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
-import { mockPredictions, tradingStyleLabels, marketFocusLabels, TradingStyle, MarketFocus } from "@/data/mockData";
+import { mockPredictions } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckCircle, Settings, Share2, Edit2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, Key } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const userProfile = {
-  name: "Alex Chen",
-  username: "alextrader",
-  isVerified: true,
-  tier: "platinum" as const,
-  traderType: {
-    style: "swing-trader" as TradingStyle,
-    markets: ["crypto", "stocks"] as MarketFocus[],
-  },
-  bio: "Swing trader focused on crypto and tech stocks. 5+ years experience. Sharing transparent calls with full accountability.",
-  followers: 2847,
-  following: 156,
-  rank: 47,
-};
 
 interface Trade {
   id: number;
@@ -42,13 +26,23 @@ interface Trade {
   entry_timestamp: string;
 }
 
+interface UserProfile {
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
-  const styleInfo = tradingStyleLabels[userProfile.traderType.style];
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile>({
+    display_name: null,
+    avatar_url: null,
+    bio: null,
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -56,21 +50,23 @@ const Profile = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setLoadingTrades(false);
+          setLoadingProfile(false);
           return;
         }
         
         setUserId(user.id);
 
-        // Fetch profile with API key
-        const { data: profile } = await supabase
+        // Fetch profile
+        const { data: profileData } = await supabase
           .from('profiles')
-          .select('api_key')
+          .select('display_name, avatar_url, bio')
           .eq('user_id', user.id)
           .single();
         
-        if (profile) {
-          setApiKey(profile.api_key);
+        if (profileData) {
+          setProfile(profileData);
         }
+        setLoadingProfile(false);
 
         // Fetch recent trades from positions table
         const { data, error } = await supabase
@@ -87,11 +83,50 @@ const Profile = () => {
         console.error('Failed to fetch user data:', err);
       } finally {
         setLoadingTrades(false);
+        setLoadingProfile(false);
       }
     };
 
     fetchUserData();
   }, []);
+
+  const getInitials = (name: string | null) => {
+    if (!name) return '';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleProfileUpdated = (data: { display_name: string; avatar_url: string; bio: string }) => {
+    setProfile(data);
+  };
+
+  const renderAvatar = () => {
+    const avatarUrl = profile.avatar_url;
+    
+    if (avatarUrl?.startsWith('emoji:')) {
+      const emoji = avatarUrl.replace('emoji:', '');
+      return (
+        <AvatarFallback className="text-3xl bg-primary/10">
+          {emoji}
+        </AvatarFallback>
+      );
+    }
+    
+    if (avatarUrl) {
+      return <AvatarImage src={avatarUrl} alt={profile.display_name || 'Profile'} />;
+    }
+    
+    return (
+      <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+        {profile.display_name ? getInitials(profile.display_name) : <User className="w-8 h-8" />}
+      </AvatarFallback>
+    );
+  };
+
   return (
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
@@ -103,67 +138,49 @@ const Profile = () => {
           <CardContent className="p-4 -mt-12">
             <div className="flex items-end gap-4 mb-4">
               <Avatar className="w-20 h-20 border-4 border-card shadow-lg">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-                  AC
-                </AvatarFallback>
+                {loadingProfile ? (
+                  <Skeleton className="w-full h-full rounded-full" />
+                ) : (
+                  renderAvatar()
+                )}
               </Avatar>
               <div className="flex-1 min-w-0 pb-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-xl">{userProfile.name}</h1>
-                  {userProfile.isVerified && <CheckCircle className="w-5 h-5 text-primary" />}
-                </div>
-                <p className="text-sm text-muted-foreground">@{userProfile.username}</p>
+                {loadingProfile ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="font-bold text-xl">
+                      {profile.display_name || 'Set your name'}
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                      {profile.bio ? profile.bio.slice(0, 50) + (profile.bio.length > 50 ? '...' : '') : 'No bio yet'}
+                    </p>
+                  </>
+                )}
               </div>
-            </div>
-
-            {/* Tier & Rank Badges */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <Badge variant="rank" className="gap-1">
-                🏆 #{userProfile.rank} Global
-              </Badge>
-              <Badge className="bg-cyan-400/20 text-cyan-300 border-cyan-400/30 capitalize">
-                {userProfile.tier} Tier
-              </Badge>
-            </div>
-
-            {/* Trader Type Tags */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border", styleInfo.color)}>
-                {styleInfo.icon} {styleInfo.label}
-              </span>
-              {userProfile.traderType.markets.map((market) => {
-                const marketInfo = marketFocusLabels[market];
-                return (
-                  <span key={market} className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border", marketInfo.color)}>
-                    {marketInfo.icon} {marketInfo.label}
-                  </span>
-                );
-              })}
             </div>
 
             {/* Bio */}
-            <p className="text-sm text-muted-foreground mb-4">
-              {userProfile.bio}
-            </p>
-
-            {/* Follow Stats */}
-            <div className="flex items-center gap-6 mb-4 text-sm">
-              <div>
-                <span className="font-bold">{userProfile.followers.toLocaleString()}</span>
-                <span className="text-muted-foreground ml-1">Followers</span>
-              </div>
-              <div>
-                <span className="font-bold">{userProfile.following}</span>
-                <span className="text-muted-foreground ml-1">Following</span>
-              </div>
-            </div>
+            {profile.bio && (
+              <p className="text-sm text-muted-foreground mb-4">
+                {profile.bio}
+              </p>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2">
-              <Button className="flex-1 gap-2">
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
-              </Button>
+              {userId && (
+                <ProfileEditDialog
+                  userId={userId}
+                  currentName={profile.display_name}
+                  currentAvatarUrl={profile.avatar_url}
+                  currentBio={profile.bio}
+                  onProfileUpdated={handleProfileUpdated}
+                />
+              )}
               <Button variant="outline" size="icon">
                 <Share2 className="w-4 h-4" />
               </Button>
@@ -179,15 +196,6 @@ const Profile = () => {
 
         {/* Stats Grid */}
         <DefaultStatsGrid />
-
-        {/* API Key Section */}
-        {userId && (
-          <ApiKeySection 
-            apiKey={apiKey} 
-            userId={userId} 
-            onKeyRegenerated={setApiKey} 
-          />
-        )}
 
         {/* Content Tabs */}
         <Tabs defaultValue="predictions" className="w-full">
@@ -207,7 +215,7 @@ const Profile = () => {
           </TabsList>
 
           <TabsContent value="predictions" className="mt-4 space-y-4">
-            {mockPredictions.slice(0, 2).map((prediction) => (
+            {mockPredictions.map((prediction) => (
               <PredictionCard key={prediction.id} prediction={prediction} />
             ))}
           </TabsContent>
