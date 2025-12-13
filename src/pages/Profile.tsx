@@ -3,18 +3,17 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
-import { PredictionCard } from "@/components/predictions/PredictionCard";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
-import { mockPredictions } from "@/data/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User } from "lucide-react";
+import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface Trade {
   id: number;
@@ -32,10 +31,28 @@ interface UserProfile {
   bio: string | null;
 }
 
+interface Prediction {
+  id: string;
+  asset: string;
+  asset_type: string;
+  direction: string;
+  current_price: number;
+  target_price: number;
+  time_horizon: string;
+  confidence: number;
+  rationale: string | null;
+  status: string;
+  likes: number;
+  comments: number;
+  created_at: string;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(true);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
@@ -51,6 +68,7 @@ const Profile = () => {
         if (!user) {
           setLoadingTrades(false);
           setLoadingProfile(false);
+          setLoadingPredictions(false);
           return;
         }
         
@@ -67,6 +85,18 @@ const Profile = () => {
           setProfile(profileData);
         }
         setLoadingProfile(false);
+
+        // Fetch user's predictions
+        const { data: predictionsData } = await supabase
+          .from('predictions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (predictionsData) {
+          setPredictions(predictionsData);
+        }
+        setLoadingPredictions(false);
 
         // Fetch recent trades from positions table
         const { data, error } = await supabase
@@ -215,9 +245,67 @@ const Profile = () => {
           </TabsList>
 
           <TabsContent value="predictions" className="mt-4 space-y-4">
-            {mockPredictions.map((prediction) => (
-              <PredictionCard key={prediction.id} prediction={prediction} />
-            ))}
+            {loadingPredictions ? (
+              <div className="space-y-3">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full" />
+                ))}
+              </div>
+            ) : predictions.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <Target className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No predictions yet. Make your first prediction.</p>
+                <Button variant="outline" className="mt-4" onClick={() => navigate('/create-prediction')}>
+                  Create Prediction
+                </Button>
+              </Card>
+            ) : (
+              predictions.map((prediction) => (
+                <Card key={prediction.id} variant="glass" className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-lg">{prediction.asset}</span>
+                      <Badge variant={prediction.direction === 'long' ? 'default' : 'destructive'} className="gap-1">
+                        {prediction.direction === 'long' ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {prediction.direction}
+                      </Badge>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        prediction.status === 'active' && 'border-blue-500 text-blue-500',
+                        prediction.status === 'success' && 'border-green-500 text-green-500',
+                        prediction.status === 'fail' && 'border-red-500 text-red-500',
+                        prediction.status === 'expired' && 'border-muted-foreground text-muted-foreground'
+                      )}
+                    >
+                      {prediction.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm mb-2">
+                    <span className="text-muted-foreground">
+                      ${prediction.current_price.toLocaleString()} → <span className="text-foreground font-medium">${prediction.target_price.toLocaleString()}</span>
+                    </span>
+                    <span className="text-muted-foreground">• {prediction.time_horizon}</span>
+                  </div>
+                  
+                  {prediction.rationale && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{prediction.rationale}</p>
+                  )}
+                  
+                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                    <span>{prediction.confidence}% confidence</span>
+                    <span>•</span>
+                    <span>{format(new Date(prediction.created_at), 'MMM d, yyyy')}</span>
+                  </div>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="journal" className="mt-4 space-y-3">
