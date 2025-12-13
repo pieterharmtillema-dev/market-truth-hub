@@ -95,6 +95,60 @@ export type Database = {
         }
         Relationships: []
       }
+      predictions: {
+        Row: {
+          asset: string
+          asset_type: string
+          comments: number
+          confidence: number
+          created_at: string
+          current_price: number
+          direction: string
+          id: string
+          likes: number
+          rationale: string | null
+          status: string
+          target_price: number
+          time_horizon: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset: string
+          asset_type?: string
+          comments?: number
+          confidence: number
+          created_at?: string
+          current_price: number
+          direction: string
+          id?: string
+          likes?: number
+          rationale?: string | null
+          status?: string
+          target_price: number
+          time_horizon: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset?: string
+          asset_type?: string
+          comments?: number
+          confidence?: number
+          created_at?: string
+          current_price?: number
+          direction?: string
+          id?: string
+          likes?: number
+          rationale?: string | null
+          status?: string
+          target_price?: number
+          time_horizon?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           api_key: string | null
