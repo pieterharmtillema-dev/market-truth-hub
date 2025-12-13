@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,35 +9,147 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { getCurrentPrice } from "@/lib/polygon";
+
+// Available assets for prediction
+const availableAssets = [
+  { symbol: "BTC", name: "Bitcoin", market: "crypto" as const, assetType: "crypto" },
+  { symbol: "ETH", name: "Ethereum", market: "crypto" as const, assetType: "crypto" },
+  { symbol: "SOL", name: "Solana", market: "crypto" as const, assetType: "crypto" },
+  { symbol: "NVDA", name: "NVIDIA", market: "stocks" as const, assetType: "stock" },
+  { symbol: "AAPL", name: "Apple", market: "stocks" as const, assetType: "stock" },
+  { symbol: "SPY", name: "S&P 500 ETF", market: "stocks" as const, assetType: "stock" },
+  { symbol: "TSLA", name: "Tesla", market: "stocks" as const, assetType: "stock" },
+  { symbol: "GOOGL", name: "Google", market: "stocks" as const, assetType: "stock" },
+  { symbol: "MSFT", name: "Microsoft", market: "stocks" as const, assetType: "stock" },
+  { symbol: "AMZN", name: "Amazon", market: "stocks" as const, assetType: "stock" },
+  { symbol: "EUR/USD", name: "Euro/US Dollar", market: "forex" as const, assetType: "forex" },
+  { symbol: "GBP/USD", name: "British Pound/US Dollar", market: "forex" as const, assetType: "forex" },
+  { symbol: "GOLD", name: "Gold", market: "stocks" as const, assetType: "commodity" },
+];
+
+const timeframeLabels: Record<string, string> = {
+  "1d": "1 Day",
+  "3d": "3 Days",
+  "1w": "1 Week",
+  "2w": "2 Weeks",
+  "1m": "1 Month",
+  "3m": "3 Months",
+};
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [confidence, setConfidence] = useState([70]);
-  const [asset, setAsset] = useState("");
+  const [selectedAsset, setSelectedAsset] = useState("");
   const [entryPrice, setEntryPrice] = useState("");
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
   const [targetPrice, setTargetPrice] = useState("");
   const [timeframe, setTimeframe] = useState("");
   const [rationale, setRationale] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!asset || !entryPrice || !targetPrice || !timeframe || !rationale) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+  const selectedAssetData = availableAssets.find(a => a.symbol === selectedAsset);
+
+  // Fetch live price when asset is selected
+  useEffect(() => {
+    const fetchLivePrice = async () => {
+      if (!selectedAssetData) {
+        setLivePrice(null);
+        return;
+      }
+
+      setPriceLoading(true);
+      try {
+        const priceData = await getCurrentPrice(selectedAssetData.symbol, selectedAssetData.market);
+        if (priceData) {
+          setLivePrice(priceData.price);
+          // Auto-fill entry price with live price
+          setEntryPrice(priceData.price.toString());
+        } else {
+          setLivePrice(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch price:", error);
+        setLivePrice(null);
+      } finally {
+        setPriceLoading(false);
+      }
+    };
+
+    fetchLivePrice();
+  }, [selectedAsset, selectedAssetData]);
+
+  const refreshPrice = async () => {
+    if (!selectedAssetData) return;
+    
+    setPriceLoading(true);
+    try {
+      const priceData = await getCurrentPrice(selectedAssetData.symbol, selectedAssetData.market);
+      if (priceData) {
+        setLivePrice(priceData.price);
+        setEntryPrice(priceData.price.toString());
+        toast.success("Price updated");
+      }
+    } catch (error) {
+      toast.error("Failed to refresh price");
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedAsset || !entryPrice || !targetPrice || !timeframe) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
-    toast({
-      title: "Prediction submitted!",
-      description: "Your prediction is now live on the feed",
-    });
-    navigate("/");
+    const entryNum = parseFloat(entryPrice);
+    const targetNum = parseFloat(targetPrice);
+
+    if (isNaN(entryNum) || isNaN(targetNum) || entryNum <= 0 || targetNum <= 0) {
+      toast.error("Please enter valid prices");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please log in to create predictions");
+        navigate("/auth");
+        return;
+      }
+
+      const { error } = await supabase.from("predictions").insert({
+        user_id: user.id,
+        asset: selectedAsset,
+        asset_type: selectedAssetData?.assetType || "stock",
+        direction,
+        current_price: entryNum,
+        target_price: targetNum,
+        time_horizon: timeframeLabels[timeframe] || timeframe,
+        confidence: confidence[0],
+        rationale: rationale.trim() || null,
+        status: "active",
+      });
+
+      if (error) throw error;
+
+      toast.success("Prediction published!");
+      navigate("/profile");
+    } catch (error) {
+      console.error("Failed to create prediction:", error);
+      toast.error("Failed to publish prediction");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const entryNum = parseFloat(entryPrice) || 0;
@@ -49,7 +161,7 @@ const CreatePrediction = () => {
       <div className="px-4 py-4 space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -88,22 +200,55 @@ const CreatePrediction = () => {
           </CardContent>
         </Card>
 
-        {/* Asset & Prices */}
+        {/* Asset Selection */}
         <Card variant="glass">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Asset & Price Targets</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="asset">Asset / Symbol</Label>
-              <Input
-                id="asset"
-                placeholder="e.g., BTC/USD, NVDA, EUR/USD"
-                value={asset}
-                onChange={(e) => setAsset(e.target.value.toUpperCase())}
-                className="font-mono"
-              />
+              <Label>Asset / Symbol</Label>
+              <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+                <SelectTrigger className="font-mono">
+                  <SelectValue placeholder="Select an asset" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="" disabled>Select an asset</SelectItem>
+                  {availableAssets.map((asset) => (
+                    <SelectItem key={asset.symbol} value={asset.symbol}>
+                      <span className="font-mono font-medium">{asset.symbol}</span>
+                      <span className="text-muted-foreground ml-2">- {asset.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Live Price Display */}
+            {selectedAsset && (
+              <div className="bg-background/50 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground">Live Price</span>
+                  <div className="font-mono font-bold text-lg">
+                    {priceLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : livePrice ? (
+                      `$${livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ) : (
+                      "N/A"
+                    )}
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={refreshPrice}
+                  disabled={priceLoading || !selectedAsset}
+                >
+                  <RefreshCw className={cn("w-4 h-4", priceLoading && "animate-spin")} />
+                </Button>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -119,6 +264,11 @@ const CreatePrediction = () => {
                     className="pl-7 font-mono"
                   />
                 </div>
+                {livePrice && entryPrice && parseFloat(entryPrice) !== livePrice && (
+                  <p className="text-xs text-muted-foreground">
+                    {parseFloat(entryPrice) > livePrice ? "Above" : "Below"} live price
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="target">Target Price</Label>
@@ -208,7 +358,7 @@ const CreatePrediction = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              Rationale
+              Rationale (Optional)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -218,9 +368,10 @@ const CreatePrediction = () => {
               onChange={(e) => setRationale(e.target.value)}
               rows={4}
               className="resize-none"
+              maxLength={1000}
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Quality explanations help build your reputation
+              Quality explanations help build your reputation ({rationale.length}/1000)
             </p>
           </CardContent>
         </Card>
@@ -230,9 +381,14 @@ const CreatePrediction = () => {
           size="xl" 
           className="w-full gap-2"
           onClick={handleSubmit}
+          disabled={isSubmitting || !selectedAsset || !entryPrice || !targetPrice || !timeframe}
         >
-          <Target className="w-5 h-5" />
-          Publish Prediction
+          {isSubmitting ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Target className="w-5 h-5" />
+          )}
+          {isSubmitting ? "Publishing..." : "Publish Prediction"}
         </Button>
 
         <p className="text-xs text-center text-muted-foreground px-4">
