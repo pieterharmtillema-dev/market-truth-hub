@@ -103,13 +103,22 @@ export type Database = {
           confidence: number
           created_at: string
           current_price: number
+          data_source: string | null
           direction: string
+          expiry_timestamp: string | null
+          hit_timestamp: string | null
           id: string
+          last_checked_price: number | null
+          last_price_check: string | null
           likes: number
           rationale: string | null
+          resolved_at: string | null
+          resolved_price: number | null
           status: string
+          tags: string[] | null
           target_price: number
           time_horizon: string
+          timeframe_code: string | null
           updated_at: string
           user_id: string
         }
@@ -120,13 +129,22 @@ export type Database = {
           confidence: number
           created_at?: string
           current_price: number
+          data_source?: string | null
           direction: string
+          expiry_timestamp?: string | null
+          hit_timestamp?: string | null
           id?: string
+          last_checked_price?: number | null
+          last_price_check?: string | null
           likes?: number
           rationale?: string | null
+          resolved_at?: string | null
+          resolved_price?: number | null
           status?: string
+          tags?: string[] | null
           target_price: number
           time_horizon: string
+          timeframe_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -137,13 +155,22 @@ export type Database = {
           confidence?: number
           created_at?: string
           current_price?: number
+          data_source?: string | null
           direction?: string
+          expiry_timestamp?: string | null
+          hit_timestamp?: string | null
           id?: string
+          last_checked_price?: number | null
+          last_price_check?: string | null
           likes?: number
           rationale?: string | null
+          resolved_at?: string | null
+          resolved_price?: number | null
           status?: string
+          tags?: string[] | null
           target_price?: number
           time_horizon?: string
+          timeframe_code?: string | null
           updated_at?: string
           user_id?: string
         }
