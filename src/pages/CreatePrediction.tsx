@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,114 +6,103 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Target, Clock, Percent, ArrowLeft, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { 
+  Target, Clock, ArrowLeft, Sparkles, Loader2, Send, 
+  Eye, AlertCircle, Shield, Radio 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPrice } from "@/lib/polygon";
 
-// Available assets for prediction
-const availableAssets = [
-  { symbol: "BTC", name: "Bitcoin", market: "crypto" as const, assetType: "crypto" },
-  { symbol: "ETH", name: "Ethereum", market: "crypto" as const, assetType: "crypto" },
-  { symbol: "SOL", name: "Solana", market: "crypto" as const, assetType: "crypto" },
-  { symbol: "NVDA", name: "NVIDIA", market: "stocks" as const, assetType: "stock" },
-  { symbol: "AAPL", name: "Apple", market: "stocks" as const, assetType: "stock" },
-  { symbol: "SPY", name: "S&P 500 ETF", market: "stocks" as const, assetType: "stock" },
-  { symbol: "TSLA", name: "Tesla", market: "stocks" as const, assetType: "stock" },
-  { symbol: "GOOGL", name: "Google", market: "stocks" as const, assetType: "stock" },
-  { symbol: "MSFT", name: "Microsoft", market: "stocks" as const, assetType: "stock" },
-  { symbol: "AMZN", name: "Amazon", market: "stocks" as const, assetType: "stock" },
-  { symbol: "EUR/USD", name: "Euro/US Dollar", market: "forex" as const, assetType: "forex" },
-  { symbol: "GBP/USD", name: "British Pound/US Dollar", market: "forex" as const, assetType: "forex" },
-  { symbol: "GOLD", name: "Gold", market: "stocks" as const, assetType: "commodity" },
-];
-
-const timeframeLabels: Record<string, string> = {
-  "1d": "1 Day",
-  "3d": "3 Days",
-  "1w": "1 Week",
-  "2w": "2 Weeks",
-  "1m": "1 Month",
-  "3m": "3 Months",
-};
+import { DirectionSelector } from "@/components/predictions/DirectionSelector";
+import { AssetSelector, availableAssets, type Asset } from "@/components/predictions/AssetSelector";
+import { TimeframePills, getTimeframeDuration, getTimeframeLabel } from "@/components/predictions/TimeframePills";
+import { ConfidenceSlider } from "@/components/predictions/ConfidenceSlider";
+import { PredictionPreview } from "@/components/predictions/PredictionPreview";
+import { PredictionTags } from "@/components/predictions/PredictionTags";
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
   const [direction, setDirection] = useState<"long" | "short">("long");
-  const [confidence, setConfidence] = useState([70]);
-  const [selectedAsset, setSelectedAsset] = useState("");
+  const [confidence, setConfidence] = useState(70);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [selectedAssetData, setSelectedAssetData] = useState<Asset | null>(null);
   const [entryPrice, setEntryPrice] = useState("");
   const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [priceChange, setPriceChange] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [targetPrice, setTargetPrice] = useState("");
-  const [timeframe, setTimeframe] = useState("");
+  const [timeframe, setTimeframe] = useState("1d");
   const [rationale, setRationale] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const selectedAssetData = availableAssets.find(a => a.symbol === selectedAsset);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Fetch live price when asset is selected
-  useEffect(() => {
-    const fetchLivePrice = async () => {
-      if (!selectedAssetData) {
-        setLivePrice(null);
-        return;
-      }
+  const fetchLivePrice = useCallback(async () => {
+    if (!selectedAssetData) {
+      setLivePrice(null);
+      setPriceChange(null);
+      return;
+    }
 
-      setPriceLoading(true);
-      try {
-        const priceData = await getCurrentPrice(selectedAssetData.symbol, selectedAssetData.market);
-        if (priceData) {
-          setLivePrice(priceData.price);
-          // Auto-fill entry price with live price
-          setEntryPrice(priceData.price.toString());
-        } else {
-          setLivePrice(null);
-        }
-      } catch (error) {
-        console.error("Failed to fetch price:", error);
-        setLivePrice(null);
-      } finally {
-        setPriceLoading(false);
-      }
-    };
-
-    fetchLivePrice();
-  }, [selectedAsset, selectedAssetData]);
-
-  const refreshPrice = async () => {
-    if (!selectedAssetData) return;
-    
     setPriceLoading(true);
     try {
       const priceData = await getCurrentPrice(selectedAssetData.symbol, selectedAssetData.market);
       if (priceData) {
         setLivePrice(priceData.price);
+        setPriceChange(priceData.changePercent);
+        // Auto-fill entry price with live price
         setEntryPrice(priceData.price.toString());
-        toast.success("Price updated");
+      } else {
+        setLivePrice(null);
+        setPriceChange(null);
       }
     } catch (error) {
-      toast.error("Failed to refresh price");
+      console.error("Failed to fetch price:", error);
+      setLivePrice(null);
+      setPriceChange(null);
     } finally {
       setPriceLoading(false);
     }
+  }, [selectedAssetData]);
+
+  useEffect(() => {
+    fetchLivePrice();
+  }, [fetchLivePrice]);
+
+  const handleAssetSelect = (asset: Asset) => {
+    setSelectedAsset(asset.symbol);
+    setSelectedAssetData(asset);
   };
 
-  const handleSubmit = async () => {
-    if (!selectedAsset || !entryPrice || !targetPrice || !timeframe) {
-      toast.error("Please fill in all required fields");
-      return;
+  const refreshPrice = async () => {
+    await fetchLivePrice();
+    if (livePrice) {
+      toast.success("Price updated");
     }
+  };
 
-    const entryNum = parseFloat(entryPrice);
-    const targetNum = parseFloat(targetPrice);
+  const entryNum = parseFloat(entryPrice) || 0;
+  const targetNum = parseFloat(targetPrice) || 0;
+  const percentMove = entryNum > 0 ? ((targetNum - entryNum) / entryNum) * 100 : 0;
 
-    if (isNaN(entryNum) || isNaN(targetNum) || entryNum <= 0 || targetNum <= 0) {
-      toast.error("Please enter valid prices");
+  // Validation
+  const isValidDirection = 
+    (direction === "long" && targetNum > entryNum) ||
+    (direction === "short" && targetNum < entryNum);
+
+  const canSubmit = 
+    selectedAsset && 
+    entryNum > 0 && 
+    targetNum > 0 && 
+    timeframe &&
+    isValidDirection;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) {
+      toast.error("Please fill in all required fields correctly");
       return;
     }
 
@@ -127,6 +116,10 @@ const CreatePrediction = () => {
         return;
       }
 
+      // Calculate expiry timestamp
+      const duration = getTimeframeDuration(timeframe);
+      const expiryTimestamp = new Date(Date.now() + duration).toISOString();
+
       const { error } = await supabase.from("predictions").insert({
         user_id: user.id,
         asset: selectedAsset,
@@ -134,15 +127,19 @@ const CreatePrediction = () => {
         direction,
         current_price: entryNum,
         target_price: targetNum,
-        time_horizon: timeframeLabels[timeframe] || timeframe,
-        confidence: confidence[0],
+        time_horizon: getTimeframeLabel(timeframe),
+        timeframe_code: timeframe,
+        confidence: confidence,
         rationale: rationale.trim() || null,
+        tags: tags.length > 0 ? tags : null,
         status: "active",
+        expiry_timestamp: expiryTimestamp,
+        data_source: "polygon",
       });
 
       if (error) throw error;
 
-      toast.success("Prediction published!");
+      toast.success("Prediction published! It will be tracked automatically.");
       navigate("/profile");
     } catch (error) {
       console.error("Failed to create prediction:", error);
@@ -152,247 +149,219 @@ const CreatePrediction = () => {
     }
   };
 
-  const entryNum = parseFloat(entryPrice) || 0;
-  const targetNum = parseFloat(targetPrice) || 0;
-  const expectedReturn = entryNum > 0 ? ((targetNum - entryNum) / entryNum) * 100 : 0;
-
   return (
     <AppLayout showNav={false}>
-      <div className="px-4 py-4 space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="font-bold text-xl">New Prediction</h1>
-            <p className="text-sm text-muted-foreground">Share your market call</p>
+      <div className="min-h-screen">
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
+          <div className="relative px-4 pt-4 pb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex-1">
+                <h1 className="font-bold text-2xl gradient-text">New Prediction</h1>
+                <p className="text-sm text-muted-foreground">Share your market thesis</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Direction Selection */}
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+        <div className="px-4 pb-8 space-y-6">
+          {/* Direction Selection */}
+          <section className="animate-slide-up" style={{ animationDelay: "0ms" }}>
+            <div className="flex items-center gap-2 mb-3">
               <Target className="w-4 h-4 text-primary" />
-              Direction
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Button
-              variant={direction === "long" ? "gain" : "outline"}
-              size="lg"
-              onClick={() => setDirection("long")}
-              className="gap-2"
-            >
-              <TrendingUp className="w-5 h-5" />
-              Long / Bullish
-            </Button>
-            <Button
-              variant={direction === "short" ? "loss" : "outline"}
-              size="lg"
-              onClick={() => setDirection("short")}
-              className="gap-2"
-            >
-              <TrendingDown className="w-5 h-5" />
-              Short / Bearish
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Asset Selection */}
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Asset & Price Targets</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Asset / Symbol</Label>
-              <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                <SelectTrigger className="font-mono">
-                  <SelectValue placeholder="Select an asset" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableAssets.map((asset) => (
-                    <SelectItem key={asset.symbol} value={asset.symbol}>
-                      <span className="font-mono font-medium">{asset.symbol}</span>
-                      <span className="text-muted-foreground ml-2">- {asset.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Direction</h2>
             </div>
+            <DirectionSelector value={direction} onChange={setDirection} />
+          </section>
 
-            {/* Live Price Display */}
-            {selectedAsset && (
-              <div className="bg-background/50 rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-muted-foreground">Live Price</span>
-                  <div className="font-mono font-bold text-lg">
-                    {priceLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : livePrice ? (
-                      `$${livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    ) : (
-                      "N/A"
-                    )}
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={refreshPrice}
-                  disabled={priceLoading || !selectedAsset}
-                >
-                  <RefreshCw className={cn("w-4 h-4", priceLoading && "animate-spin")} />
-                </Button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="entry">Entry Price</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="entry"
-                    type="number"
-                    placeholder="0.00"
-                    value={entryPrice}
-                    onChange={(e) => setEntryPrice(e.target.value)}
-                    className="pl-7 font-mono"
-                  />
-                </div>
-                {livePrice && entryPrice && parseFloat(entryPrice) !== livePrice && (
-                  <p className="text-xs text-muted-foreground">
-                    {parseFloat(entryPrice) > livePrice ? "Above" : "Below"} live price
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="target">Target Price</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="target"
-                    type="number"
-                    placeholder="0.00"
-                    value={targetPrice}
-                    onChange={(e) => setTargetPrice(e.target.value)}
-                    className="pl-7 font-mono"
-                  />
-                </div>
-              </div>
+          {/* Asset Selection */}
+          <section className="animate-slide-up" style={{ animationDelay: "50ms" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Radio className="w-4 h-4 text-primary" />
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Asset</h2>
             </div>
-
-            {entryNum > 0 && targetNum > 0 && (
-              <div className="bg-background/50 rounded-lg p-3 text-center">
-                <span className="text-xs text-muted-foreground">Expected Return</span>
-                <div className={cn(
-                  "font-mono font-bold text-2xl",
-                  expectedReturn >= 0 ? "text-gain" : "text-loss"
-                )}>
-                  {expectedReturn >= 0 ? "+" : ""}{expectedReturn.toFixed(2)}%
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Time & Confidence */}
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              Timeframe & Confidence
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Time Horizon</Label>
-              <Select value={timeframe} onValueChange={setTimeframe}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select timeframe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1d">1 Day</SelectItem>
-                  <SelectItem value="3d">3 Days</SelectItem>
-                  <SelectItem value="1w">1 Week</SelectItem>
-                  <SelectItem value="2w">2 Weeks</SelectItem>
-                  <SelectItem value="1m">1 Month</SelectItem>
-                  <SelectItem value="3m">3 Months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <Percent className="w-4 h-4" />
-                  Confidence Level
-                </Label>
-                <Badge variant={confidence[0] >= 70 ? "success" : confidence[0] >= 50 ? "warning" : "secondary"}>
-                  {confidence[0]}%
-                </Badge>
-              </div>
-              <Slider
-                value={confidence}
-                onValueChange={setConfidence}
-                max={100}
-                min={10}
-                step={5}
-                className="py-2"
-              />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>Low</span>
-                <span>Medium</span>
-                <span>High</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Rationale */}
-        <Card variant="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Rationale (Optional)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Explain your reasoning. What technical or fundamental factors support this prediction?"
-              value={rationale}
-              onChange={(e) => setRationale(e.target.value)}
-              rows={4}
-              className="resize-none"
-              maxLength={1000}
+            <AssetSelector
+              selectedAsset={selectedAsset}
+              onSelect={handleAssetSelect}
+              livePrice={livePrice}
+              priceChange={priceChange}
+              priceLoading={priceLoading}
+              onRefreshPrice={refreshPrice}
             />
-            <p className="text-xs text-muted-foreground mt-2">
-              Quality explanations help build your reputation ({rationale.length}/1000)
-            </p>
-          </CardContent>
-        </Card>
+          </section>
 
-        {/* Submit */}
-        <Button 
-          size="xl" 
-          className="w-full gap-2"
-          onClick={handleSubmit}
-          disabled={isSubmitting || !selectedAsset || !entryPrice || !targetPrice || !timeframe}
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Target className="w-5 h-5" />
+          {/* Price Targets */}
+          {selectedAsset && (
+            <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+              <Card className="border-0 bg-gradient-to-br from-card to-card-elevated">
+                <CardContent className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="entry" className="text-sm text-muted-foreground">Entry Price</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
+                        <Input
+                          id="entry"
+                          type="number"
+                          placeholder="0.00"
+                          value={entryPrice}
+                          onChange={(e) => setEntryPrice(e.target.value)}
+                          className="pl-7 font-mono text-lg h-12 bg-background/50"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="target" className="text-sm text-muted-foreground">Target Price</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
+                        <Input
+                          id="target"
+                          type="number"
+                          placeholder="0.00"
+                          value={targetPrice}
+                          onChange={(e) => setTargetPrice(e.target.value)}
+                          className={cn(
+                            "pl-7 font-mono text-lg h-12 bg-background/50",
+                            targetNum > 0 && (isValidDirection 
+                              ? direction === "long" ? "border-gain/50" : "border-loss/50"
+                              : "border-warning/50"
+                            )
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Percent Move Display */}
+                  {entryNum > 0 && targetNum > 0 && (
+                    <div className={cn(
+                      "flex items-center justify-center gap-2 py-3 rounded-xl",
+                      isValidDirection
+                        ? direction === "long" ? "bg-gain/10" : "bg-loss/10"
+                        : "bg-warning/10"
+                    )}>
+                      {!isValidDirection && (
+                        <AlertCircle className="w-4 h-4 text-warning" />
+                      )}
+                      <span className={cn(
+                        "font-mono font-bold text-2xl",
+                        isValidDirection
+                          ? direction === "long" ? "text-gain" : "text-loss"
+                          : "text-warning"
+                      )}>
+                        {percentMove >= 0 ? "+" : ""}{percentMove.toFixed(2)}% target
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Warning Message */}
+                  {targetNum > 0 && !isValidDirection && (
+                    <p className="text-xs text-warning flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Target should be {direction === "long" ? "above" : "below"} entry for a {direction} position
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
           )}
-          {isSubmitting ? "Publishing..." : "Publish Prediction"}
-        </Button>
 
-        <p className="text-xs text-center text-muted-foreground px-4">
-          Your prediction will be tracked automatically and resolved based on market data.
-        </p>
+          {/* Timeframe */}
+          <section className="animate-slide-up" style={{ animationDelay: "150ms" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-4 h-4 text-primary" />
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Time Horizon</h2>
+            </div>
+            <TimeframePills value={timeframe} onChange={setTimeframe} />
+          </section>
+
+          {/* Confidence */}
+          <section className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+            <Card className="border-0 bg-gradient-to-br from-card to-card-elevated">
+              <CardContent className="p-5">
+                <ConfidenceSlider value={confidence} onChange={setConfidence} />
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Rationale */}
+          <section className="animate-slide-up" style={{ animationDelay: "250ms" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Rationale</h2>
+              <span className="text-xs text-muted-foreground">(Optional)</span>
+            </div>
+            <Card className="border-0 bg-gradient-to-br from-card to-card-elevated">
+              <CardContent className="p-4 space-y-3">
+                <Textarea
+                  placeholder="Explain your thesis. What technical or fundamental factors support this prediction? Use markdown for formatting."
+                  value={rationale}
+                  onChange={(e) => setRationale(e.target.value)}
+                  rows={4}
+                  className="resize-none bg-background/50 border-0 focus-visible:ring-1"
+                  maxLength={1000}
+                />
+                <div className="flex items-center justify-between">
+                  <PredictionTags selectedTags={tags} onChange={setTags} />
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  {rationale.length}/1000
+                </p>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Preview */}
+          {canSubmit && (
+            <section className="animate-slide-up" style={{ animationDelay: "300ms" }}>
+              <Button
+                variant="ghost"
+                onClick={() => setShowPreview(!showPreview)}
+                className="w-full mb-3 gap-2 text-muted-foreground"
+              >
+                <Eye className="w-4 h-4" />
+                {showPreview ? "Hide Preview" : "Show Preview"}
+              </Button>
+              
+              {showPreview && (
+                <PredictionPreview
+                  direction={direction}
+                  asset={selectedAsset!}
+                  entryPrice={entryNum}
+                  targetPrice={targetNum}
+                  timeframe={timeframe}
+                  confidence={confidence}
+                />
+              )}
+            </section>
+          )}
+
+          {/* Submit Section */}
+          <section className="space-y-4 pt-2 animate-slide-up" style={{ animationDelay: "350ms" }}>
+            <Button 
+              size="xl" 
+              className="w-full gap-2 h-14 text-lg font-semibold"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !canSubmit}
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+              {isSubmitting ? "Publishing..." : "Publish Prediction"}
+            </Button>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Predictions are verified automatically with live market data</span>
+            </div>
+          </section>
+        </div>
       </div>
     </AppLayout>
   );
