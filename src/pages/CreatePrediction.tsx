@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -21,6 +20,7 @@ import { TimeframePills, getTimeframeDuration, getTimeframeLabel } from "@/compo
 import { ConfidenceSlider } from "@/components/predictions/ConfidenceSlider";
 import { PredictionPreview } from "@/components/predictions/PredictionPreview";
 import { PredictionTags } from "@/components/predictions/PredictionTags";
+import { PriceInput } from "@/components/predictions/PriceInput";
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
@@ -202,37 +202,27 @@ const CreatePrediction = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="entry" className="text-sm text-muted-foreground">Entry Price</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
-                        <Input
-                          id="entry"
-                          type="number"
-                          placeholder="0.00"
-                          value={entryPrice}
-                          onChange={(e) => setEntryPrice(e.target.value)}
-                          className="pl-7 font-mono text-lg h-12 bg-background/50"
-                        />
-                      </div>
+                      <PriceInput
+                        id="entry"
+                        value={entryPrice}
+                        onChange={setEntryPrice}
+                        step={livePrice && livePrice > 100 ? 1 : 0.01}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="target" className="text-sm text-muted-foreground">Target Price</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
-                        <Input
-                          id="target"
-                          type="number"
-                          placeholder="0.00"
-                          value={targetPrice}
-                          onChange={(e) => setTargetPrice(e.target.value)}
-                          className={cn(
-                            "pl-7 font-mono text-lg h-12 bg-background/50",
-                            targetNum > 0 && (isValidDirection 
-                              ? direction === "long" ? "border-gain/50" : "border-loss/50"
-                              : "border-warning/50"
-                            )
-                          )}
-                        />
-                      </div>
+                      <PriceInput
+                        id="target"
+                        value={targetPrice}
+                        onChange={setTargetPrice}
+                        step={livePrice && livePrice > 100 ? 1 : 0.01}
+                        className={cn(
+                          targetNum > 0 && (isValidDirection 
+                            ? direction === "long" ? "border-gain/50" : "border-loss/50"
+                            : "border-warning/50"
+                          )
+                        )}
+                      />
                     </div>
                   </div>
 
