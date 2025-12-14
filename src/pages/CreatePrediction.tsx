@@ -213,7 +213,6 @@ const CreatePrediction = () => {
                   <SelectValue placeholder="Select an asset" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" disabled>Select an asset</SelectItem>
                   {availableAssets.map((asset) => (
                     <SelectItem key={asset.symbol} value={asset.symbol}>
                       <span className="font-mono font-medium">{asset.symbol}</span>
