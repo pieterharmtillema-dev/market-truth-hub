@@ -34,6 +34,7 @@ const CreatePrediction = () => {
   const [priceLoading, setPriceLoading] = useState(false);
   const [targetPrice, setTargetPrice] = useState("");
   const [timeframe, setTimeframe] = useState("1d");
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [rationale, setRationale] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,8 +118,10 @@ const CreatePrediction = () => {
       }
 
       // Calculate expiry timestamp
-      const duration = getTimeframeDuration(timeframe);
-      const expiryTimestamp = new Date(Date.now() + duration).toISOString();
+      const duration = getTimeframeDuration(timeframe, customDate);
+      const expiryTimestamp = timeframe === "custom" && customDate 
+        ? customDate.toISOString() 
+        : new Date(Date.now() + duration).toISOString();
 
       const { error } = await supabase.from("predictions").insert({
         user_id: user.id,
@@ -127,7 +130,7 @@ const CreatePrediction = () => {
         direction,
         current_price: entryNum,
         target_price: targetNum,
-        time_horizon: getTimeframeLabel(timeframe),
+        time_horizon: getTimeframeLabel(timeframe, customDate),
         timeframe_code: timeframe,
         confidence: confidence,
         rationale: rationale.trim() || null,
@@ -210,7 +213,18 @@ const CreatePrediction = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="target" className="text-sm text-muted-foreground">Target Price</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="target" className="text-sm text-muted-foreground">Target Price</Label>
+                        {livePrice && (
+                          <button
+                            type="button"
+                            onClick={() => setTargetPrice(livePrice.toString())}
+                            className="text-xs text-primary hover:text-primary/80 transition-colors"
+                          >
+                            Use current
+                          </button>
+                        )}
+                      </div>
                       <PriceInput
                         id="target"
                         value={targetPrice}
@@ -266,7 +280,12 @@ const CreatePrediction = () => {
               <Clock className="w-4 h-4 text-primary" />
               <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Time Horizon</h2>
             </div>
-            <TimeframePills value={timeframe} onChange={setTimeframe} />
+            <TimeframePills 
+              value={timeframe} 
+              onChange={setTimeframe} 
+              customDate={customDate}
+              onCustomDateChange={setCustomDate}
+            />
           </section>
 
           {/* Confidence */}
