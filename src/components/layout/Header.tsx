@@ -12,22 +12,17 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
-/* -------------------------------------------------
-   Hide header on scroll (desktop only)
--------------------------------------------------- */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
   const hideTimeout = useRef<number | null>(null);
 
   useEffect(() => {
-    // Disable on mobile
     if (window.innerWidth < 640) return;
 
     const onScroll = () => {
       const current = window.scrollY;
 
-      // scrolling down
       if (current > lastScrollY.current && current > 80) {
         if (!hideTimeout.current) {
           hideTimeout.current = window.setTimeout(() => {
@@ -35,7 +30,6 @@ function useHideOnScroll() {
           }, 200);
         }
       } else {
-        // scrolling up
         if (hideTimeout.current) {
           clearTimeout(hideTimeout.current);
           hideTimeout.current = null;
@@ -71,9 +65,9 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
       `}
     >
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
-        {/* Brand */}
-        <div className="flex items-center shrink-0">
-          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-1" />
+        {/* Brand (clickable → /feed) */}
+        <Link to="/feed" className="flex items-center shrink-0 focus:outline-none" aria-label="Go to feed">
+          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-0.5" />
 
           <h1
             className="
@@ -85,11 +79,10 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
           >
             TRAX
           </h1>
-        </div>
+        </Link>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Status hidden on mobile to avoid crowding */}
           <div className="hidden sm:block">
             <TraderStatusIndicator />
           </div>
