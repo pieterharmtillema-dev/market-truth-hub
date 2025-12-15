@@ -12,33 +12,28 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
-/* ---------------------------------------------------
-   Hide-on-scroll hook
-   - Desktop only
-   - Delayed hide
-   - Fade + slide ready
----------------------------------------------------- */
+/* ---------------------------------------------
+   Hide-on-scroll (desktop only)
+--------------------------------------------- */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
   const hideTimeout = useRef<number | null>(null);
 
   useEffect(() => {
-    // Disable behavior on mobile
+    // Disable on mobile
     if (window.innerWidth < 640) return;
 
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    const onScroll = () => {
+      const current = window.scrollY;
 
-      // Scroll down → hide after delay
-      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+      if (current > lastScrollY.current && current > 80) {
         if (!hideTimeout.current) {
           hideTimeout.current = window.setTimeout(() => {
             setHidden(true);
           }, 200);
         }
       } else {
-        // Scroll up → show immediately
         if (hideTimeout.current) {
           clearTimeout(hideTimeout.current);
           hideTimeout.current = null;
@@ -46,14 +41,13 @@ function useHideOnScroll() {
         setHidden(false);
       }
 
-      lastScrollY.current = currentScrollY;
+      lastScrollY.current = current;
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       if (hideTimeout.current) clearTimeout(hideTimeout.current);
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 
@@ -74,19 +68,23 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
         ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
       `}
     >
-      <div className="flex items-center justify-between h-16 sm:h-20 px-4">
-        {/* Logo + Brand */}
-        <div className="flex items-center">
-          <img src={traxLogo} alt="TRAX" className="h-10 sm:h-16 w-auto object-contain translate-y-0.5" />
+      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
+        {/* Brand */}
+        <div className="flex items-center shrink-0">
+          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-0.5" />
 
-          <h1 className="ml-1.5 font-black leading-none tracking-widest text-[#40962b] text-xl sm:text-[2.5rem]">
+          {/* Desktop text only */}
+          <h1 className="hidden sm:block ml-1.5 font-black leading-none tracking-widest text-[#40962b] text-[2.5rem]">
             TRAX
           </h1>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <TraderStatusIndicator />
+          {/* Hide status on mobile to prevent crowding */}
+          <div className="hidden sm:block">
+            <TraderStatusIndicator />
+          </div>
 
           {showSearch && (
             <Button variant="ghost" size="icon-sm">
@@ -96,9 +94,8 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
 
           {user && showCreate && (
             <Link to="/create-prediction">
-              <Button variant="default" size="sm" className="gap-1">
+              <Button variant="default" size="icon-sm">
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Predict</span>
               </Button>
             </Link>
           )}
@@ -116,9 +113,8 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
             </>
           ) : (
             <Link to="/auth">
-              <Button variant="default" size="sm" className="gap-1">
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign In</span>
+              <Button variant="default" size="icon-sm">
+                <LogIn className="w-5 h-5" />
               </Button>
             </Link>
           )}
