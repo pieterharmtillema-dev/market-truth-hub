@@ -35,6 +35,10 @@
     --success: 142 70% 45%;
     --success-foreground: 220 20% 6%;
 
+    /* Trax brand color - T-Rex green */
+    --trax: 125 50% 42%;
+    --trax-foreground: 0 0% 100%;
+
     --warning: 38 92% 50%;
     --warning-foreground: 220 20% 6%;
 

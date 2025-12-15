@@ -64,6 +64,10 @@ export default {
         gain: "hsl(var(--gain))",
         loss: "hsl(var(--loss))",
         neutral: "hsl(var(--neutral))",
+        trax: {
+          DEFAULT: "hsl(var(--trax))",
+          foreground: "hsl(var(--trax-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
