@@ -71,11 +71,11 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
 
           <h1
             className="
-              ml-1
-              font-black leading-none tracking-widest
-              text-[#40962b]
-              text-base sm:text-[2.5rem]
-            "
+    ml-1
+    font-black leading-none tracking-widest
+    text-[#40962b]
+    text-lg sm:text-[2.5rem]
+  "
           >
             TRAX
           </h1>
