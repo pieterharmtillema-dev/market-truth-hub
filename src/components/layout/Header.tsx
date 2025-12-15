@@ -66,7 +66,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     >
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
         {/* Brand (clickable → /feed) */}
-        <Link to="/feed" className="flex items-center shrink-0 focus:outline-none" aria-label="Go to feed">
+        <Link to="/" className="flex items-center shrink-0 focus:outline-none" aria-label="Go to feed">
           <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-0.5" />
 
           <h1
