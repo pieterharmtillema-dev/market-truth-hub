@@ -22,12 +22,12 @@ export function Header({ title = "MarketDiscussion", showSearch = true, showCrea
           </div>
           <h1 className="font-semibold text-lg">{title}</h1>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <TraderStatusIndicator />
           {showSearch && (
             <Button variant="ghost" size="icon-sm">
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
             </Button>
           )}
           {user && showCreate && (
