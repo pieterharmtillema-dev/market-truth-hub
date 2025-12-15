@@ -96,16 +96,16 @@ export function TraderStatusIndicator() {
 
   return (
     <div className={cn(
-      "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium",
+      "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium",
       isActive 
         ? "bg-gain/20 text-gain border border-gain/30" 
         : "bg-loss/20 text-loss border border-loss/30"
     )}>
       <span className={cn(
-        "w-2 h-2 rounded-full animate-pulse",
+        "w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full animate-pulse shrink-0",
         isActive ? "bg-gain" : "bg-loss"
       )} />
-      <span>
+      <span className="truncate max-w-[100px] sm:max-w-none">
         {isActive ? "Active" : "Inactive"}
         {isActive && platform && ` • ${platform}`}
         {!isActive && lastSeenText && ` • ${lastSeenText} ago`}
