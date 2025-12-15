@@ -19,15 +19,9 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
       <div className="flex items-center justify-between h-20 px-4">
         {/* Logo + Brand */}
         <div className="flex items-center gap-1.5">
-          <img
-            src={traxLogo}
-            alt="TRAX"
-            className="w-20 h-20 object-contain 
-                       brightness-0 saturate-100 
-                       [filter:invert(38%)_sepia(85%)_saturate(420%)_hue-rotate(85deg)]"
-          />
+          <img src={traxLogo} alt="TRAX" className="w-20 h-20 object-contain" />
 
-          <h1 className="font-black text-3xl sm:text-4xl tracking-widest text-trax leading-none">TRAX</h1>
+          <h1 className="font-black text-3xl sm:text-4xl tracking-widest leading-none text-[#40962b]">TRAX</h1>
         </div>
 
         {/* Actions */}
@@ -55,6 +49,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
               </Button>
+
               <Button variant="ghost" size="icon-sm" onClick={signOut}>
                 <LogOut className="w-5 h-5" />
               </Button>
