@@ -73,7 +73,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
         {/* Brand */}
         <div className="flex items-center shrink-0">
-          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-0.5" />
+          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-1" />
 
           <h1
             className="
