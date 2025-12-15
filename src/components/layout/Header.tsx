@@ -1,11 +1,18 @@
+import { useEffect, useState } from "react";
 import { Bell, Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
 import traxLogo from "@/assets/trax-logo.png";
-import { useEffect, useState } from "react";
 
+interface HeaderProps {
+  title?: string;
+  showSearch?: boolean;
+  showCreate?: boolean;
+}
+
+/* 👇 hook */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -15,9 +22,9 @@ function useHideOnScroll() {
       const currentScrollY = window.scrollY;
 
       if (currentScrollY > lastScrollY && currentScrollY > 80) {
-        setHidden(true); // scrolling down
+        setHidden(true);
       } else {
-        setHidden(false); // scrolling up
+        setHidden(false);
       }
 
       setLastScrollY(currentScrollY);
@@ -30,28 +37,22 @@ function useHideOnScroll() {
   return hidden;
 }
 
-
-interface HeaderProps {
-  title?: string;
-  showSearch?: boolean;
-  showCreate?: boolean;
-}
-
 export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
 
+  // ✅ MUST be here
+  const hidden = useHideOnScroll();
+
   return (
-const hidden = useHideOnScroll();
-
-<header
-  className={`sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border
-              transition-transform duration-300 ease-in-out
-              ${hidden ? "-translate-y-full" : "translate-y-0"}`}>
-
+    <header
+      className={`sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border
+                  transition-transform duration-300 ease-in-out
+                  ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+    >
       <div className="flex items-center justify-between h-20 px-4">
         {/* Logo + Brand */}
         <div className="flex items-center">
-          <img src={traxLogo} alt="TRAX" className="h-16 w-auto object-contain translate-y-1" />
+          <img src={traxLogo} alt="TRAX" className="h-16 w-auto object-contain translate-y-0.5" />
 
           <h1 className="ml-1.5 font-black text-[2.5rem] leading-none tracking-widest text-[#40962b]">TRAX</h1>
         </div>
