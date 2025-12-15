@@ -10,7 +10,7 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
-export function Header({ title = "MarketDiscussion", showSearch = true, showCreate = true }: HeaderProps) {
+export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
 
   return (
