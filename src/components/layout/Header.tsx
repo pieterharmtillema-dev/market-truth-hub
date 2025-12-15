@@ -18,8 +18,8 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="flex items-center justify-between h-20 px-4">
         {/* Logo + Brand */}
-        <div className="flex items-center h-12">
-          <img src={traxLogo} alt="TRAX" className="h-12 w-auto object-contain" />
+        <div className="flex items-center">
+          <img src={traxLogo} alt="TRAX" className="h-18 w-auto object-contain" />
 
           <h1 className="ml-1 font-black text-[2.5rem] leading-none tracking-widest text-[#40962b]">TRAX</h1>
         </div>
