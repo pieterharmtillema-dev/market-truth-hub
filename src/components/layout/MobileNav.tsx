@@ -14,9 +14,9 @@ const navItems = [
 export function MobileNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-pb" style={{ position: 'fixed', WebkitTransform: 'translateZ(0)' }}>
-      {/* Walking T-Rex animation */}
+     
       
-          }}
+         
         />
       </div>
       <div className="flex items-center justify-around h-16 px-2">
