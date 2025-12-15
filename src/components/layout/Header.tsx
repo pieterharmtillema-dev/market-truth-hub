@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
+import traxLogo from "@/assets/trax-logo.png";
 
 interface HeaderProps {
   title?: string;
@@ -16,11 +17,9 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
   return (
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="flex items-center justify-between h-14 px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">M</span>
-          </div>
-          <h1 className="font-semibold text-lg">{title}</h1>
+        <div className="flex items-center gap-2">
+          <img src={traxLogo} alt="Trax" className="w-9 h-9 object-contain" />
+          <h1 className="font-semibold text-lg text-primary">{title}</h1>
         </div>
 
         <div className="flex items-center gap-2">
