@@ -4,6 +4,32 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
 import traxLogo from "@/assets/trax-logo.png";
+import { useEffect, useState } from "react";
+
+function useHideOnScroll() {
+  const [hidden, setHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setHidden(true); // scrolling down
+      } else {
+        setHidden(false); // scrolling up
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  return hidden;
+}
+
 
 interface HeaderProps {
   title?: string;
@@ -15,7 +41,13 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
   const { user, signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+const hidden = useHideOnScroll();
+
+<header
+  className={`sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border
+              transition-transform duration-300 ease-in-out
+              ${hidden ? "-translate-y-full" : "translate-y-0"}`}>
+
       <div className="flex items-center justify-between h-20 px-4">
         {/* Logo + Brand */}
         <div className="flex items-center">
