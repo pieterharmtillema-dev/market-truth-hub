@@ -12,9 +12,9 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
-/* ---------------------------------------------
-   Hide-on-scroll (desktop only)
---------------------------------------------- */
+/* -------------------------------------------------
+   Hide header on scroll (desktop only)
+-------------------------------------------------- */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -27,6 +27,7 @@ function useHideOnScroll() {
     const onScroll = () => {
       const current = window.scrollY;
 
+      // scrolling down
       if (current > lastScrollY.current && current > 80) {
         if (!hideTimeout.current) {
           hideTimeout.current = window.setTimeout(() => {
@@ -34,6 +35,7 @@ function useHideOnScroll() {
           }, 200);
         }
       } else {
+        // scrolling up
         if (hideTimeout.current) {
           clearTimeout(hideTimeout.current);
           hideTimeout.current = null;
@@ -73,15 +75,21 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
         <div className="flex items-center shrink-0">
           <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-0.5" />
 
-          {/* Desktop text only */}
-          <h1 className="hidden sm:block ml-1.5 font-black leading-none tracking-widest text-[#40962b] text-[2.5rem]">
+          <h1
+            className="
+              ml-1
+              font-black leading-none tracking-widest
+              text-[#40962b]
+              text-base sm:text-[2.5rem]
+            "
+          >
             TRAX
           </h1>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Hide status on mobile to prevent crowding */}
+          {/* Status hidden on mobile to avoid crowding */}
           <div className="hidden sm:block">
             <TraderStatusIndicator />
           </div>
