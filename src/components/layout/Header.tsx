@@ -18,8 +18,11 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex items-center gap-3">
-          <img src={traxLogo} alt="TRAX" className="w-10 h-10 object-contain drop-shadow-lg" />
-          <h1 className="font-bold text-xl tracking-wide text-trax drop-shadow-[0_0_10px_hsl(var(--trax)/0.5)]">TRAX</h1>
+          <div className="relative">
+            <img src={traxLogo} alt="TRAX" className="w-14 h-14 object-contain drop-shadow-[0_0_15px_hsl(var(--trax)/0.4)]" />
+            <div className="absolute inset-0 bg-trax/20 rounded-full blur-xl -z-10 animate-pulse" />
+          </div>
+          <h1 className="font-black text-2xl tracking-widest text-trax drop-shadow-[0_0_15px_hsl(var(--trax)/0.6)]">TRAX</h1>
         </div>
 
         <div className="flex items-center gap-2">
