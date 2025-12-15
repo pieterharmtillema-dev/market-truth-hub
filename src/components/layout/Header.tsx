@@ -74,7 +74,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
               ml-1
               font-black leading-none tracking-widest
               text-[#40962b]
-              text-base lg:text-[2.5rem]
+              text-base sm:text-[2.5rem]
             "
           >
             TRAX
