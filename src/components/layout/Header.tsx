@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -12,49 +12,76 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
-/* 👇 hook */
+/* ---------------------------------------------------
+   Hide-on-scroll hook
+   - Desktop only
+   - Delayed hide
+   - Fade + slide ready
+---------------------------------------------------- */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
+  const hideTimeout = useRef<number | null>(null);
 
   useEffect(() => {
+    // Disable behavior on mobile
+    if (window.innerWidth < 640) return;
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY && currentScrollY > 80) {
-        setHidden(true);
+      // Scroll down → hide after delay
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+        if (!hideTimeout.current) {
+          hideTimeout.current = window.setTimeout(() => {
+            setHidden(true);
+          }, 200);
+        }
       } else {
+        // Scroll up → show immediately
+        if (hideTimeout.current) {
+          clearTimeout(hideTimeout.current);
+          hideTimeout.current = null;
+        }
         setHidden(false);
       }
 
-      setLastScrollY(currentScrollY);
+      lastScrollY.current = currentScrollY;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+
+    return () => {
+      if (hideTimeout.current) clearTimeout(hideTimeout.current);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return hidden;
 }
 
 export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
-
-  // ✅ MUST be here
   const hidden = useHideOnScroll();
 
   return (
     <header
-      className={`sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border
-                  transition-transform duration-300 ease-in-out
-                  ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      className={`
+        sticky top-0 z-40
+        bg-background/95 backdrop-blur-xl border-b border-border
+        transition-all duration-300 ease-out
+        will-change-transform will-change-opacity
+        ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
+      `}
     >
-      <div className="flex items-center justify-between h-20 px-4">
+      <div className="flex items-center justify-between h-16 sm:h-20 px-4">
         {/* Logo + Brand */}
         <div className="flex items-center">
-          <img src={traxLogo} alt="TRAX" className="h-16 w-auto object-contain translate-y-1" />
+          <img src={traxLogo} alt="TRAX" className="h-10 sm:h-16 w-auto object-contain translate-y-0.5" />
 
-          <h1 className="ml-1.5 font-black text-[2.5rem] leading-none tracking-widest text-[#40962b]">TRAX</h1>
+          <h1 className="ml-1.5 font-black leading-none tracking-widest text-[#40962b] text-xl sm:text-[2.5rem]">
+            TRAX
+          </h1>
         </div>
 
         {/* Actions */}
