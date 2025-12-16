@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPrice } from "@/lib/polygon";
+import { useUserRole } from "@/hooks/useUserRole";
 
 import { DirectionSelector } from "@/components/predictions/DirectionSelector";
 import { AssetSelector, availableAssets, type Asset } from "@/components/predictions/AssetSelector";
@@ -24,6 +25,7 @@ import { PriceInput } from "@/components/predictions/PriceInput";
 
 const CreatePrediction = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useUserRole();
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [confidence, setConfidence] = useState(70);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -33,7 +35,7 @@ const CreatePrediction = () => {
   const [priceChange, setPriceChange] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [targetPrice, setTargetPrice] = useState("");
-  const [timeframe, setTimeframe] = useState("1d");
+  const [timeframe, setTimeframe] = useState("1d"); // Default to 1 day (minimum for non-admins)
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
   const [rationale, setRationale] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -285,7 +287,13 @@ const CreatePrediction = () => {
               onChange={setTimeframe} 
               customDate={customDate}
               onCustomDateChange={setCustomDate}
+              isAdmin={isAdmin}
             />
+            {!isAdmin && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Minimum 1 day for long-term predictions
+              </p>
+            )}
           </section>
 
           {/* Confidence */}

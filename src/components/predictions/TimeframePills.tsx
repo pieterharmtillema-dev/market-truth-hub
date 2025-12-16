@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Calendar } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 
 export interface TimeframeOption {
   code: string;
@@ -11,7 +11,8 @@ export interface TimeframeOption {
   duration: number; // in milliseconds
 }
 
-export const timeframeOptions: TimeframeOption[] = [
+// All timeframe options
+export const allTimeframeOptions: TimeframeOption[] = [
   { code: "1h", label: "1H", duration: 60 * 60 * 1000 },
   { code: "4h", label: "4H", duration: 4 * 60 * 60 * 1000 },
   { code: "1d", label: "1D", duration: 24 * 60 * 60 * 1000 },
@@ -19,16 +20,33 @@ export const timeframeOptions: TimeframeOption[] = [
   { code: "1m", label: "1M", duration: 30 * 24 * 60 * 60 * 1000 },
 ];
 
+// Long-term options (1 day minimum) for regular users
+export const longTermTimeframeOptions: TimeframeOption[] = [
+  { code: "1d", label: "1D", duration: 24 * 60 * 60 * 1000 },
+  { code: "1w", label: "1W", duration: 7 * 24 * 60 * 60 * 1000 },
+  { code: "1m", label: "1M", duration: 30 * 24 * 60 * 60 * 1000 },
+];
+
+// Legacy export for backward compatibility
+export const timeframeOptions = allTimeframeOptions;
+
 interface TimeframePillsProps {
   value: string;
   onChange: (value: string) => void;
   onCustomDateChange?: (date: Date | undefined) => void;
   customDate?: Date | undefined;
+  isAdmin?: boolean; // Admin can use all timeframes
 }
 
-export function TimeframePills({ value, onChange, onCustomDateChange, customDate }: TimeframePillsProps) {
+export function TimeframePills({ value, onChange, onCustomDateChange, customDate, isAdmin = false }: TimeframePillsProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const isCustom = value === "custom";
+  
+  // Use all options for admin, long-term only for regular users
+  const availableOptions = isAdmin ? allTimeframeOptions : longTermTimeframeOptions;
+
+  // Minimum date for custom selection (tomorrow for non-admins)
+  const minDate = isAdmin ? new Date() : addDays(new Date(), 1);
 
   const handleCustomDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -40,7 +58,7 @@ export function TimeframePills({ value, onChange, onCustomDateChange, customDate
 
   return (
     <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-      {timeframeOptions.map((option) => (
+      {availableOptions.map((option) => (
         <button
           key={option.code}
           type="button"
@@ -77,7 +95,7 @@ export function TimeframePills({ value, onChange, onCustomDateChange, customDate
             mode="single"
             selected={customDate}
             onSelect={handleCustomDateSelect}
-            disabled={(date) => date < new Date()}
+            disabled={(date) => date < minDate}
             initialFocus
           />
         </PopoverContent>
@@ -90,7 +108,7 @@ export function getTimeframeDuration(code: string, customDate?: Date): number {
   if (code === "custom" && customDate) {
     return customDate.getTime() - Date.now();
   }
-  const option = timeframeOptions.find((o) => o.code === code);
+  const option = allTimeframeOptions.find((o) => o.code === code);
   return option?.duration || 24 * 60 * 60 * 1000; // Default to 1 day
 }
 
@@ -98,7 +116,7 @@ export function getTimeframeLabel(code: string, customDate?: Date): string {
   if (code === "custom" && customDate) {
     return `Until ${format(customDate, "MMM d, yyyy")}`;
   }
-  const option = timeframeOptions.find((o) => o.code === code);
+  const option = allTimeframeOptions.find((o) => o.code === code);
   if (!option) return code;
   
   switch (option.code) {
