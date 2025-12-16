@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, CheckCircle, Flame, Snowflake } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ export interface PublicPredictionData {
   asset_type: string;
   direction: string;
   current_price: number; // entry price
-  target_price: number; // exit price
+  target_price: number; // exit price (or same as entry if still active)
   status: string;
   created_at: string;
   resolved_at?: string | null;
@@ -29,7 +29,7 @@ export interface PublicPredictionData {
     streak_type?: string;
     total_predictions?: number;
     total_hits?: number;
-  };
+  } | null;
 }
 
 interface PublicPredictionCardProps {
@@ -42,7 +42,9 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const isOwner = currentUserId === prediction.user_id;
   const isLong = prediction.direction === "long";
+  const isActive = prediction.status === "active";
   const isHit = prediction.status === "hit";
+  const isMissed = prediction.status === "missed";
   
   // Calculate accuracy from profile
   const accuracy = prediction.profile?.total_predictions && prediction.profile.total_predictions > 0
@@ -65,9 +67,27 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
   // Should show explanation
   const showExplanation = prediction.explanation && (isOwner || prediction.explanation_public);
 
+  // Get card variant based on status
+  const getCardVariant = () => {
+    if (isActive) return "prediction";
+    if (isHit) return "gain";
+    if (isMissed) return "loss";
+    return "default";
+  };
+
+  // Get status badge
+  const getStatusBadge = () => {
+    if (isActive) return { variant: "neutral" as const, text: "Active", icon: Activity };
+    if (isHit) return { variant: "gain" as const, text: "Hit ✓", icon: null };
+    if (isMissed) return { variant: "loss" as const, text: "Missed", icon: null };
+    return { variant: "neutral" as const, text: prediction.status, icon: null };
+  };
+
+  const statusBadge = getStatusBadge();
+
   return (
     <Card 
-      variant={isHit ? "gain" : "loss"}
+      variant={getCardVariant()}
       className="animate-fade-in overflow-hidden"
     >
       <CardContent className="p-4">
@@ -112,8 +132,9 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
               </div>
             </div>
           </div>
-          <Badge variant={isHit ? "gain" : "loss"}>
-            {isHit ? "Hit ✓" : "Missed"}
+          <Badge variant={statusBadge.variant} className="gap-1">
+            {statusBadge.icon && <statusBadge.icon className="w-3 h-3" />}
+            {statusBadge.text}
           </Badge>
         </div>
 
@@ -134,18 +155,32 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div>
+          {isActive ? (
+            <div className="text-center">
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry</div>
-              <div className="font-mono font-medium text-sm">${prediction.current_price.toLocaleString()}</div>
+              <div className="font-mono font-medium text-lg">${prediction.current_price.toLocaleString()}</div>
               <div className="text-[9px] text-muted-foreground">{entryTime}</div>
+              <div className="mt-2 text-xs text-primary animate-pulse">Trade in progress...</div>
             </div>
-            <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Exit</div>
-              <div className="font-mono font-medium text-sm">${prediction.target_price.toLocaleString()}</div>
-              <div className="text-[9px] text-muted-foreground">{exitTime}</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry</div>
+                <div className="font-mono font-medium text-sm">${prediction.current_price.toLocaleString()}</div>
+                <div className="text-[9px] text-muted-foreground">{entryTime}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Outcome</div>
+                <div className={cn(
+                  "font-medium text-sm",
+                  isHit ? "text-gain" : "text-loss"
+                )}>
+                  {isHit ? "Profitable" : "Loss"}
+                </div>
+                <div className="text-[9px] text-muted-foreground">{exitTime}</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Collapsible Explanation */}
