@@ -137,7 +137,7 @@ const CreatePrediction = () => {
         tags: tags.length > 0 ? tags : null,
         status: "active",
         expiry_timestamp: expiryTimestamp,
-        data_source: "polygon",
+        data_source: "user", // User-created long-term prediction
       });
 
       if (error) throw error;
@@ -164,8 +164,8 @@ const CreatePrediction = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex-1">
-                <h1 className="font-bold text-2xl gradient-text">New Prediction</h1>
-                <p className="text-sm text-muted-foreground">Share your market thesis</p>
+                <h1 className="font-bold text-2xl gradient-text">Long-Term Prediction</h1>
+                <p className="text-sm text-muted-foreground">Share your market thesis • Not tied to trades</p>
               </div>
             </div>
           </div>

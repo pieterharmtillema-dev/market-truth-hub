@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, CheckCircle, Flame, Snowflake } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 export interface PublicPredictionData {
   id: string;
@@ -15,12 +15,15 @@ export interface PublicPredictionData {
   asset_type: string;
   direction: string;
   current_price: number; // entry price
-  target_price: number; // exit price
+  target_price: number; // target price (or exit price for trades)
   status: string;
   created_at: string;
   resolved_at?: string | null;
   explanation?: string | null;
   explanation_public?: boolean;
+  data_source?: string | null;
+  time_horizon?: string | null;
+  expiry_timestamp?: string | null;
   // User profile data (from join)
   profile?: {
     display_name: string | null;
@@ -29,7 +32,7 @@ export interface PublicPredictionData {
     streak_type?: string;
     total_predictions?: number;
     total_hits?: number;
-  };
+  } | null;
 }
 
 interface PublicPredictionCardProps {
@@ -43,17 +46,20 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
   const isOwner = currentUserId === prediction.user_id;
   const isLong = prediction.direction === "long";
   const isHit = prediction.status === "hit";
+  const isActive = prediction.status === "active";
+  const isMissed = prediction.status === "missed";
+  const isLongTerm = prediction.data_source === "user";
   
-  // Calculate accuracy from profile
-  const accuracy = prediction.profile?.total_predictions && prediction.profile.total_predictions > 0
+  // Calculate accuracy from profile (only for trade-based predictions)
+  const accuracy = !isLongTerm && prediction.profile?.total_predictions && prediction.profile.total_predictions > 0
     ? Math.round((prediction.profile.total_hits || 0) / prediction.profile.total_predictions * 100)
     : null;
 
-  // Streak info
+  // Streak info (only show for trade-based predictions)
   const streak = prediction.profile?.current_streak || 0;
   const streakType = prediction.profile?.streak_type || "none";
-  const isHotStreak = streakType === "hit" && streak >= 2;
-  const isColdStreak = streakType === "miss" && streak >= 3;
+  const isHotStreak = !isLongTerm && streakType === "hit" && streak >= 2;
+  const isColdStreak = !isLongTerm && streakType === "miss" && streak >= 3;
 
   const displayName = prediction.profile?.display_name || "Trader";
   const avatarUrl = prediction.profile?.avatar_url;
@@ -61,16 +67,37 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
   // Format dates
   const entryTime = prediction.created_at ? format(new Date(prediction.created_at), "MMM d, yyyy HH:mm") : "";
   const exitTime = prediction.resolved_at ? format(new Date(prediction.resolved_at), "MMM d, yyyy HH:mm") : "";
+  const expiryTime = prediction.expiry_timestamp ? new Date(prediction.expiry_timestamp) : null;
+  const timeRemaining = expiryTime && isActive ? formatDistanceToNow(expiryTime, { addSuffix: true }) : null;
 
   // Should show explanation
   const showExplanation = prediction.explanation && (isOwner || prediction.explanation_public);
 
+  // Card variant based on status
+  const cardVariant = isActive ? "prediction" : isHit ? "gain" : "loss";
+
   return (
     <Card 
-      variant={isHit ? "gain" : "loss"}
+      variant={cardVariant}
       className="animate-fade-in overflow-hidden"
     >
       <CardContent className="p-4">
+        {/* Long-Term Label */}
+        {isLongTerm && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
+              <Calendar className="w-3 h-3" />
+              Long-Term Prediction
+            </Badge>
+            {isActive && timeRemaining && (
+              <Badge variant="outline" className="text-[10px] gap-1">
+                <Clock className="w-3 h-3" />
+                Expires {timeRemaining}
+              </Badge>
+            )}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -98,7 +125,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
                   </span>
                 )}
                 {isColdStreak && (
-                  <span className="inline-flex items-center gap-0.5 text-xs text-blue-400" title="Cold Streak">
+                  <span className="inline-flex items-center gap-0.5 text-xs text-blue-400" title="High Variance">
                     <Snowflake className="w-3 h-3" />
                   </span>
                 )}
@@ -112,8 +139,8 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
               </div>
             </div>
           </div>
-          <Badge variant={isHit ? "gain" : "loss"}>
-            {isHit ? "Hit ✓" : "Missed"}
+          <Badge variant={isActive ? "neutral" : isHit ? "gain" : "loss"}>
+            {isActive ? "Active" : isHit ? "Hit ✓" : "Missed"}
           </Badge>
         </div>
 
@@ -134,17 +161,29 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-center">
+          <div className={cn("grid gap-3 text-center", isLongTerm && isActive ? "grid-cols-3" : "grid-cols-2")}>
             <div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry</div>
               <div className="font-mono font-medium text-sm">${prediction.current_price.toLocaleString()}</div>
               <div className="text-[9px] text-muted-foreground">{entryTime}</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Exit</div>
-              <div className="font-mono font-medium text-sm">${prediction.target_price.toLocaleString()}</div>
-              <div className="text-[9px] text-muted-foreground">{exitTime}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                {isLongTerm ? "Target" : "Exit"}
+              </div>
+              <div className={cn("font-mono font-medium text-sm", isLong ? "text-gain" : "text-loss")}>
+                ${prediction.target_price.toLocaleString()}
+              </div>
+              {!isActive && exitTime && (
+                <div className="text-[9px] text-muted-foreground">{exitTime}</div>
+              )}
             </div>
+            {isLongTerm && isActive && prediction.time_horizon && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Horizon</div>
+                <div className="font-medium text-sm">{prediction.time_horizon}</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -159,7 +198,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
               >
                 <span className="text-xs">
                   {isOwner && !prediction.explanation_public && "(Private) "}
-                  Trade Explanation
+                  {isLongTerm ? "Rationale" : "Trade Explanation"}
                 </span>
                 {isExplanationOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
@@ -180,7 +219,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
             className="w-full mt-2 text-xs"
             onClick={() => onAddExplanation(prediction.id)}
           >
-            Add Trade Explanation
+            {isLongTerm ? "Add Rationale" : "Add Trade Explanation"}
           </Button>
         )}
       </CardContent>

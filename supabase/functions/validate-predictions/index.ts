@@ -57,16 +57,17 @@ Deno.serve(async (req) => {
 
         // Check if prediction has expired
         if (nowTime >= expiryTime) {
-          // Mark as expired/missed
+          // Mark as missed (expired predictions that didn't hit are missed)
           await supabase
             .from("predictions")
             .update({
-              status: "expired",
+              status: "missed",
               resolved_at: now,
             })
             .eq("id", prediction.id);
 
           results.expired++;
+          console.log(`Prediction ${prediction.id} MISSED (expired without hitting target)`);
           continue;
         }
 

@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { PredictionCard } from "@/components/predictions/PredictionCard";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
 import { TrendingAssets } from "@/components/feed/TrendingAssets";
 import { MarketTicker } from "@/components/feed/MarketTicker";
-import { mockPredictions, mockTrendingAssets, mockTickerData } from "@/data/mockData";
+import { mockTrendingAssets, mockTickerData } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Clock, Target, Users } from "lucide-react";
-import { usePublicPredictions } from "@/hooks/usePublicPredictions";
+import { Flame, Clock, Target, Calendar } from "lucide-react";
+import { usePublicPredictions, useLongTermPredictions } from "@/hooks/usePublicPredictions";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 
 const Index = () => {
-  const { predictions: publicPredictions, loading } = usePublicPredictions(30);
+  const { predictions: tradePredictions, loading: loadingTrades } = usePublicPredictions(30);
+  const { predictions: longTermPredictions, loading: loadingLongTerm } = useLongTermPredictions(30);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   useEffect(() => {
@@ -22,19 +22,23 @@ const Index = () => {
     });
   }, []);
 
-  // Sort predictions for different views
-  const hotPredictions = [...publicPredictions].sort((a, b) => {
-    // Prioritize hit streaks and recent activity
+  // Sort trade predictions for different views
+  const hotPredictions = [...tradePredictions].sort((a, b) => {
     const aStreak = a.profile?.streak_type === "hit" ? (a.profile.current_streak || 0) : 0;
     const bStreak = b.profile?.streak_type === "hit" ? (b.profile.current_streak || 0) : 0;
     return bStreak - aStreak;
   });
 
-  const newPredictions = [...publicPredictions].sort((a, b) => 
+  const newTradePredictions = [...tradePredictions].sort((a, b) => 
     new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime()
   );
 
-  const topPredictions = [...publicPredictions].filter(p => p.status === "hit");
+  const topPredictions = [...tradePredictions].filter(p => p.status === "hit");
+
+  // Long-term predictions sorted by creation date
+  const sortedLongTermPredictions = [...longTermPredictions].sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   return (
     <AppLayout>
@@ -56,18 +60,18 @@ const Index = () => {
               <Clock className="w-4 h-4" />
               New
             </TabsTrigger>
+            <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Calendar className="w-4 h-4" />
+              Long-Term
+            </TabsTrigger>
             <TabsTrigger value="top" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="w-4 h-4" />
               Winners
             </TabsTrigger>
-            <TabsTrigger value="following" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Users className="w-4 h-4" />
-              Following
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="hot" className="mt-4 space-y-4">
-            {loading ? (
+            {loadingTrades ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Skeleton key={i} className="h-48 w-full rounded-xl" />
@@ -76,7 +80,7 @@ const Index = () => {
             ) : hotPredictions.length === 0 ? (
               <Card variant="glass" className="p-8 text-center">
                 <Flame className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">No predictions yet. Be the first to trade!</p>
+                <p className="text-sm text-muted-foreground">No trade predictions yet. Start trading!</p>
               </Card>
             ) : (
               hotPredictions.map((prediction) => (
@@ -90,19 +94,43 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="new" className="mt-4 space-y-4">
-            {loading ? (
+            {loadingTrades ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Skeleton key={i} className="h-48 w-full rounded-xl" />
                 ))}
               </div>
-            ) : newPredictions.length === 0 ? (
+            ) : newTradePredictions.length === 0 ? (
               <Card variant="glass" className="p-8 text-center">
                 <Clock className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">No recent predictions.</p>
+                <p className="text-sm text-muted-foreground">No recent trade predictions.</p>
               </Card>
             ) : (
-              newPredictions.map((prediction) => (
+              newTradePredictions.map((prediction) => (
+                <PublicPredictionCard 
+                  key={prediction.id} 
+                  prediction={prediction}
+                  currentUserId={currentUserId}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="longterm" className="mt-4 space-y-4">
+            {loadingLongTerm ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : sortedLongTermPredictions.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No long-term predictions yet.</p>
+                <p className="text-xs text-muted-foreground mt-1">Create one to share your market thesis!</p>
+              </Card>
+            ) : (
+              sortedLongTermPredictions.map((prediction) => (
                 <PublicPredictionCard 
                   key={prediction.id} 
                   prediction={prediction}
@@ -113,7 +141,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="top" className="mt-4 space-y-4">
-            {loading ? (
+            {loadingTrades ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Skeleton key={i} className="h-48 w-full rounded-xl" />
@@ -133,13 +161,6 @@ const Index = () => {
                 />
               ))
             )}
-          </TabsContent>
-
-          <TabsContent value="following" className="mt-4">
-            <Card variant="glass" className="p-12 text-center">
-              <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-sm text-muted-foreground">Follow traders to see their predictions here</p>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
