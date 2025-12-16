@@ -5,15 +5,18 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
+import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
+import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
+import { ExplanationDialog } from "@/components/predictions/ExplanationDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, TrendingUp, TrendingDown } from "lucide-react";
+import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { useUserPredictions } from "@/hooks/usePublicPredictions";
 
 interface Trade {
   id: number;
@@ -23,43 +26,40 @@ interface Trade {
   exit_price: number | null;
   pnl: number | null;
   entry_timestamp: string;
+  is_simulation?: boolean;
 }
 
 interface UserProfile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
-}
-
-interface Prediction {
-  id: string;
-  asset: string;
-  asset_type: string;
-  direction: string;
-  current_price: number;
-  target_price: number;
-  time_horizon: string;
-  confidence: number;
-  rationale: string | null;
-  status: string;
-  likes: number;
-  comments: number;
-  created_at: string;
+  current_streak?: number;
+  streak_type?: string;
+  total_predictions?: number;
+  total_hits?: number;
 }
 
 const Profile = () => {
   const navigate = useNavigate();
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(true);
-  const [loadingPredictions, setLoadingPredictions] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile>({
     display_name: null,
     avatar_url: null,
     bio: null,
+    current_streak: 0,
+    streak_type: "none",
+    total_predictions: 0,
+    total_hits: 0,
   });
+  const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
+  
+  const { predictions, loading: loadingPredictions } = useUserPredictions(userId);
+
+  // Filter to only show resolved predictions (hit/missed) from real trades
+  const resolvedPredictions = predictions.filter(p => p.status === "hit" || p.status === "missed");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -68,16 +68,15 @@ const Profile = () => {
         if (!user) {
           setLoadingTrades(false);
           setLoadingProfile(false);
-          setLoadingPredictions(false);
           return;
         }
         
         setUserId(user.id);
 
-        // Fetch profile
+        // Fetch profile with streak data
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('display_name, avatar_url, bio')
+          .select('display_name, avatar_url, bio, current_streak, streak_type, total_predictions, total_hits')
           .eq('user_id', user.id)
           .single();
         
@@ -86,22 +85,10 @@ const Profile = () => {
         }
         setLoadingProfile(false);
 
-        // Fetch user's predictions
-        const { data: predictionsData } = await supabase
-          .from('predictions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (predictionsData) {
-          setPredictions(predictionsData);
-        }
-        setLoadingPredictions(false);
-
-        // Fetch recent trades from positions table
+        // Fetch recent trades from positions table (only user's trades, including simulation)
         const { data, error } = await supabase
           .from('positions')
-          .select('id, symbol, side, entry_price, exit_price, pnl, entry_timestamp')
+          .select('id, symbol, side, entry_price, exit_price, pnl, entry_timestamp, is_simulation')
           .eq('user_id', user.id)
           .order('entry_timestamp', { ascending: false })
           .limit(5);
@@ -221,6 +208,29 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* Streak Badge */}
+        {profile.current_streak && profile.current_streak >= 2 && (
+          <div className="flex justify-center">
+            <StreakBadge 
+              streak={profile.current_streak} 
+              streakType={profile.streak_type || "none"} 
+              size="lg" 
+            />
+          </div>
+        )}
+
+        {/* Trader Stats */}
+        {profile.total_predictions && profile.total_predictions > 0 && (
+          <Card variant="glass" className="p-4">
+            <TraderStats 
+              totalPredictions={profile.total_predictions || 0}
+              totalHits={profile.total_hits || 0}
+              currentStreak={profile.current_streak || 0}
+              streakType={profile.streak_type || "none"}
+            />
+          </Card>
+        )}
+
         {/* Trader Status */}
         <TraderStatusCard />
 
@@ -251,59 +261,20 @@ const Profile = () => {
                   <Skeleton key={i} className="h-32 w-full" />
                 ))}
               </div>
-            ) : predictions.length === 0 ? (
+            ) : resolvedPredictions.length === 0 ? (
               <Card variant="glass" className="p-8 text-center">
                 <Target className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">No predictions yet. Make your first prediction.</p>
-                <Button variant="outline" className="mt-4" onClick={() => navigate('/create-prediction')}>
-                  Create Prediction
-                </Button>
+                <p className="text-sm text-muted-foreground">No predictions yet. Complete trades to see them here.</p>
+                <p className="text-xs text-muted-foreground mt-2">Only real trades with entry/exit are published as predictions.</p>
               </Card>
             ) : (
-              predictions.map((prediction) => (
-                <Card key={prediction.id} variant="glass" className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-lg">{prediction.asset}</span>
-                      <Badge variant={prediction.direction === 'long' ? 'default' : 'destructive'} className="gap-1">
-                        {prediction.direction === 'long' ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-                        {prediction.direction}
-                      </Badge>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        prediction.status === 'active' && 'border-blue-500 text-blue-500',
-                        prediction.status === 'success' && 'border-green-500 text-green-500',
-                        prediction.status === 'fail' && 'border-red-500 text-red-500',
-                        prediction.status === 'expired' && 'border-muted-foreground text-muted-foreground'
-                      )}
-                    >
-                      {prediction.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm mb-2">
-                    <span className="text-muted-foreground">
-                      ${prediction.current_price.toLocaleString()} → <span className="text-foreground font-medium">${prediction.target_price.toLocaleString()}</span>
-                    </span>
-                    <span className="text-muted-foreground">• {prediction.time_horizon}</span>
-                  </div>
-                  
-                  {prediction.rationale && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{prediction.rationale}</p>
-                  )}
-                  
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <span>{prediction.confidence}% confidence</span>
-                    <span>•</span>
-                    <span>{format(new Date(prediction.created_at), 'MMM d, yyyy')}</span>
-                  </div>
-                </Card>
+              resolvedPredictions.map((prediction) => (
+                <PublicPredictionCard 
+                  key={prediction.id} 
+                  prediction={prediction}
+                  currentUserId={userId || undefined}
+                  onAddExplanation={(id) => setExplanationPredictionId(id)}
+                />
               ))
             )}
           </TabsContent>
@@ -380,6 +351,14 @@ const Profile = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Explanation Dialog */}
+        <ExplanationDialog
+          predictionId={explanationPredictionId}
+          open={!!explanationPredictionId}
+          onOpenChange={(open) => !open && setExplanationPredictionId(null)}
+          onSaved={() => window.location.reload()}
+        />
       </div>
     </AppLayout>
   );
