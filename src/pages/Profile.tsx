@@ -13,10 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User } from "lucide-react";
+import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUserPredictions } from "@/hooks/usePublicPredictions";
+import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
 
 interface Trade {
   id: number;
@@ -56,10 +56,11 @@ const Profile = () => {
   });
   const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
   
-  const { predictions, loading: loadingPredictions } = useUserPredictions(userId);
+  const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
+  const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
 
   // Filter to only show resolved predictions (hit/missed) from real trades
-  const resolvedPredictions = predictions.filter(p => p.status === "hit" || p.status === "missed");
+  const resolvedTradePredictions = tradePredictions.filter(p => p.status === "hit" || p.status === "missed");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -242,33 +243,58 @@ const Profile = () => {
           <TabsList className="w-full bg-card border border-border">
             <TabsTrigger value="predictions" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Target className="w-4 h-4" />
-              Predictions
+              Trades
+            </TabsTrigger>
+            <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Calendar className="w-4 h-4" />
+              Long-Term
             </TabsTrigger>
             <TabsTrigger value="journal" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <BookOpen className="w-4 h-4" />
               Journal
             </TabsTrigger>
-            <TabsTrigger value="groups" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Users className="w-4 h-4" />
-              Groups
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="predictions" className="mt-4 space-y-4">
-            {loadingPredictions ? (
+            {loadingTradePredictions ? (
               <div className="space-y-3">
                 {[...Array(2)].map((_, i) => (
                   <Skeleton key={i} className="h-32 w-full" />
                 ))}
               </div>
-            ) : resolvedPredictions.length === 0 ? (
+            ) : resolvedTradePredictions.length === 0 ? (
               <Card variant="glass" className="p-8 text-center">
                 <Target className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">No predictions yet. Complete trades to see them here.</p>
-                <p className="text-xs text-muted-foreground mt-2">Only real trades with entry/exit are published as predictions.</p>
+                <p className="text-sm text-muted-foreground">No trade predictions yet.</p>
+                <p className="text-xs text-muted-foreground mt-2">Complete real trades to see them here.</p>
               </Card>
             ) : (
-              resolvedPredictions.map((prediction) => (
+              resolvedTradePredictions.map((prediction) => (
+                <PublicPredictionCard 
+                  key={prediction.id} 
+                  prediction={prediction}
+                  currentUserId={userId || undefined}
+                  onAddExplanation={(id) => setExplanationPredictionId(id)}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="longterm" className="mt-4 space-y-4">
+            {loadingLongTermPredictions ? (
+              <div className="space-y-3">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full" />
+                ))}
+              </div>
+            ) : longTermPredictions.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No long-term predictions yet.</p>
+                <p className="text-xs text-muted-foreground mt-2">Create predictions from the Create Prediction page.</p>
+              </Card>
+            ) : (
+              longTermPredictions.map((prediction) => (
                 <PublicPredictionCard 
                   key={prediction.id} 
                   prediction={prediction}
@@ -296,7 +322,7 @@ const Profile = () => {
               </Card>
             ) : (
               <>
-              {recentTrades.map((trade) => (
+                {recentTrades.map((trade) => (
                   <Card key={trade.id} variant="glass" className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -339,16 +365,6 @@ const Profile = () => {
                 </Button>
               </>
             )}
-          </TabsContent>
-
-          <TabsContent value="groups" className="mt-4">
-            <Card variant="glass" className="p-8 text-center">
-              <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-sm text-muted-foreground">Groups you manage or are a member of</p>
-              <Button variant="outline" className="mt-4">
-                Create Group
-              </Button>
-            </Card>
           </TabsContent>
         </Tabs>
 
