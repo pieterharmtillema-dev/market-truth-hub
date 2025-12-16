@@ -58,8 +58,8 @@ const Profile = () => {
   
   const { predictions, loading: loadingPredictions } = useUserPredictions(userId);
 
-  // Filter to only show resolved predictions (hit/missed) from real trades
-  const resolvedPredictions = predictions.filter(p => p.status === "hit" || p.status === "missed");
+  // Show all predictions (active, hit, missed)
+  const allPredictions = predictions;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -261,14 +261,14 @@ const Profile = () => {
                   <Skeleton key={i} className="h-32 w-full" />
                 ))}
               </div>
-            ) : resolvedPredictions.length === 0 ? (
+            ) : allPredictions.length === 0 ? (
               <Card variant="glass" className="p-8 text-center">
                 <Target className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">No predictions yet. Complete trades to see them here.</p>
-                <p className="text-xs text-muted-foreground mt-2">Only real trades with entry/exit are published as predictions.</p>
+                <p className="text-sm text-muted-foreground">No predictions yet. Start trading to see them here.</p>
+                <p className="text-xs text-muted-foreground mt-2">Real trades are automatically published as predictions.</p>
               </Card>
             ) : (
-              resolvedPredictions.map((prediction) => (
+              allPredictions.map((prediction) => (
                 <PublicPredictionCard 
                   key={prediction.id} 
                   prediction={prediction}

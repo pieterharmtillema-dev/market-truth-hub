@@ -11,13 +11,12 @@ export function usePublicPredictions(limit = 20) {
     try {
       setLoading(true);
       
-      // Fetch resolved predictions (only hit/missed, not active)
+      // Fetch all predictions from real trades (active, hit, missed)
       const { data: predictionsData, error: predictionsError } = await supabase
         .from("predictions")
         .select("*")
-        .in("status", ["hit", "missed"])
         .eq("data_source", "trade_sync") // Only auto-published from real trades
-        .order("resolved_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(limit);
 
       if (predictionsError) throw predictionsError;
