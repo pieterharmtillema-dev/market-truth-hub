@@ -106,6 +106,8 @@ export type Database = {
           data_source: string | null
           direction: string
           expiry_timestamp: string | null
+          explanation: string | null
+          explanation_public: boolean | null
           hit_timestamp: string | null
           id: string
           last_checked_price: number | null
@@ -114,6 +116,7 @@ export type Database = {
           rationale: string | null
           resolved_at: string | null
           resolved_price: number | null
+          source_position_id: number | null
           status: string
           tags: string[] | null
           target_price: number
@@ -132,6 +135,8 @@ export type Database = {
           data_source?: string | null
           direction: string
           expiry_timestamp?: string | null
+          explanation?: string | null
+          explanation_public?: boolean | null
           hit_timestamp?: string | null
           id?: string
           last_checked_price?: number | null
@@ -140,6 +145,7 @@ export type Database = {
           rationale?: string | null
           resolved_at?: string | null
           resolved_price?: number | null
+          source_position_id?: number | null
           status?: string
           tags?: string[] | null
           target_price: number
@@ -158,6 +164,8 @@ export type Database = {
           data_source?: string | null
           direction?: string
           expiry_timestamp?: string | null
+          explanation?: string | null
+          explanation_public?: boolean | null
           hit_timestamp?: string | null
           id?: string
           last_checked_price?: number | null
@@ -166,6 +174,7 @@ export type Database = {
           rationale?: string | null
           resolved_at?: string | null
           resolved_price?: number | null
+          source_position_id?: number | null
           status?: string
           tags?: string[] | null
           target_price?: number
@@ -174,7 +183,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "predictions_source_position_id_fkey"
+            columns: ["source_position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -182,8 +199,12 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          current_streak: number | null
           display_name: string | null
           id: string
+          streak_type: string | null
+          total_hits: number | null
+          total_predictions: number | null
           updated_at: string
           user_id: string
         }
@@ -192,8 +213,12 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          current_streak?: number | null
           display_name?: string | null
           id?: string
+          streak_type?: string | null
+          total_hits?: number | null
+          total_predictions?: number | null
           updated_at?: string
           user_id: string
         }
@@ -202,8 +227,12 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          current_streak?: number | null
           display_name?: string | null
           id?: string
+          streak_type?: string | null
+          total_hits?: number | null
+          total_predictions?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -336,21 +365,33 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string | null
+          current_streak: number | null
           display_name: string | null
+          streak_type: string | null
+          total_hits: number | null
+          total_predictions: number | null
           user_id: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          current_streak?: number | null
           display_name?: string | null
+          streak_type?: string | null
+          total_hits?: number | null
+          total_predictions?: number | null
           user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          current_streak?: number | null
           display_name?: string | null
+          streak_type?: string | null
+          total_hits?: number | null
+          total_predictions?: number | null
           user_id?: string | null
         }
         Relationships: []

@@ -681,6 +681,63 @@ async function handleTradeExit(
     `Exit complete: ${closedPositions.length} positions closed, ${partialCloseCount} partial, total PnL: ${roundedTotalPnL}`,
   );
 
+  // ========================================
+  // AUTO-PUBLISH AS PREDICTION (Real trades only)
+  // ========================================
+  if (!payload.isSimulation && closedPositions.length > 0) {
+    for (const closedPos of closedPositions) {
+      try {
+        // Get the full position details
+        const { data: positionData } = await serviceClient
+          .from("positions")
+          .select("*")
+          .eq("id", closedPos.id)
+          .single();
+
+        if (positionData && positionData.entry_price && positionData.exit_price && positionData.pnl !== null) {
+          const isHit = positionData.pnl > 0;
+          const predictionStatus = isHit ? "hit" : "missed";
+          
+          // Map asset class to prediction asset_type
+          const assetTypeMap: Record<string, string> = {
+            "forex": "forex",
+            "crypto": "crypto",
+            "stock": "stock",
+            "index": "stock",
+            "metal": "futures",
+            "commodity": "futures",
+          };
+          const predictionAssetType = assetTypeMap[positionData.asset_class || "stock"] || "stock";
+
+          const { error: predictionError } = await serviceClient.from("predictions").insert({
+            user_id: userId,
+            asset: positionData.symbol,
+            asset_type: predictionAssetType,
+            direction: positionData.side,
+            current_price: positionData.entry_price,
+            target_price: positionData.exit_price,
+            confidence: 100, // System-generated from actual trade
+            time_horizon: "Completed",
+            status: predictionStatus,
+            resolved_at: positionData.exit_timestamp,
+            resolved_price: positionData.exit_price,
+            hit_timestamp: isHit ? positionData.exit_timestamp : null,
+            source_position_id: positionData.id,
+            data_source: "trade_sync",
+          });
+
+          if (predictionError) {
+            console.error("Failed to create prediction for position:", closedPos.id, predictionError);
+          } else {
+            console.log(`Auto-published prediction for position ${closedPos.id}: ${predictionStatus}`);
+          }
+        }
+      } catch (err) {
+        console.error("Error creating prediction:", err);
+      }
+    }
+  }
+
   const responseData: Record<string, unknown> = {
     success: true,
     asset_class: assetClass,
