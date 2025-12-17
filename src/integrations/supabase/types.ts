@@ -110,6 +110,7 @@ export type Database = {
           explanation_public: boolean | null
           hit_timestamp: string | null
           id: string
+          is_public: boolean | null
           last_checked_price: number | null
           last_price_check: string | null
           likes: number
@@ -139,6 +140,7 @@ export type Database = {
           explanation_public?: boolean | null
           hit_timestamp?: string | null
           id?: string
+          is_public?: boolean | null
           last_checked_price?: number | null
           last_price_check?: string | null
           likes?: number
@@ -168,6 +170,7 @@ export type Database = {
           explanation_public?: boolean | null
           hit_timestamp?: string | null
           id?: string
+          is_public?: boolean | null
           last_checked_price?: number | null
           last_price_check?: string | null
           likes?: number
