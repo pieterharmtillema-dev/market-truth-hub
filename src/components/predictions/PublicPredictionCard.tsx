@@ -80,6 +80,30 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
       setIsUpdating(false);
     }
   };
+
+  // Smart price formatting: show enough decimals to differentiate entry/exit
+  const formatPrice = (price: number, otherPrice?: number) => {
+    if (otherPrice === undefined) {
+      return price.toLocaleString();
+    }
+    
+    // Find minimum decimals needed to show difference
+    for (let decimals = 2; decimals <= 8; decimals++) {
+      const formatted1 = price.toFixed(decimals);
+      const formatted2 = otherPrice.toFixed(decimals);
+      if (formatted1 !== formatted2) {
+        return Number(price.toFixed(decimals)).toLocaleString(undefined, { 
+          minimumFractionDigits: decimals, 
+          maximumFractionDigits: decimals 
+        });
+      }
+    }
+    // If still same after 8 decimals, just show 2
+    return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const entryPrice = formatPrice(prediction.current_price, prediction.target_price);
+  const exitPrice = formatPrice(prediction.target_price, prediction.current_price);
   
   // Calculate accuracy from profile (only for trade-based predictions)
   const accuracy = !isLongTerm && prediction.profile?.total_predictions && prediction.profile.total_predictions > 0
@@ -195,7 +219,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
           <div className={cn("grid gap-3 text-center", isLongTerm && isActive ? "grid-cols-3" : isOwner && prediction.pnl !== undefined && prediction.pnl !== null ? "grid-cols-3" : "grid-cols-2")}>
             <div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry</div>
-              <div className="font-mono font-medium text-sm">${prediction.current_price.toLocaleString()}</div>
+              <div className="font-mono font-medium text-sm">${entryPrice}</div>
               <div className="text-[9px] text-muted-foreground">{entryTime}</div>
             </div>
             <div>
@@ -203,7 +227,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
                 {isLongTerm ? "Target" : "Exit"}
               </div>
               <div className={cn("font-mono font-medium text-sm", isLong ? "text-gain" : "text-loss")}>
-                ${prediction.target_price.toLocaleString()}
+                ${exitPrice}
               </div>
               {!isActive && exitTime && (
                 <div className="text-[9px] text-muted-foreground">{exitTime}</div>
