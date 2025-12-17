@@ -12,12 +12,13 @@ export function usePublicPredictions(limit = 20) {
     try {
       setLoading(true);
       
-      // Fetch resolved predictions from real trades (only hit/missed)
+      // Fetch resolved predictions from real trades that are PUBLIC
       const { data: predictionsData, error: predictionsError } = await supabase
         .from("predictions")
         .select("*")
         .in("status", ["hit", "missed"])
-        .eq("data_source", "trade_sync") // Only auto-published from real trades
+        .eq("data_source", "trade_sync")
+        .eq("is_public", true) // Only show trades user chose to share
         .order("resolved_at", { ascending: false })
         .limit(limit);
 
@@ -147,6 +148,7 @@ export function useUserTradePredictions(userId: string | null) {
             expiry_timestamp: prediction.expiry_timestamp,
             pnl: positionData?.pnl ?? null,
             pnl_pct: positionData?.pnl_pct ?? null,
+            is_public: prediction.is_public ?? false,
             profile: profile || null,
           };
         });

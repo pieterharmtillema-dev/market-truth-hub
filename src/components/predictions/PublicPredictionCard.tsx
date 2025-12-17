@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format, formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface PublicPredictionData {
   id: string;
@@ -27,6 +29,8 @@ export interface PublicPredictionData {
   // PnL data (only available for owner viewing their own trade predictions)
   pnl?: number | null;
   pnl_pct?: number | null;
+  // Public visibility
+  is_public?: boolean;
   // User profile data (from join)
   profile?: {
     display_name: string | null;
@@ -46,12 +50,36 @@ interface PublicPredictionCardProps {
 
 export function PublicPredictionCard({ prediction, currentUserId, onAddExplanation }: PublicPredictionCardProps) {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(prediction.is_public ?? false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const isOwner = currentUserId === prediction.user_id;
   const isLong = prediction.direction === "long";
   const isHit = prediction.status === "hit";
   const isActive = prediction.status === "active";
   const isMissed = prediction.status === "missed";
   const isLongTerm = prediction.data_source === "user";
+  const isTrade = prediction.data_source === "trade_sync";
+
+  const handleTogglePublic = async () => {
+    if (!isOwner) return;
+    setIsUpdating(true);
+    try {
+      const newValue = !isPublic;
+      const { error } = await supabase
+        .from("predictions")
+        .update({ is_public: newValue })
+        .eq("id", prediction.id);
+      
+      if (error) throw error;
+      setIsPublic(newValue);
+      toast.success(newValue ? "Trade shared to feed" : "Trade removed from feed");
+    } catch (err) {
+      console.error("Failed to update visibility:", err);
+      toast.error("Failed to update visibility");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
   
   // Calculate accuracy from profile (only for trade-based predictions)
   const accuracy = !isLongTerm && prediction.profile?.total_predictions && prediction.profile.total_predictions > 0
@@ -237,6 +265,29 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
             onClick={() => onAddExplanation(prediction.id)}
           >
             {isLongTerm ? "Add Rationale" : "Add Trade Explanation"}
+          </Button>
+        )}
+
+        {/* Share to Feed Toggle (Owner only, resolved trades only) */}
+        {isOwner && isTrade && !isActive && (
+          <Button 
+            variant={isPublic ? "default" : "outline"} 
+            size="sm" 
+            className="w-full mt-2 text-xs gap-1.5"
+            onClick={handleTogglePublic}
+            disabled={isUpdating}
+          >
+            {isPublic ? (
+              <>
+                <Globe className="w-3.5 h-3.5" />
+                Shared on Feed
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                Share to Feed
+              </>
+            )}
           </Button>
         )}
       </CardContent>
