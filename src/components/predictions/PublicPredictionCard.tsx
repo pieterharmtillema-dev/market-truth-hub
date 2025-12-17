@@ -24,6 +24,9 @@ export interface PublicPredictionData {
   data_source?: string | null;
   time_horizon?: string | null;
   expiry_timestamp?: string | null;
+  // PnL data (only available for owner viewing their own trade predictions)
+  pnl?: number | null;
+  pnl_pct?: number | null;
   // User profile data (from join)
   profile?: {
     display_name: string | null;
@@ -161,7 +164,7 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
             </Badge>
           </div>
 
-          <div className={cn("grid gap-3 text-center", isLongTerm && isActive ? "grid-cols-3" : "grid-cols-2")}>
+          <div className={cn("grid gap-3 text-center", isLongTerm && isActive ? "grid-cols-3" : isOwner && prediction.pnl !== undefined && prediction.pnl !== null ? "grid-cols-3" : "grid-cols-2")}>
             <div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry</div>
               <div className="font-mono font-medium text-sm">${prediction.current_price.toLocaleString()}</div>
@@ -178,6 +181,20 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
                 <div className="text-[9px] text-muted-foreground">{exitTime}</div>
               )}
             </div>
+            {/* PnL - Only visible to owner */}
+            {isOwner && prediction.pnl !== undefined && prediction.pnl !== null && !isLongTerm && (
+              <div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">P/L</div>
+                <div className={cn("font-mono font-medium text-sm", prediction.pnl >= 0 ? "text-gain" : "text-loss")}>
+                  {prediction.pnl >= 0 ? "+" : ""}{prediction.pnl.toFixed(2)}
+                </div>
+                {prediction.pnl_pct !== undefined && prediction.pnl_pct !== null && (
+                  <div className={cn("text-[9px]", prediction.pnl_pct >= 0 ? "text-gain/70" : "text-loss/70")}>
+                    {prediction.pnl_pct >= 0 ? "+" : ""}{prediction.pnl_pct.toFixed(2)}%
+                  </div>
+                )}
+              </div>
+            )}
             {isLongTerm && isActive && prediction.time_horizon && (
               <div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Horizon</div>

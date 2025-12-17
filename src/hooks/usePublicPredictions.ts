@@ -75,7 +75,7 @@ export function usePublicPredictions(limit = 20) {
   return { predictions, loading, error, refetch: fetchPredictions };
 }
 
-// User's trade-based predictions only
+// User's trade-based predictions only (includes PnL from linked positions)
 export function useUserTradePredictions(userId: string | null) {
   const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,24 +106,50 @@ export function useUserTradePredictions(userId: string | null) {
           .eq("user_id", userId)
           .maybeSingle();
 
-        const enrichedPredictions: PublicPredictionData[] = (data || []).map(prediction => ({
-          id: prediction.id,
-          user_id: prediction.user_id,
-          asset: prediction.asset,
-          asset_type: prediction.asset_type,
-          direction: prediction.direction,
-          current_price: Number(prediction.current_price),
-          target_price: Number(prediction.target_price),
-          status: prediction.status,
-          created_at: prediction.created_at,
-          resolved_at: prediction.resolved_at,
-          explanation: prediction.explanation,
-          explanation_public: prediction.explanation_public,
-          data_source: prediction.data_source,
-          time_horizon: prediction.time_horizon,
-          expiry_timestamp: prediction.expiry_timestamp,
-          profile: profile || null,
-        }));
+        // Fetch PnL data from linked positions (only for user's own trades)
+        const positionIds = (data || [])
+          .filter(p => p.source_position_id)
+          .map(p => p.source_position_id);
+
+        let positionsMap = new Map<number, { pnl: number | null; pnl_pct: number | null }>();
+        
+        if (positionIds.length > 0) {
+          const { data: positionsData } = await supabase
+            .from("positions")
+            .select("id, pnl, pnl_pct")
+            .in("id", positionIds);
+          
+          if (positionsData) {
+            positionsMap = new Map(positionsData.map(p => [p.id, { pnl: p.pnl, pnl_pct: p.pnl_pct }]));
+          }
+        }
+
+        const enrichedPredictions: PublicPredictionData[] = (data || []).map(prediction => {
+          const positionData = prediction.source_position_id 
+            ? positionsMap.get(prediction.source_position_id) 
+            : null;
+          
+          return {
+            id: prediction.id,
+            user_id: prediction.user_id,
+            asset: prediction.asset,
+            asset_type: prediction.asset_type,
+            direction: prediction.direction,
+            current_price: Number(prediction.current_price),
+            target_price: Number(prediction.target_price),
+            status: prediction.status,
+            created_at: prediction.created_at,
+            resolved_at: prediction.resolved_at,
+            explanation: prediction.explanation,
+            explanation_public: prediction.explanation_public,
+            data_source: prediction.data_source,
+            time_horizon: prediction.time_horizon,
+            expiry_timestamp: prediction.expiry_timestamp,
+            pnl: positionData?.pnl ?? null,
+            pnl_pct: positionData?.pnl_pct ?? null,
+            profile: profile || null,
+          };
+        });
 
         setPredictions(enrichedPredictions);
       } catch (err) {
