@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
-import traxLogo from "@/assets/trax-logo.png";
+import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
 interface HeaderProps {
   title?: string;
@@ -66,21 +66,8 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     >
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
         {/* Brand (clickable → /feed) */}
-        <Link to="/" className="flex items-center shrink-0 focus:outline-none" aria-label="Go to feed">
-          <img src={traxLogo} alt="TRAX" className="h-9 sm:h-16 w-auto object-contain translate-y-1" />
-
-          <h1
-            className="
-    ml-1
-    font-black leading-none
-    tracking-wider sm:tracking-widest
-    text-[#40962b]
-    text-xl sm:text-[2.5rem]
-    translate-y-0.5 sm:translate-y-0
-  "
-          >
-            TRAX
-          </h1>
+        <Link to="/" className="flex items-center shrink-0 focus:outline-none hover:opacity-90 transition-opacity" aria-label="Go to feed">
+          <img src={traxDinoLogo} alt="TRAX" className="h-10 sm:h-14 w-auto object-contain" />
         </Link>
 
         {/* Actions */}
