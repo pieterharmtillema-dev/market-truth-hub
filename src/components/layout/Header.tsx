@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
-import { TrexWalker } from "./TrexWalker";
 import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
 interface HeaderProps {
@@ -40,7 +39,7 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
   return (
     <header
       className={`
-        sticky top-0 z-40 relative overflow-hidden
+        sticky top-0 z-40
         transition-all duration-500 ease-out
         ${
           hideBackground
@@ -49,10 +48,7 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
         }
       `}
     >
-      {/* T-Rex walking animation */}
-      <TrexWalker />
-      
-      <div className="relative z-10 flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
+      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
         {/* ----------------------------------
             LOGO
         ----------------------------------- */}
