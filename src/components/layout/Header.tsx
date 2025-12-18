@@ -7,77 +7,59 @@ import { TraderStatusIndicator } from "./TraderStatusIndicator";
 import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
 interface HeaderProps {
-  title?: string;
   showSearch?: boolean;
   showCreate?: boolean;
 }
 
-/* ------------------------------
-   Hide on scroll (desktop only)
-------------------------------- */
-function useHideOnScroll() {
-  const [hidden, setHidden] = useState(false);
-  const lastScrollY = useRef(0);
-  const hideTimeout = useRef<number | null>(null);
+/* ----------------------------------------
+   Scroll-aware header states
+----------------------------------------- */
+function useHeaderScrollState() {
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
-    if (window.innerWidth < 640) return;
-
-    const onScroll = () => {
-      const current = window.scrollY;
-
-      if (current > lastScrollY.current && current > 80) {
-        if (!hideTimeout.current) {
-          hideTimeout.current = window.setTimeout(() => {
-            setHidden(true);
-          }, 200);
-        }
-      } else {
-        if (hideTimeout.current) {
-          clearTimeout(hideTimeout.current);
-          hideTimeout.current = null;
-        }
-        setHidden(false);
-      }
-
-      lastScrollY.current = current;
-    };
-
+    const onScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      if (hideTimeout.current) clearTimeout(hideTimeout.current);
-      window.removeEventListener("scroll", onScroll);
-    };
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return hidden;
+  return {
+    hideBackground: scrollY > 60,
+    hideContent: scrollY > 140,
+  };
 }
 
-/* ------------------------------
+/* ----------------------------------------
    Header
-------------------------------- */
-export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
+----------------------------------------- */
+export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
-  const hidden = useHideOnScroll();
+  const { hideBackground, hideContent } = useHeaderScrollState();
 
   return (
     <header
       className={`
         sticky top-0 z-40
-        bg-background/95 backdrop-blur-xl
-        border-b border-border
-        transition-all duration-300 ease-out
-        will-change-transform will-change-opacity
-        ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
+        transition-all duration-500 ease-out
+        ${
+          hideBackground
+            ? "bg-transparent border-transparent"
+            : "bg-background/95 backdrop-blur-xl border-b border-border"
+        }
       `}
     >
-      {/* Header height unchanged */}
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
-        {/* Logo */}
+        {/* ----------------------------------
+            LOGO
+        ----------------------------------- */}
         <Link
           to="/"
-          className="relative flex items-center shrink-0 overflow-visible hover:opacity-90 transition-opacity"
           aria-label="Go to feed"
+          className={`
+            relative flex items-center shrink-0 overflow-visible
+            transition-all duration-500 ease-out
+            ${hideContent ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}
+          `}
         >
           <img
             src={traxDinoLogo}
@@ -88,12 +70,23 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
               object-contain
               shrink-0
               translate-y-1 sm:translate-y-2
+              drop-shadow-[0_0_10px_rgba(0,255,150,0.35)]
+              hover:drop-shadow-[0_0_18px_rgba(0,255,180,0.6)]
+              transition-all duration-500 ease-out
             "
           />
         </Link>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* ----------------------------------
+            ACTIONS
+        ----------------------------------- */}
+        <div
+          className={`
+            flex items-center gap-2
+            transition-all duration-500 ease-out
+            ${hideContent ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}
+          `}
+        >
           <div className="hidden sm:block">
             <TraderStatusIndicator />
           </div>
@@ -119,7 +112,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
               </Button>
 
-              <Button variant="ghost" size="icon-sm" onClick={signOut} aria-label="Sign out">
+              <Button variant="ghost" size="icon-sm" onClick={signOut}>
                 <LogOut className="w-5 h-5" />
               </Button>
             </>
