@@ -1,0 +1,70 @@
+/* T-Rex Walker Animation
+   Sprite sheet: 4 columns × 3 rows (12 frames)
+   Frame size: 325px × 240px
+*/
+
+.trex-walker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100px;
+  height: 74px;
+  background-image: url('/images/trex-sprite.png');
+  background-size: 400px 222px; /* Scaled down proportionally from 1300×720 */
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+  
+  /* Combine walk cycle + horizontal movement + subtle bob */
+  animation: 
+    trex-walk 0.8s steps(1) infinite,
+    trex-move 40s linear infinite,
+    trex-bob 0.4s ease-in-out infinite;
+  
+  /* Hidden on mobile */
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .trex-walker {
+    display: block;
+  }
+}
+
+/* Walk cycle animation - steps through 12 frames in 4x3 grid */
+@keyframes trex-walk {
+  0%      { background-position: 0 0; }
+  8.33%   { background-position: -100px 0; }
+  16.66%  { background-position: -200px 0; }
+  25%     { background-position: -300px 0; }
+  33.33%  { background-position: 0 -74px; }
+  41.66%  { background-position: -100px -74px; }
+  50%     { background-position: -200px -74px; }
+  58.33%  { background-position: -300px -74px; }
+  66.66%  { background-position: 0 -148px; }
+  75%     { background-position: -100px -148px; }
+  83.33%  { background-position: -200px -148px; }
+  91.66%  { background-position: -300px -148px; }
+  100%    { background-position: 0 0; }
+}
+
+/* Horizontal movement across the header */
+@keyframes trex-move {
+  0% {
+    transform: translateX(-120px);
+  }
+  100% {
+    transform: translateX(calc(100vw + 20px));
+  }
+}
+
+/* Subtle vertical bob for walking weight */
+@keyframes trex-bob {
+  0%, 100% {
+    margin-bottom: 0;
+  }
+  50% {
+    margin-bottom: 2px;
+  }
+}

@@ -17,7 +17,7 @@ export function AppLayout({
 }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      {showHeader && <Header title={title} />}
+      {showHeader && <Header />}
       <main className={showNav ? "pb-20" : ""}>
         {children}
       </main>
