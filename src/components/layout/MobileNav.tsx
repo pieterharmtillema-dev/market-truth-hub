@@ -2,6 +2,7 @@ import { Home, TrendingUp, Trophy, Users, User, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 import traxLogo from "@/assets/trax-logo.png";
+import { TrexWalker } from "./TrexWalker";
 
 const navItems = [
   { icon: Home, label: "Feed", path: "/" },
@@ -14,9 +15,10 @@ const navItems = [
 export function MobileNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-pb"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-pb overflow-hidden"
       style={{ position: "fixed", WebkitTransform: "translateZ(0)" }}
     >
+      <TrexWalker />
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => (
           <NavLink
