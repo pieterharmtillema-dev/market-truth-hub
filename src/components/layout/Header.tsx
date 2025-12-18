@@ -64,17 +64,32 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
         ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
       `}
     >
-      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
-        {/* Brand */}
+      {/* HEADER HEIGHT IS UNCHANGED */}
+      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
+        {/* ----------------------------------
+            LOGO (INTENTIONALLY OVERSIZED)
+        ----------------------------------- */}
         <Link
           to="/"
-          className="flex items-center shrink-0 focus:outline-none hover:opacity-90 transition-opacity"
+          className="relative flex items-center shrink-0 overflow-visible hover:opacity-90 transition-opacity"
           aria-label="Go to feed"
         >
-          <img src={traxDinoLogo} alt="TRAX" className="h-12 sm:h-16 w-auto object-contain shrink-0" />
+          <img
+            src={traxDinoLogo}
+            alt="TRAX"
+            className="
+              h-20 sm:h-28 md:h-32
+              w-auto
+              object-contain
+              shrink-0
+              -translate-y-2 sm:-translate-y-3
+            "
+          />
         </Link>
 
-        {/* Actions */}
+        {/* ----------------------------------
+            ACTIONS
+        ----------------------------------- */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:block">
             <TraderStatusIndicator />
