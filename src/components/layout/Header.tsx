@@ -12,6 +12,9 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
+/* -----------------------------------------
+   Hide header on scroll (desktop only)
+------------------------------------------ */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -50,6 +53,9 @@ function useHideOnScroll() {
   return hidden;
 }
 
+/* -----------------------------------------
+   Header Component
+------------------------------------------ */
 export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
   const hidden = useHideOnScroll();
@@ -58,30 +64,51 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     <header
       className={`
         sticky top-0 z-40
-        bg-background/95 backdrop-blur-xl border-b border-border
+        bg-background/95 backdrop-blur-xl
+        border-b border-border
         transition-all duration-300 ease-out
         will-change-transform will-change-opacity
         ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
       `}
     >
-      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2">
-        {/* Brand (clickable → /feed) */}
-        <Link to="/" className="flex items-center shrink-0 focus:outline-none hover:opacity-90 transition-opacity" aria-label="Go to feed">
-          <img src={traxDinoLogo} alt="TRAX" className="h-10 sm:h-14 w-auto object-contain" />
+      <div className="flex items-center justify-between h-20 sm:h-24 px-4 sm:px-6 gap-3">
+        {/* ----------------------------------
+            Brand / Logo
+        ----------------------------------- */}
+        <Link
+          to="/"
+          className="flex items-center shrink-0 hover:opacity-90 transition-opacity focus:outline-none"
+          aria-label="Go to feed"
+        >
+          <img
+            src={traxDinoLogo}
+            alt="TRAX"
+            className="
+              h-12 sm:h-16 md:h-20
+              w-auto
+              object-contain
+              shrink-0
+            "
+          />
         </Link>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* ----------------------------------
+            Right Actions
+        ----------------------------------- */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Trader Status (desktop only) */}
           <div className="hidden sm:block">
             <TraderStatusIndicator />
           </div>
 
+          {/* Search */}
           {showSearch && (
             <Button variant="ghost" size="icon-sm">
               <Search className="w-4 h-4" />
             </Button>
           )}
 
+          {/* Create Prediction */}
           {user && showCreate && (
             <Link to="/create-prediction">
               <Button variant="default" size="icon-sm">
@@ -90,14 +117,16 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
             </Link>
           )}
 
+          {/* Authenticated Actions */}
           {user ? (
             <>
               <Button variant="ghost" size="icon-sm" className="relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+                {/* Notification dot */}
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
               </Button>
 
-              <Button variant="ghost" size="icon-sm" onClick={signOut}>
+              <Button variant="ghost" size="icon-sm" onClick={signOut} aria-label="Sign out">
                 <LogOut className="w-5 h-5" />
               </Button>
             </>
