@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
+import { TrexWalker } from "./TrexWalker";
 import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
 interface HeaderProps {
@@ -39,7 +40,7 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
   return (
     <header
       className={`
-        sticky top-0 z-40
+        sticky top-0 z-40 relative overflow-hidden
         transition-all duration-500 ease-out
         ${
           hideBackground
@@ -48,7 +49,10 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
         }
       `}
     >
-      <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
+      {/* T-Rex walking animation */}
+      <TrexWalker />
+      
+      <div className="relative z-10 flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
         {/* ----------------------------------
             LOGO
         ----------------------------------- */}
