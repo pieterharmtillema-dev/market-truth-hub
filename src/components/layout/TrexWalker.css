@@ -5,23 +5,29 @@
 
 .trex-walker {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% - 10px);
   left: 0;
   width: 80px;
   height: 59px;
   background-image: url('/images/trex-sprite.png');
   background-size: 320px 177px; /* Scaled proportionally */
   background-repeat: no-repeat;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 10;
   opacity: 0.85;
   filter: hue-rotate(-10deg) saturate(1.3) brightness(1.05);
+  cursor: pointer;
   
   /* Combine walk cycle + horizontal movement + subtle bob */
   animation: 
     trex-walk 0.8s steps(1) infinite,
     trex-move 35s linear infinite,
     trex-bob 0.4s ease-in-out infinite;
+}
+
+/* Pause all animations on hover */
+.trex-walker:hover {
+  animation-play-state: paused;
 }
 
 /* Walk cycle animation - steps through 12 frames in 4x3 grid */
