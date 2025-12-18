@@ -12,6 +12,9 @@ interface HeaderProps {
   showCreate?: boolean;
 }
 
+/* ------------------------------
+   Hide on scroll (desktop only)
+------------------------------- */
 function useHideOnScroll() {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -50,6 +53,9 @@ function useHideOnScroll() {
   return hidden;
 }
 
+/* ------------------------------
+   Header
+------------------------------- */
 export function Header({ title = "Trax", showSearch = true, showCreate = true }: HeaderProps) {
   const { user, signOut } = useAuth();
   const hidden = useHideOnScroll();
@@ -58,17 +64,16 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
     <header
       className={`
         sticky top-0 z-40
-        bg-background/95 backdrop-blur-xl border-b border-border
+        bg-background/95 backdrop-blur-xl
+        border-b border-border
         transition-all duration-300 ease-out
         will-change-transform will-change-opacity
         ${hidden ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"}
       `}
     >
-      {/* HEADER HEIGHT IS UNCHANGED */}
+      {/* Header height unchanged */}
       <div className="flex items-center justify-between h-16 sm:h-20 px-4 gap-2 overflow-visible">
-        {/* ----------------------------------
-            LOGO (INTENTIONALLY OVERSIZED)
-        ----------------------------------- */}
+        {/* Logo */}
         <Link
           to="/"
           className="relative flex items-center shrink-0 overflow-visible hover:opacity-90 transition-opacity"
@@ -82,14 +87,12 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
               w-auto
               object-contain
               shrink-0
-              -translate-y-2 sm:-translate-y-3
+              translate-y-1 sm:translate-y-2
             "
           />
         </Link>
 
-        {/* ----------------------------------
-            ACTIONS
-        ----------------------------------- */}
+        {/* Actions */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:block">
             <TraderStatusIndicator />
@@ -116,7 +119,7 @@ export function Header({ title = "Trax", showSearch = true, showCreate = true }:
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
               </Button>
 
-              <Button variant="ghost" size="icon-sm" onClick={signOut}>
+              <Button variant="ghost" size="icon-sm" onClick={signOut} aria-label="Sign out">
                 <LogOut className="w-5 h-5" />
               </Button>
             </>
