@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
+import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
@@ -231,6 +232,9 @@ const Profile = () => {
             />
           </Card>
         )}
+
+        {/* Trader Profile Section */}
+        {userId && <TraderProfileSection userId={userId} />}
 
         {/* Trader Status */}
         <TraderStatusCard />
