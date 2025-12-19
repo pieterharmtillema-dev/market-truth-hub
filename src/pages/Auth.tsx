@@ -206,7 +206,7 @@ export default function Auth() {
             </div>
 
             {/* Logo */}
-            <img src={traxLogo} alt="Trax Logo" className="relative h-28 w-auto" />
+            <img src={traxLogo} alt="Trax Logo" className="relative h-40 w-auto" />
           </div>
 
           <CardDescription>Track your trades and predictions</CardDescription>
