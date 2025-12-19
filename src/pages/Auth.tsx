@@ -197,12 +197,12 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md pt-2">
         <CardHeader className="text-center pt-6 pb-0 space-y-0">
-          <div className="relative flex justify-center mb-2">
+          <div className="relative flex justify-center mb-0">
             {/* Glow */}
             <div className="absolute inset-0 flex justify-center">
-              <div className="h-28 w-28 rounded-full bg-green-500/20 blur-2xl" />
+              <div className="h-20 w-20 rounded-full bg-green-500/25 blur-xl" />
             </div>
 
             {/* Logo */}
