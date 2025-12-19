@@ -200,11 +200,6 @@ export default function Auth() {
       <Card className="w-full max-w-md pt-2">
         <CardHeader className="text-center pt-6 pb-0 space-y-0">
           <div className="relative flex justify-center mb-0">
-            {/* Glow */}
-            <div className="absolute inset-0 flex justify-center">
-              <div className="h-28 w-28 rounded-full bg-green-500/30 blur-2xl" />
-            </div>
-
             {/* Logo */}
             <img src={traxLogo} alt="Trax Logo" className="relative h-40 w-auto" />
           </div>
