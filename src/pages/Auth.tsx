@@ -13,7 +13,8 @@ import traxLogo from "@/assets/trax-dino-logo.png";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
-const usernameSchema = z.string()
+const usernameSchema = z
+  .string()
   .min(3, "Username must be at least 3 characters")
   .max(20, "Username must be less than 20 characters")
   .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores");
@@ -30,7 +31,9 @@ export default function Auth() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         navigate("/");
       }
@@ -48,7 +51,7 @@ export default function Auth() {
   // Check username availability with debounce
   useEffect(() => {
     const trimmedUsername = username.trim().toLowerCase();
-    
+
     // Reset state if username is too short
     if (trimmedUsername.length < 3) {
       setUsernameAvailable(null);
@@ -138,7 +141,7 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
           toast({ title: "Login failed", description: "Invalid email or password", variant: "destructive" });
@@ -160,7 +163,7 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -174,7 +177,11 @@ export default function Auth() {
 
       if (error) {
         if (error.message.includes("already registered")) {
-          toast({ title: "Account exists", description: "This email is already registered. Try signing in.", variant: "destructive" });
+          toast({
+            title: "Account exists",
+            description: "This email is already registered. Try signing in.",
+            variant: "destructive",
+          });
         } else {
           toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
         }
@@ -195,7 +202,7 @@ export default function Auth() {
           <div className="flex justify-center mb-4">
             <img src={traxLogo} alt="Trax Logo" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl">Trax</CardTitle>
+
           <CardDescription>Track your trades and predictions</CardDescription>
         </CardHeader>
         <CardContent>
@@ -254,27 +261,21 @@ export default function Auth() {
                       type="text"
                       placeholder="your_username"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                       disabled={isLoading}
                       required
                       maxLength={20}
                       className="pr-10"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {isCheckingUsername && (
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      )}
+                      {isCheckingUsername && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                       {!isCheckingUsername && usernameAvailable === true && (
                         <CheckCircle className="w-4 h-4 text-gain" />
                       )}
-                      {!isCheckingUsername && usernameAvailable === false && (
-                        <XCircle className="w-4 h-4 text-loss" />
-                      )}
+                      {!isCheckingUsername && usernameAvailable === false && <XCircle className="w-4 h-4 text-loss" />}
                     </div>
                   </div>
-                  {usernameError && (
-                    <p className="text-xs text-loss">{usernameError}</p>
-                  )}
+                  {usernameError && <p className="text-xs text-loss">{usernameError}</p>}
                   {!usernameError && usernameAvailable === false && (
                     <p className="text-xs text-loss">Username is already taken</p>
                   )}
