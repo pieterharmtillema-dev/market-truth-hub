@@ -211,7 +211,7 @@ export default function Auth() {
 
           <CardDescription className="mt-0 mb-0">Track your trades and predictions</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-1">
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
