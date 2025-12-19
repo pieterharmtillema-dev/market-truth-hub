@@ -209,7 +209,7 @@ export default function Auth() {
             <img src={traxLogo} alt="Trax Logo" className="relative h-40 w-auto" />
           </div>
 
-          <CardDescription>Track your trades and predictions</CardDescription>
+          <CardDescription className="mt-0 mb-1">Track your trades and predictions</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
