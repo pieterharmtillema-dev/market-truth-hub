@@ -198,7 +198,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
+        <CardHeader className="text-center pb-2 pt-6 space-y-1">
           <div className="relative flex justify-center mb-2">
             {/* Glow */}
             <div className="absolute inset-0 flex justify-center">
