@@ -49,10 +49,22 @@ export default function Auth() {
   const greeting = useMemo(() => getGreeting(), []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        setLoginSuccess(true);
-        setTimeout(() => navigate("/"), 800);
+        // Check if user needs onboarding
+        const { data: traderProfile } = await supabase
+          .from("trader_profiles")
+          .select("onboarding_completed, onboarding_skipped")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        
+        if (traderProfile && !traderProfile.onboarding_completed && !traderProfile.onboarding_skipped) {
+          setLoginSuccess(true);
+          setTimeout(() => navigate("/onboarding"), 800);
+        } else {
+          setLoginSuccess(true);
+          setTimeout(() => navigate("/"), 800);
+        }
       }
     });
 

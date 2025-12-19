@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
 import { TrendingAssets } from "@/components/feed/TrendingAssets";
@@ -12,15 +13,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { predictions: tradePredictions, loading: loadingTrades } = usePublicPredictions(30);
   const { predictions: longTermPredictions, loading: loadingLongTerm } = useLongTermPredictions(30);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserId(data.user?.id);
-    });
-  }, []);
+    const checkUserAndOnboarding = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setCurrentUserId(session.user.id);
+        
+        // Check if user needs onboarding
+        const { data: traderProfile } = await supabase
+          .from("trader_profiles")
+          .select("onboarding_completed, onboarding_skipped")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        
+        if (traderProfile && !traderProfile.onboarding_completed && !traderProfile.onboarding_skipped) {
+          navigate("/onboarding");
+        }
+      }
+    };
+    
+    checkUserAndOnboarding();
+  }, [navigate]);
 
   // Sort trade predictions for different views
   const hotPredictions = [...tradePredictions].sort((a, b) => {

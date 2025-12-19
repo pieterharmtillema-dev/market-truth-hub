@@ -14,6 +14,7 @@ import Trades from "./pages/Trades";
 import TradeJournal from "./pages/TradeJournal";
 import PastTrades from "./pages/PastTrades";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ function RouterContent() {
       <Route path="/past-trades" element={<PastTrades />} />
       <Route path="/create-prediction" element={<CreatePrediction />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

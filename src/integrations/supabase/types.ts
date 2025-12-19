@@ -313,6 +313,51 @@ export type Database = {
         }
         Relationships: []
       }
+      trader_profiles: {
+        Row: {
+          created_at: string
+          decision_style: string | null
+          experience_level: string | null
+          holding_time: string | null
+          id: string
+          loss_response: string | null
+          onboarding_completed: boolean
+          onboarding_skipped: boolean
+          risk_per_trade: string | null
+          trade_frequency: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision_style?: string | null
+          experience_level?: string | null
+          holding_time?: string | null
+          id?: string
+          loss_response?: string | null
+          onboarding_completed?: boolean
+          onboarding_skipped?: boolean
+          risk_per_trade?: string | null
+          trade_frequency?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision_style?: string | null
+          experience_level?: string | null
+          holding_time?: string | null
+          id?: string
+          loss_response?: string | null
+          onboarding_completed?: boolean
+          onboarding_skipped?: boolean
+          risk_per_trade?: string | null
+          trade_frequency?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_activity: {
         Row: {
           created_at: string | null
