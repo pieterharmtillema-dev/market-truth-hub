@@ -202,7 +202,7 @@ export default function Auth() {
           <div className="relative flex justify-center mb-0">
             {/* Glow */}
             <div className="absolute inset-0 flex justify-center">
-              <div className="h-20 w-20 rounded-full bg-green-500/25 blur-xl" />
+              <div className="h-28 w-28 rounded-full bg-green-500/30 blur-2xl" />
             </div>
 
             {/* Logo */}
