@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { z } from "zod";
+import traxLogo from "@/assets/trax-dino-logo.png";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -191,12 +192,10 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <div className="flex justify-center mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-primary-foreground" />
-            </div>
+          <div className="flex justify-center mb-4">
+            <img src={traxLogo} alt="Trax Logo" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl">MarketDiscussion</CardTitle>
+          <CardTitle className="text-2xl">Trax</CardTitle>
           <CardDescription>Track your trades and predictions</CardDescription>
         </CardHeader>
         <CardContent>
