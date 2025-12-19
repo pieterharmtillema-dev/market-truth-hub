@@ -200,7 +200,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <img src={traxLogo} alt="Trax Logo" className="h-28 w-auto mx-auto" />
+            <img src={traxLogo} alt="Trax Logo" className="h-40 w-auto mx-auto" />
           </div>
 
           <CardDescription>Track your trades and predictions</CardDescription>
