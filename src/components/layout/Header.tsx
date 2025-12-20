@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Bell, Search, Plus, LogIn, LogOut } from "lucide-react";
+import { Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { TraderStatusIndicator } from "./TraderStatusIndicator";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
 interface HeaderProps {
@@ -107,10 +108,7 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
 
           {user ? (
             <>
-              <Button variant="ghost" size="icon-sm" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-              </Button>
+              <NotificationBell />
 
               <Button variant="ghost" size="icon-sm" onClick={signOut}>
                 <LogOut className="w-5 h-5" />
