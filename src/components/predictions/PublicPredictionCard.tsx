@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock, UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,12 +46,23 @@ interface PublicPredictionCardProps {
   prediction: PublicPredictionData;
   currentUserId?: string;
   onAddExplanation?: (predictionId: string) => void;
+  isFollowing?: boolean;
+  onFollow?: (userId: string) => Promise<boolean>;
+  onUnfollow?: (userId: string) => Promise<boolean>;
 }
 
-export function PublicPredictionCard({ prediction, currentUserId, onAddExplanation }: PublicPredictionCardProps) {
+export function PublicPredictionCard({ 
+  prediction, 
+  currentUserId, 
+  onAddExplanation,
+  isFollowing: isFollowingProp,
+  onFollow,
+  onUnfollow 
+}: PublicPredictionCardProps) {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(prediction.is_public ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const isOwner = currentUserId === prediction.user_id;
   const isLong = prediction.direction === "long";
   const isHit = prediction.status === "hit";
@@ -78,6 +89,20 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
       toast.error("Failed to update visibility");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleFollowClick = async () => {
+    if (!onFollow || !onUnfollow) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowingProp) {
+        await onUnfollow(prediction.user_id);
+      } else {
+        await onFollow(prediction.user_id);
+      }
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -194,9 +219,29 @@ export function PublicPredictionCard({ prediction, currentUserId, onAddExplanati
               </div>
             </div>
           </div>
-          <Badge variant={isActive ? "neutral" : isHit ? "gain" : "loss"}>
-            {isActive ? "Active" : isHit ? "Hit ✓" : "Missed"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {/* Follow button - only show for other users */}
+            {currentUserId && !isOwner && onFollow && onUnfollow && (
+              <Button
+                variant={isFollowingProp ? "default" : "outline"}
+                size="sm"
+                onClick={handleFollowClick}
+                disabled={followLoading}
+                className="h-7 px-2 gap-1 text-xs"
+              >
+                {followLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : isFollowingProp ? (
+                  <UserMinus className="w-3 h-3" />
+                ) : (
+                  <UserPlus className="w-3 h-3" />
+                )}
+              </Button>
+            )}
+            <Badge variant={isActive ? "neutral" : isHit ? "gain" : "loss"}>
+              {isActive ? "Active" : isHit ? "Hit ✓" : "Missed"}
+            </Badge>
+          </div>
         </div>
 
         {/* Trade Details - Public Info Only (NO PnL) */}
