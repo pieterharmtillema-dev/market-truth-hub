@@ -6,17 +6,25 @@ import { TrendingAssets } from "@/components/feed/TrendingAssets";
 import { MarketTicker } from "@/components/feed/MarketTicker";
 import { mockTrendingAssets, mockTickerData } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Clock, Target, Calendar } from "lucide-react";
+import { Flame, Clock, Target, Calendar, Users } from "lucide-react";
 import { usePublicPredictions, useLongTermPredictions } from "@/hooks/usePublicPredictions";
+import { useFollows, useFollowingPredictions } from "@/hooks/useFollows";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { UserSearch } from "@/components/social/UserSearch";
+import { FollowingList } from "@/components/social/FollowingList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Index = () => {
   const navigate = useNavigate();
   const { predictions: tradePredictions, loading: loadingTrades } = usePublicPredictions(30);
   const { predictions: longTermPredictions, loading: loadingLongTerm } = useLongTermPredictions(30);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+  const { following, followUser, unfollowUser, isFollowing } = useFollows(currentUserId || null);
+  const { predictions: followingPredictions, loading: loadingFollowing } = useFollowingPredictions(currentUserId || null, following);
+  const [showFollowDialog, setShowFollowDialog] = useState(false);
 
   useEffect(() => {
     const checkUserAndOnboarding = async () => {
@@ -70,7 +78,7 @@ const Index = () => {
 
         {/* Feed Tabs */}
         <Tabs defaultValue="hot" className="w-full">
-          <TabsList className="w-full bg-card border border-border">
+          <TabsList className="w-full bg-card border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="hot" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Flame className="w-4 h-4" />
               Hot
@@ -79,6 +87,12 @@ const Index = () => {
               <Clock className="w-4 h-4" />
               New
             </TabsTrigger>
+            {currentUserId && (
+              <TabsTrigger value="following" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Users className="w-4 h-4" />
+                Following
+              </TabsTrigger>
+            )}
             <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <Calendar className="w-4 h-4" />
               Long-Term
@@ -107,6 +121,9 @@ const Index = () => {
                   key={prediction.id} 
                   prediction={prediction}
                   currentUserId={currentUserId}
+                  isFollowing={isFollowing(prediction.user_id)}
+                  onFollow={followUser}
+                  onUnfollow={unfollowUser}
                 />
               ))
             )}
@@ -130,10 +147,79 @@ const Index = () => {
                   key={prediction.id} 
                   prediction={prediction}
                   currentUserId={currentUserId}
+                  isFollowing={isFollowing(prediction.user_id)}
+                  onFollow={followUser}
+                  onUnfollow={unfollowUser}
                 />
               ))
             )}
           </TabsContent>
+
+          {currentUserId && (
+            <TabsContent value="following" className="mt-4 space-y-4">
+              <div className="flex justify-end">
+                <Dialog open={showFollowDialog} onOpenChange={setShowFollowDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Users className="w-4 h-4" />
+                      Manage Following
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Find & Follow Traders</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <UserSearch 
+                        currentUserId={currentUserId}
+                        isFollowing={isFollowing}
+                        onFollow={followUser}
+                        onUnfollow={unfollowUser}
+                      />
+                      <div className="border-t border-border pt-4">
+                        <h4 className="text-sm font-medium mb-3">Following ({following.length})</h4>
+                        <FollowingList 
+                          followingIds={following}
+                          onFollow={followUser}
+                          onUnfollow={unfollowUser}
+                        />
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {loadingFollowing ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : followingPredictions.length === 0 ? (
+                <Card variant="glass" className="p-8 text-center">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">No predictions from traders you follow.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Follow some traders to see their activity here!</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => setShowFollowDialog(true)}
+                  >
+                    Find Traders
+                  </Button>
+                </Card>
+              ) : (
+                followingPredictions.map((prediction) => (
+                  <PublicPredictionCard 
+                    key={prediction.id} 
+                    prediction={prediction}
+                    currentUserId={currentUserId}
+                  />
+                ))
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="longterm" className="mt-4 space-y-4">
             {loadingLongTerm ? (
@@ -154,6 +240,9 @@ const Index = () => {
                   key={prediction.id} 
                   prediction={prediction}
                   currentUserId={currentUserId}
+                  isFollowing={isFollowing(prediction.user_id)}
+                  onFollow={followUser}
+                  onUnfollow={unfollowUser}
                 />
               ))
             )}
@@ -177,6 +266,9 @@ const Index = () => {
                   key={prediction.id} 
                   prediction={prediction}
                   currentUserId={currentUserId}
+                  isFollowing={isFollowing(prediction.user_id)}
+                  onFollow={followUser}
+                  onUnfollow={unfollowUser}
                 />
               ))
             )}
