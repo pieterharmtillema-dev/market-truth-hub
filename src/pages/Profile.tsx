@@ -9,15 +9,20 @@ import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
 import { ExplanationDialog } from "@/components/predictions/ExplanationDialog";
+import { FollowersList } from "@/components/social/FollowersList";
+import { FollowingList } from "@/components/social/FollowingList";
+import { UserSearch } from "@/components/social/UserSearch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
+import { useFollows } from "@/hooks/useFollows";
 
 interface Trade {
   id: number;
@@ -56,9 +61,11 @@ const Profile = () => {
     total_hits: 0,
   });
   const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
+  const [showSocialDialog, setShowSocialDialog] = useState(false);
   
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
+  const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
 
   // Filter to only show resolved predictions (hit/missed) from real trades
   const resolvedTradePredictions = tradePredictions.filter(p => p.status === "hit" || p.status === "missed");
@@ -200,6 +207,61 @@ const Profile = () => {
                   onProfileUpdated={handleProfileUpdated}
                 />
               )}
+              
+              {/* Social/Followers Dialog */}
+              <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="icon" className="relative">
+                    <Users className="w-4 h-4" />
+                    {followers.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                        {followers.length}
+                      </span>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Connections</DialogTitle>
+                  </DialogHeader>
+                  <Tabs defaultValue="followers" className="w-full">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="followers" className="flex-1 gap-1">
+                        Followers
+                        <Badge variant="secondary" className="ml-1 text-xs">{followers.length}</Badge>
+                      </TabsTrigger>
+                      <TabsTrigger value="following" className="flex-1 gap-1">
+                        Following
+                        <Badge variant="secondary" className="ml-1 text-xs">{following.length}</Badge>
+                      </TabsTrigger>
+                      <TabsTrigger value="find" className="flex-1">
+                        Find
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="followers" className="mt-4">
+                      <FollowersList followerIds={followers} />
+                    </TabsContent>
+                    <TabsContent value="following" className="mt-4">
+                      <FollowingList 
+                        followingIds={following}
+                        onFollow={followUser}
+                        onUnfollow={unfollowUser}
+                      />
+                    </TabsContent>
+                    <TabsContent value="find" className="mt-4">
+                      {userId && (
+                        <UserSearch 
+                          currentUserId={userId}
+                          isFollowing={isFollowing}
+                          onFollow={followUser}
+                          onUnfollow={unfollowUser}
+                        />
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </DialogContent>
+              </Dialog>
+
               <Button variant="outline" size="icon">
                 <Share2 className="w-4 h-4" />
               </Button>
