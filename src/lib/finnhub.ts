@@ -1,5 +1,6 @@
-// Finnhub API configuration
-export const FINNHUB_API_KEY = "d4qamehr01quli1bdbq0d4qamehr01quli1bdbqg";
+// Finnhub API client - uses Edge Function proxy for secure API access
+import { supabase } from "@/integrations/supabase/client";
+
 export const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
 
 export interface FinnhubQuote {
@@ -28,6 +29,18 @@ const apiCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 60000; // 1 minute for quotes
 const HISTORICAL_CACHE_TTL = 300000; // 5 minutes for historical data
 
+async function fetchFromProxy(endpoint: string, params: Record<string, any>): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('market-data', {
+    body: { provider: 'finnhub', endpoint, params }
+  });
+  
+  if (error) {
+    throw new Error(`Finnhub API error: ${error.message}`);
+  }
+  
+  return data;
+}
+
 // Get real-time quote for a stock
 export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
   const cacheKey = `quote-${symbol}`;
@@ -38,15 +51,7 @@ export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
   }
 
   try {
-    const url = `${FINNHUB_BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error(`Finnhub API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await fetchFromProxy('quote', { symbol });
     
     // Check if we got valid data (c=0 means no data)
     if (data.c === 0 && data.pc === 0) {
@@ -77,15 +82,7 @@ export async function getStockCandles(
   }
   
   try {
-    const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error(`Finnhub stock candles API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await fetchFromProxy('stockCandles', { symbol, resolution, from, to });
     
     if (data.s === 'no_data' || !data.c || data.c.length === 0) {
       apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
@@ -116,23 +113,7 @@ export async function getForexCandles(
   }
   
   try {
-    const url = `${FINNHUB_BASE_URL}/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
-    const response = await fetch(url);
-    
-    // 403 means forex candles not available on free tier - return null silently
-    if (response.status === 403) {
-      console.log(`[Finnhub] Forex candles not available for ${symbol} (requires paid plan)`);
-      // Cache the failure to avoid repeated requests
-      apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
-      return null;
-    }
-    
-    if (!response.ok) {
-      console.error(`Finnhub forex candles API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await fetchFromProxy('forexCandles', { symbol, resolution, from, to });
     
     if (data.s === 'no_data' || !data.c || data.c.length === 0) {
       apiCache.set(cacheKey, { data: null, timestamp: Date.now() });
@@ -162,15 +143,7 @@ export async function getCryptoCandles(
   }
   
   try {
-    const url = `${FINNHUB_BASE_URL}/crypto/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error(`Finnhub crypto candles API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await fetchFromProxy('cryptoCandles', { symbol, resolution, from, to });
     
     if (data.s === 'no_data' || !data.c || data.c.length === 0) {
       return null;

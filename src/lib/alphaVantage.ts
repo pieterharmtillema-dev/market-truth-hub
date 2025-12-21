@@ -1,5 +1,6 @@
-// Alpha Vantage API configuration
-export const ALPHA_VANTAGE_API_KEY = "7G4U39PZ4TIX2LXA";
+// Alpha Vantage API client - uses Edge Function proxy for secure API access
+import { supabase } from "@/integrations/supabase/client";
+
 export const ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query";
 
 export interface AlphaVantageOHLC {
@@ -18,7 +19,7 @@ const CACHE_TTL = 600000; // 10 minutes - aggressive caching due to rate limits
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 15000; // 15 seconds between requests
 
-async function rateLimitedFetch(url: string): Promise<Response> {
+async function rateLimitedFetch(params: Record<string, string>): Promise<any> {
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
   
@@ -29,7 +30,16 @@ async function rateLimitedFetch(url: string): Promise<Response> {
   }
   
   lastRequestTime = Date.now();
-  return fetch(url);
+  
+  const { data, error } = await supabase.functions.invoke('market-data', {
+    body: { provider: 'alphavantage', endpoint: 'query', params }
+  });
+  
+  if (error) {
+    throw new Error(`Alpha Vantage API error: ${error.message}`);
+  }
+  
+  return data;
 }
 
 // Get intraday data for stocks
@@ -45,15 +55,11 @@ export async function getStockIntraday(
   }
   
   try {
-    const url = `${ALPHA_VANTAGE_BASE_URL}?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await rateLimitedFetch(url);
-    
-    if (!response.ok) {
-      console.error(`[AlphaVantage] Stock intraday API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch({
+      function: 'TIME_SERIES_INTRADAY',
+      symbol,
+      interval
+    });
     
     // Check for rate limit error
     if (data.Note || data['Error Message']) {
@@ -99,15 +105,10 @@ export async function getStockDaily(symbol: string): Promise<Map<string, AlphaVa
   }
   
   try {
-    const url = `${ALPHA_VANTAGE_BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await rateLimitedFetch(url);
-    
-    if (!response.ok) {
-      console.error(`[AlphaVantage] Stock daily API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch({
+      function: 'TIME_SERIES_DAILY',
+      symbol
+    });
     
     if (data.Note || data['Error Message']) {
       console.log(`[AlphaVantage] API limit or error: ${data.Note || data['Error Message']}`);
@@ -155,15 +156,12 @@ export async function getForexIntraday(
   }
   
   try {
-    const url = `${ALPHA_VANTAGE_BASE_URL}?function=FX_INTRADAY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await rateLimitedFetch(url);
-    
-    if (!response.ok) {
-      console.error(`[AlphaVantage] Forex intraday API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch({
+      function: 'FX_INTRADAY',
+      from_symbol: fromCurrency,
+      to_symbol: toCurrency,
+      interval
+    });
     
     if (data.Note || data['Error Message']) {
       console.log(`[AlphaVantage] API limit or error: ${data.Note || data['Error Message']}`);
@@ -210,15 +208,11 @@ export async function getForexDaily(
   }
   
   try {
-    const url = `${ALPHA_VANTAGE_BASE_URL}?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await rateLimitedFetch(url);
-    
-    if (!response.ok) {
-      console.error(`[AlphaVantage] Forex daily API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch({
+      function: 'FX_DAILY',
+      from_symbol: fromCurrency,
+      to_symbol: toCurrency
+    });
     
     if (data.Note || data['Error Message']) {
       console.log(`[AlphaVantage] API limit or error: ${data.Note || data['Error Message']}`);
@@ -264,15 +258,11 @@ export async function getCryptoDaily(
   }
   
   try {
-    const url = `${ALPHA_VANTAGE_BASE_URL}?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await rateLimitedFetch(url);
-    
-    if (!response.ok) {
-      console.error(`[AlphaVantage] Crypto daily API error: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch({
+      function: 'DIGITAL_CURRENCY_DAILY',
+      symbol,
+      market
+    });
     
     if (data.Note || data['Error Message']) {
       console.log(`[AlphaVantage] API limit or error: ${data.Note || data['Error Message']}`);
