@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      exchange_connections: {
+        Row: {
+          api_key_encrypted: string
+          api_secret_encrypted: string
+          created_at: string
+          error_message: string | null
+          exchange: string
+          id: string
+          label: string | null
+          last_sync_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          verified_trades_count: number | null
+        }
+        Insert: {
+          api_key_encrypted: string
+          api_secret_encrypted: string
+          created_at?: string
+          error_message?: string | null
+          exchange: string
+          id?: string
+          label?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          verified_trades_count?: number | null
+        }
+        Update: {
+          api_key_encrypted?: string
+          api_secret_encrypted?: string
+          created_at?: string
+          error_message?: string | null
+          exchange?: string
+          id?: string
+          label?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verified_trades_count?: number | null
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
