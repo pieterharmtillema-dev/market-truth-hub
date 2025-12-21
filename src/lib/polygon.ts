@@ -1,5 +1,6 @@
-// Polygon.io API configuration
-export const POLYGON_API_KEY = "w_4UVsHuoT9cncTKAzRsnUlUabyFN5IY";
+// Polygon.io API client - uses Edge Function proxy for secure API access
+import { supabase } from "@/integrations/supabase/client";
+
 export const POLYGON_BASE_URL = "https://api.polygon.io";
 
 export interface PolygonAggregateBar {
@@ -64,7 +65,7 @@ const CACHE_TTL = 300000; // 5 minutes - extended to reduce API calls
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 15000; // 15 seconds between requests to stay under 5/min
 
-async function rateLimitedFetch(url: string): Promise<Response> {
+async function rateLimitedFetch(provider: string, endpoint: string, params: Record<string, any>): Promise<any> {
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
   
@@ -75,7 +76,16 @@ async function rateLimitedFetch(url: string): Promise<Response> {
   }
   
   lastRequestTime = Date.now();
-  return fetch(url);
+  
+  const { data, error } = await supabase.functions.invoke('market-data', {
+    body: { provider, endpoint, params }
+  });
+  
+  if (error) {
+    throw new Error(`Market data API error: ${error.message}`);
+  }
+  
+  return data;
 }
 
 // Get aggregates (candlestick data) with caching and retry
@@ -95,25 +105,15 @@ export async function getAggregates(
     return cached.data;
   }
 
-  const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&apiKey=${POLYGON_API_KEY}`;
-  
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await rateLimitedFetch(url);
-      
-      if (response.status === 429) {
-        // Rate limited - wait longer and retry
-        const delay = 30000 + (attempt * 15000); // 30s, 45s
-        console.log(`[Polygon] Rate limited (429), waiting ${delay}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch aggregates: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await rateLimitedFetch('polygon', 'aggregates', {
+        ticker,
+        multiplier,
+        timespan,
+        from,
+        to
+      });
       
       // Cache successful response
       apiCache.set(cacheKey, { data, timestamp: Date.now() });
@@ -137,14 +137,7 @@ export async function getPreviousClose(ticker: string): Promise<any> {
     return cached.data;
   }
 
-  const url = `${POLYGON_BASE_URL}/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${POLYGON_API_KEY}`;
-  
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch previous close: ${response.statusText}`);
-  }
-  
-  const data = await response.json();
+  const data = await rateLimitedFetch('polygon', 'previousClose', { ticker });
   apiCache.set(cacheKey, { data, timestamp: Date.now() });
   
   return data;
@@ -159,14 +152,7 @@ export async function getTickerSnapshot(ticker: string, market: "stocks" | "cryp
     return cached.data;
   }
 
-  const url = `${POLYGON_BASE_URL}/v2/snapshot/locale/us/markets/${market}/tickers/${ticker}?apiKey=${POLYGON_API_KEY}`;
-  
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
-  }
-  
-  const data = await response.json();
+  const data = await rateLimitedFetch('polygon', 'snapshot', { ticker, market });
   apiCache.set(cacheKey, { data, timestamp: Date.now() });
   
   return data;
@@ -182,12 +168,7 @@ export async function getLastTrade(ticker: string): Promise<{ price: number; tim
   }
 
   try {
-    const url = `${POLYGON_BASE_URL}/v2/last/trade/${ticker}?apiKey=${POLYGON_API_KEY}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) return null;
-    
-    const data = await response.json();
+    const data = await rateLimitedFetch('polygon', 'lastTrade', { ticker });
     const result = data.results ? { price: data.results.p, timestamp: data.results.t } : null;
     
     if (result) {
