@@ -12,13 +12,16 @@ import { ExplanationDialog } from "@/components/predictions/ExplanationDialog";
 import { FollowersList } from "@/components/social/FollowersList";
 import { FollowingList } from "@/components/social/FollowingList";
 import { UserSearch } from "@/components/social/UserSearch";
+import { ConnectExchangeButton } from "@/components/exchange/ConnectExchangeButton";
+import { ExchangeStatusBadge } from "@/components/exchange/ExchangeStatusBadge";
+import { useExchangeConnections } from "@/hooks/useExchangeConnections";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, Calendar } from "lucide-react";
+import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, Calendar, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
@@ -66,6 +69,7 @@ const Profile = () => {
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
   const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
+  const { connections, loading: loadingExchanges } = useExchangeConnections();
 
   // Filter to only show resolved predictions (hit/missed) from real trades
   const resolvedTradePredictions = tradePredictions.filter(p => p.status === "hit" || p.status === "missed");
@@ -300,6 +304,40 @@ const Profile = () => {
 
         {/* Trader Status */}
         <TraderStatusCard />
+
+        {/* Exchange Connections */}
+        {userId && (
+          <Card variant="glass" className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Exchange Connections</h3>
+              </div>
+              <ConnectExchangeButton variant="outline" size="sm" />
+            </div>
+            
+            {loadingExchanges ? (
+              <Skeleton className="h-12 w-full" />
+            ) : connections.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Connect your exchange to automatically sync and verify your trades.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {connections.map((conn) => (
+                  <ExchangeStatusBadge
+                    key={conn.id}
+                    exchange={conn.exchange}
+                    status={conn.status}
+                    lastSyncAt={conn.last_sync_at}
+                    verifiedTradesCount={conn.verified_trades_count}
+                    showDetails
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <DefaultStatsGrid />
