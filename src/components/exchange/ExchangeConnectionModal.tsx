@@ -24,6 +24,9 @@ import {
   RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import binanceLogo from "@/assets/binance-logo.webp";
+import bitvavoLogo from "@/assets/bitvavo-logo.png";
+import coinbaseLogo from "@/assets/coinbase-logo.webp";
 
 interface ExchangeConnectionModalProps {
   open: boolean;
@@ -35,14 +38,14 @@ type Exchange = "binance" | "bitvavo" | "coinbase";
 interface ExchangeInfo {
   id: Exchange;
   name: string;
-  icon: string;
+  logo: string;
   color: string;
 }
 
 const EXCHANGES: ExchangeInfo[] = [
-  { id: "binance", name: "Binance", icon: "🟡", color: "bg-yellow-500/10 border-yellow-500/30" },
-  { id: "bitvavo", name: "Bitvavo", icon: "🔵", color: "bg-blue-500/10 border-blue-500/30" },
-  { id: "coinbase", name: "Coinbase", icon: "🔷", color: "bg-blue-600/10 border-blue-600/30" },
+  { id: "binance", name: "Binance", logo: binanceLogo, color: "bg-yellow-500/10 border-yellow-500/30" },
+  { id: "bitvavo", name: "Bitvavo", logo: bitvavoLogo, color: "bg-blue-500/10 border-blue-500/30" },
+  { id: "coinbase", name: "Coinbase", logo: coinbaseLogo, color: "bg-blue-600/10 border-blue-600/30" },
 ];
 
 export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnectionModalProps) {
@@ -135,7 +138,7 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{exchange.icon}</span>
+                  <img src={exchange.logo} alt={exchange.name} className="h-8 w-8 rounded-md object-contain" />
                   <div>
                     <div className="font-medium">{exchange.name}</div>
                     {connection && (
@@ -227,7 +230,7 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
         </Button>
 
         <div className={`p-4 rounded-lg border ${exchange.color} flex items-center gap-3`}>
-          <span className="text-2xl">{exchange.icon}</span>
+          <img src={exchange.logo} alt={exchange.name} className="h-8 w-8 rounded-md object-contain" />
           <span className="font-medium">{exchange.name}</span>
         </div>
 
