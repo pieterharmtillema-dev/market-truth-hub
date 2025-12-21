@@ -24,7 +24,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import binanceLogo from "@/assets/binance-logo.webp";
+import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
 
