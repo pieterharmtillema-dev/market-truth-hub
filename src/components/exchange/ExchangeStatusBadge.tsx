@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import binanceLogo from "@/assets/binance-logo.png";
+import bitvavoLogo from "@/assets/bitvavo-logo.png";
+import coinbaseLogo from "@/assets/coinbase-logo.webp";
 
 interface ExchangeStatusBadgeProps {
   exchange: string;
@@ -16,10 +19,10 @@ const EXCHANGE_NAMES: Record<string, string> = {
   coinbase: "Coinbase",
 };
 
-const EXCHANGE_ICONS: Record<string, string> = {
-  binance: "🟡",
-  bitvavo: "🔵",
-  coinbase: "🔷",
+const EXCHANGE_LOGOS: Record<string, string> = {
+  binance: binanceLogo,
+  bitvavo: bitvavoLogo,
+  coinbase: coinbaseLogo,
 };
 
 export function ExchangeStatusBadge({
@@ -30,13 +33,17 @@ export function ExchangeStatusBadge({
   showDetails = false,
 }: ExchangeStatusBadgeProps) {
   const exchangeName = EXCHANGE_NAMES[exchange] || exchange;
-  const exchangeIcon = EXCHANGE_ICONS[exchange] || "💹";
+  const exchangeLogo = EXCHANGE_LOGOS[exchange];
+
+  const LogoImage = exchangeLogo ? (
+    <img src={exchangeLogo} alt={exchangeName} className="h-4 w-4 rounded object-contain" />
+  ) : null;
 
   if (status === "connected") {
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="success" className="gap-1">
-          <span>{exchangeIcon}</span>
+        <Badge variant="success" className="gap-1.5">
+          {LogoImage}
           {exchangeName}
           <CheckCircle2 className="h-3 w-3" />
         </Badge>
@@ -56,8 +63,8 @@ export function ExchangeStatusBadge({
 
   if (status === "invalid" || status === "revoked") {
     return (
-      <Badge variant="destructive" className="gap-1">
-        <span>{exchangeIcon}</span>
+      <Badge variant="destructive" className="gap-1.5">
+        {LogoImage}
         {exchangeName}
         <XCircle className="h-3 w-3" />
         {status === "revoked" ? "Revoked" : "Invalid"}
@@ -67,8 +74,8 @@ export function ExchangeStatusBadge({
 
   if (status === "pending") {
     return (
-      <Badge variant="warning" className="gap-1">
-        <span>{exchangeIcon}</span>
+      <Badge variant="warning" className="gap-1.5">
+        {LogoImage}
         {exchangeName}
         <Clock className="h-3 w-3" />
         Pending
@@ -77,8 +84,8 @@ export function ExchangeStatusBadge({
   }
 
   return (
-    <Badge variant="outline" className="gap-1">
-      <span>{exchangeIcon}</span>
+    <Badge variant="outline" className="gap-1.5">
+      {LogoImage}
       {exchangeName}
       <AlertCircle className="h-3 w-3" />
     </Badge>
