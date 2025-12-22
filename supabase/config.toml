@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.exchange-connect]
 verify_jwt = false
+
+[functions.calculate-trade-metrics]
+verify_jwt = false

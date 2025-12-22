@@ -127,10 +127,17 @@ export type Database = {
           created_at: string | null
           entry_price: number
           entry_timestamp: string
+          estimated_risk: number | null
+          exchange_source: string | null
           exit_price: number | null
           exit_timestamp: string | null
+          fees_total: number | null
           id: number
+          is_exchange_verified: boolean | null
           is_simulation: boolean
+          mae: number | null
+          metrics_calculated_at: string | null
+          mfe: number | null
           open: boolean
           pip_size: number | null
           pip_value: number | null
@@ -140,6 +147,7 @@ export type Database = {
           pnl_pct: number | null
           quantity: number
           quantity_lots: number | null
+          r_multiple: number | null
           side: string
           symbol: string
           tick_size: number | null
@@ -153,10 +161,17 @@ export type Database = {
           created_at?: string | null
           entry_price: number
           entry_timestamp: string
+          estimated_risk?: number | null
+          exchange_source?: string | null
           exit_price?: number | null
           exit_timestamp?: string | null
+          fees_total?: number | null
           id?: never
+          is_exchange_verified?: boolean | null
           is_simulation?: boolean
+          mae?: number | null
+          metrics_calculated_at?: string | null
+          mfe?: number | null
           open?: boolean
           pip_size?: number | null
           pip_value?: number | null
@@ -166,6 +181,7 @@ export type Database = {
           pnl_pct?: number | null
           quantity: number
           quantity_lots?: number | null
+          r_multiple?: number | null
           side: string
           symbol: string
           tick_size?: number | null
@@ -179,10 +195,17 @@ export type Database = {
           created_at?: string | null
           entry_price?: number
           entry_timestamp?: string
+          estimated_risk?: number | null
+          exchange_source?: string | null
           exit_price?: number | null
           exit_timestamp?: string | null
+          fees_total?: number | null
           id?: never
+          is_exchange_verified?: boolean | null
           is_simulation?: boolean
+          mae?: number | null
+          metrics_calculated_at?: string | null
+          mfe?: number | null
           open?: boolean
           pip_size?: number | null
           pip_value?: number | null
@@ -192,6 +215,7 @@ export type Database = {
           pnl_pct?: number | null
           quantity?: number
           quantity_lots?: number | null
+          r_multiple?: number | null
           side?: string
           symbol?: string
           tick_size?: number | null
@@ -302,6 +326,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      price_cache: {
+        Row: {
+          close: number
+          created_at: string
+          date: string
+          high: number
+          id: string
+          low: number
+          open: number
+          provider: string
+          symbol: string
+          volume: number | null
+        }
+        Insert: {
+          close: number
+          created_at?: string
+          date: string
+          high: number
+          id?: string
+          low: number
+          open: number
+          provider?: string
+          symbol: string
+          volume?: number | null
+        }
+        Update: {
+          close?: number
+          created_at?: string
+          date?: string
+          high?: number
+          id?: string
+          low?: number
+          open?: number
+          provider?: string
+          symbol?: string
+          volume?: number | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -510,6 +573,66 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_trading_metrics: {
+        Row: {
+          accuracy_score: number | null
+          api_status: string | null
+          average_r: number | null
+          created_at: string
+          id: string
+          is_verified: boolean
+          last_api_sync_at: string | null
+          positive_r_percentage: number | null
+          r_variance: number | null
+          total_breakeven: number
+          total_losses: number
+          total_r: number | null
+          total_verified_trades: number
+          total_wins: number
+          updated_at: string
+          user_id: string
+          win_rate: number | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          api_status?: string | null
+          average_r?: number | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          last_api_sync_at?: string | null
+          positive_r_percentage?: number | null
+          r_variance?: number | null
+          total_breakeven?: number
+          total_losses?: number
+          total_r?: number | null
+          total_verified_trades?: number
+          total_wins?: number
+          updated_at?: string
+          user_id: string
+          win_rate?: number | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          api_status?: string | null
+          average_r?: number | null
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          last_api_sync_at?: string | null
+          positive_r_percentage?: number | null
+          r_variance?: number | null
+          total_breakeven?: number
+          total_losses?: number
+          total_r?: number | null
+          total_verified_trades?: number
+          total_wins?: number
+          updated_at?: string
+          user_id?: string
+          win_rate?: number | null
         }
         Relationships: []
       }
