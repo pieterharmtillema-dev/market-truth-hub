@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,263 +20,151 @@ interface Position {
   is_exchange_verified: boolean;
   exchange_source: string | null;
   fees_total: number;
-  mae: number | null;
-  mfe: number | null;
+  asset_class: string | null;
   r_multiple: number | null;
   estimated_risk: number | null;
 }
 
-interface PriceCandle {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
+// Volatility lookup table - conservative daily volatility percentages
+// These represent typical adverse price movements per asset class
+const VOLATILITY_TABLE: Record<string, number> = {
+  // Major cryptocurrencies
+  'BTC': 0.02,      // 2% - Bitcoin
+  'ETH': 0.025,     // 2.5% - Ethereum
+  'SOL': 0.03,      // 3% - Solana
+  'XRP': 0.03,      // 3% - Ripple
+  'BNB': 0.025,     // 2.5% - Binance Coin
+  'ADA': 0.035,     // 3.5% - Cardano
+  'DOT': 0.035,     // 3.5% - Polkadot
+  'DOGE': 0.04,     // 4% - Dogecoin
+  'AVAX': 0.035,    // 3.5% - Avalanche
+  'MATIC': 0.035,   // 3.5% - Polygon
+  'LINK': 0.03,     // 3% - Chainlink
+  
+  // Default by asset class
+  'crypto_major': 0.025,    // 2.5% - Large cap crypto
+  'crypto_alt': 0.04,       // 4% - Alt coins
+  'crypto_small': 0.05,     // 5% - Small cap / meme coins
+  'stock': 0.015,           // 1.5% - Stocks
+  'forex': 0.008,           // 0.8% - Forex
+  'futures': 0.02,          // 2% - Futures
+  'default': 0.03,          // 3% - Default fallback
+};
 
-interface CachedPrice {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
+// Known major crypto symbols for classification
+const MAJOR_CRYPTO = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'AVAX', 'MATIC', 'LINK'];
+const MEME_COINS = ['DOGE', 'SHIB', 'PEPE', 'FLOKI', 'BONK', 'WIF', 'MEME'];
 
-// Fetch price data with aggressive caching
-async function fetchCachedPrices(
-  supabase: SupabaseClient,
-  symbol: string,
-  startDate: Date,
-  endDate: Date
-): Promise<PriceCandle[]> {
-  const startStr = startDate.toISOString().split('T')[0];
-  const endStr = endDate.toISOString().split('T')[0];
-
-  // Check cache first
-  const { data: cached, error: cacheError } = await supabase
-    .from('price_cache')
-    .select('date, open, high, low, close')
-    .eq('symbol', symbol.toUpperCase())
-    .gte('date', startStr)
-    .lte('date', endStr)
-    .order('date', { ascending: true });
-
-  if (!cacheError && cached && cached.length > 0) {
-    console.log(`Cache hit for ${symbol}: ${cached.length} candles`);
-    return (cached as CachedPrice[]).map(c => ({
-      date: c.date,
-      open: Number(c.open),
-      high: Number(c.high),
-      low: Number(c.low),
-      close: Number(c.close),
-    }));
-  }
-
-  // Fetch from Finnhub (better rate limits than Polygon)
-  const finnhubKey = Deno.env.get('FINNHUB_API_KEY');
-  if (!finnhubKey) {
-    console.warn('FINNHUB_API_KEY not set, using fallback risk estimation');
-    return [];
-  }
-
-  try {
-    const from = Math.floor(startDate.getTime() / 1000);
-    const to = Math.floor(endDate.getTime() / 1000);
-    
-    // Normalize symbol for Finnhub
-    const normalizedSymbol = normalizeSymbolForFinnhub(symbol);
-    
-    const url = `https://finnhub.io/api/v1/stock/candle?symbol=${normalizedSymbol}&resolution=D&from=${from}&to=${to}&token=${finnhubKey}`;
-    console.log(`Fetching from Finnhub: ${normalizedSymbol}`);
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error(`Finnhub error: ${response.status}`);
-      return [];
-    }
-    
-    const data = await response.json();
-    
-    if (data.s === 'no_data' || !data.t) {
-      console.log(`No data from Finnhub for ${symbol}`);
-      return [];
-    }
-    
-    const candles: PriceCandle[] = [];
-    for (let i = 0; i < data.t.length; i++) {
-      const date = new Date(data.t[i] * 1000).toISOString().split('T')[0];
-      candles.push({
-        date,
-        open: data.o[i],
-        high: data.h[i],
-        low: data.l[i],
-        close: data.c[i],
-      });
-    }
-    
-    // Cache the results
-    if (candles.length > 0) {
-      const cacheInserts = candles.map(c => ({
-        symbol: symbol.toUpperCase(),
-        date: c.date,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-        provider: 'finnhub',
-      }));
-      
-      // Insert into cache - ignore conflicts
-      try {
-        for (const insert of cacheInserts) {
-          const { error } = await supabase
-            .from('price_cache')
-            .insert(insert);
-          // Ignore duplicate key errors
-          if (error && !error.message.includes('duplicate')) {
-            console.error('Cache insert error:', error);
-          }
-        }
-      } catch (e) {
-        console.error('Cache batch insert error:', e);
-      }
-      
-      console.log(`Cached ${candles.length} candles for ${symbol}`);
-    }
-    
-    return candles;
-  } catch (error) {
-    console.error(`Error fetching prices for ${symbol}:`, error);
-    return [];
-  }
-}
-
-// Normalize symbol for Finnhub API
-function normalizeSymbolForFinnhub(symbol: string): string {
-  // Remove common suffixes
-  let normalized = symbol.toUpperCase()
+// Get volatility for a symbol
+function getVolatility(symbol: string, assetClass: string | null): number {
+  // Normalize symbol - remove common suffixes
+  const normalized = symbol.toUpperCase()
     .replace(/USD$/, '')
     .replace(/USDT$/, '')
     .replace(/-USD$/, '')
-    .replace(/\/USD$/, '');
+    .replace(/\/USD$/, '')
+    .replace(/PERP$/, '')
+    .replace(/-PERP$/, '');
   
-  // Add exchange prefix for crypto
-  if (isCrypto(symbol)) {
-    return `BINANCE:${normalized}USDT`;
+  // Check direct lookup first
+  if (VOLATILITY_TABLE[normalized]) {
+    return VOLATILITY_TABLE[normalized];
   }
   
-  return normalized;
-}
-
-function isCrypto(symbol: string): boolean {
-  const cryptoSymbols = ['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOT', 'DOGE', 'AVAX', 'MATIC', 'LINK'];
-  const upper = symbol.toUpperCase();
-  return cryptoSymbols.some(c => upper.includes(c));
-}
-
-// Calculate MAE (Maximum Adverse Excursion) - how far price moved against the trade
-function calculateMAE(
-  candles: PriceCandle[],
-  entryPrice: number,
-  side: string
-): number {
-  if (candles.length === 0) return 0;
-  
-  let maxAdverseMove = 0;
-  
-  for (const candle of candles) {
-    let adverseMove: number;
-    
-    if (side === 'buy' || side === 'long') {
-      // For long positions, adverse is when price goes below entry
-      adverseMove = entryPrice - candle.low;
-    } else {
-      // For short positions, adverse is when price goes above entry
-      adverseMove = candle.high - entryPrice;
+  // Check asset class
+  if (assetClass) {
+    const ac = assetClass.toLowerCase();
+    if (ac === 'crypto') {
+      // Classify crypto by symbol
+      if (MAJOR_CRYPTO.includes(normalized)) {
+        return VOLATILITY_TABLE['crypto_major'];
+      }
+      if (MEME_COINS.includes(normalized)) {
+        return VOLATILITY_TABLE['crypto_small'];
+      }
+      return VOLATILITY_TABLE['crypto_alt'];
     }
-    
-    if (adverseMove > maxAdverseMove) {
-      maxAdverseMove = adverseMove;
-    }
+    if (ac === 'forex' || ac === 'fx') return VOLATILITY_TABLE['forex'];
+    if (ac === 'stock' || ac === 'equity') return VOLATILITY_TABLE['stock'];
+    if (ac === 'futures') return VOLATILITY_TABLE['futures'];
   }
   
-  return maxAdverseMove;
-}
-
-// Calculate MFE (Maximum Favorable Excursion) - how far price moved in favor
-function calculateMFE(
-  candles: PriceCandle[],
-  entryPrice: number,
-  side: string
-): number {
-  if (candles.length === 0) return 0;
-  
-  let maxFavorableMove = 0;
-  
-  for (const candle of candles) {
-    let favorableMove: number;
-    
-    if (side === 'buy' || side === 'long') {
-      // For long positions, favorable is when price goes above entry
-      favorableMove = candle.high - entryPrice;
-    } else {
-      // For short positions, favorable is when price goes below entry
-      favorableMove = entryPrice - candle.low;
+  // Infer from symbol patterns
+  if (normalized.endsWith('BTC') || normalized.startsWith('BTC') || 
+      normalized.includes('USDT') || normalized.includes('USD')) {
+    // Likely crypto
+    if (MAJOR_CRYPTO.some(c => normalized.includes(c))) {
+      return VOLATILITY_TABLE['crypto_major'];
     }
-    
-    if (favorableMove > maxFavorableMove) {
-      maxFavorableMove = favorableMove;
-    }
+    return VOLATILITY_TABLE['crypto_alt'];
   }
   
-  return maxFavorableMove;
+  // Forex pairs (6 character codes like EURUSD)
+  if (/^[A-Z]{6}$/.test(normalized)) {
+    return VOLATILITY_TABLE['forex'];
+  }
+  
+  return VOLATILITY_TABLE['default'];
 }
 
-// Estimate risk using MAE, with fallback to position-based estimation
-function estimateRisk(
-  mae: number,
+/**
+ * Calculate estimated risk using Volatility-Adjusted Position Risk model
+ * 
+ * Step 1: Position Notional = entry_price × quantity
+ * Step 2: Estimated Risk = Position Notional × Volatility %
+ * Step 3: Final Risk = max(Estimated Risk, abs(realized loss))
+ * 
+ * This ensures we never underestimate risk on losing trades
+ */
+function calculateVolatilityAdjustedRisk(
   entryPrice: number,
   quantity: number,
-  actualLoss: number | null
+  symbol: string,
+  assetClass: string | null,
+  netPnl: number
 ): number {
-  // Risk must be at least as large as the largest loss experienced
-  const minRisk = actualLoss !== null && actualLoss < 0 ? Math.abs(actualLoss) : 0;
+  // Step 1: Calculate position notional
+  const positionNotional = entryPrice * Math.abs(quantity);
   
-  // Calculate risk from MAE
-  const maeRisk = mae * quantity;
+  // Step 2: Get volatility and calculate estimated risk
+  const volatility = getVolatility(symbol, assetClass);
+  const estimatedRisk = positionNotional * volatility;
   
-  // If no MAE data, use conservative estimate (2% of position value)
-  const fallbackRisk = entryPrice * quantity * 0.02;
+  // Step 3: Apply safety rule - risk cannot be less than actual loss
+  const actualLoss = netPnl < 0 ? Math.abs(netPnl) : 0;
+  const finalRisk = Math.max(estimatedRisk, actualLoss, 0.01); // Ensure non-zero
   
-  const calculatedRisk = maeRisk > 0 ? maeRisk : fallbackRisk;
+  console.log(`Risk for ${symbol}: Notional=${positionNotional.toFixed(2)}, Vol=${(volatility*100).toFixed(1)}%, Est=${estimatedRisk.toFixed(2)}, Final=${finalRisk.toFixed(2)}`);
   
-  // Return the larger of calculated risk or actual loss
-  return Math.max(calculatedRisk, minRisk, 0.01); // Ensure non-zero risk
+  return finalRisk;
 }
 
-// Calculate R-Multiple: PnL / Risk
-function calculateRMultiple(pnl: number, risk: number): number {
+// Calculate R-Multiple: Net PnL / Risk
+function calculateRMultiple(netPnl: number, risk: number): number {
   if (risk <= 0) return 0;
-  return pnl / risk;
+  return netPnl / risk;
 }
 
 // Calculate accuracy score (0-100)
+// Combines: Average R (expectancy), % of trades with R > 0, Consistency (variance penalty)
 function calculateAccuracyScore(
   averageR: number,
   positiveRPercentage: number,
   rVariance: number
 ): number {
-  // Normalize average R (typical range -2 to +3)
-  // Map to 0-40 range
-  const avgRScore = Math.min(40, Math.max(0, (averageR + 1) * 10));
+  // Component 1: Average R contribution (0-40 points)
+  // Maps averageR from range [-2, +3] to [0, 40]
+  // averageR of 0 = 20 points, +1R = 30 points, +2R = 40 points
+  const avgRScore = Math.min(40, Math.max(0, (averageR + 2) * 8));
   
-  // Positive R percentage (0-100) maps to 0-40
-  const positiveRScore = positiveRPercentage * 0.4;
+  // Component 2: Positive R percentage (0-40 points)
+  // 100% positive R trades = 40 points
+  const positiveRScore = (positiveRPercentage / 100) * 40;
   
-  // Consistency bonus (penalize high variance)
-  // Variance of 1 = no penalty, variance of 4+ = max penalty
-  const variancePenalty = Math.min(20, Math.max(0, (rVariance - 1) * 5));
+  // Component 3: Consistency bonus (0-20 points)
+  // Low variance = high consistency = more points
+  // Variance < 1 = full 20 points, variance > 4 = 0 points
+  const variancePenalty = Math.min(20, Math.max(0, rVariance * 5));
   const consistencyScore = 20 - variancePenalty;
   
   const totalScore = avgRScore + positiveRScore + consistencyScore;
@@ -288,7 +176,6 @@ function calculateAccuracyScore(
 // Calculate variance of R-multiples
 function calculateVariance(values: number[]): number {
   if (values.length < 2) return 0;
-  
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
   return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
@@ -325,7 +212,7 @@ serve(async (req) => {
 
     console.log(`Calculating metrics for user ${user.id}`);
 
-    // Check if user has exchange connection
+    // Check if user has active exchange connection
     const { data: connections } = await supabase
       .from('exchange_connections')
       .select('exchange, status, last_sync_at')
@@ -353,7 +240,8 @@ serve(async (req) => {
     }
 
     if (!positions || positions.length === 0) {
-      // No positions, return empty metrics
+      console.log('No closed positions found');
+      
       const emptyMetrics = {
         total_verified_trades: 0,
         win_rate: null,
@@ -367,6 +255,13 @@ serve(async (req) => {
         .upsert({
           user_id: user.id,
           ...emptyMetrics,
+          total_wins: 0,
+          total_losses: 0,
+          total_breakeven: 0,
+          average_r: null,
+          total_r: null,
+          positive_r_percentage: null,
+          r_variance: null,
           last_api_sync_at: lastSyncAt,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
@@ -377,7 +272,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing ${positions.length} closed positions`);
+    console.log(`Processing ${positions.length} closed positions using Volatility-Adjusted Risk model`);
 
     const rMultiples: number[] = [];
     let totalWins = 0;
@@ -392,28 +287,25 @@ serve(async (req) => {
       // Skip if no exit data
       if (!pos.exit_price || !pos.exit_timestamp) continue;
       
-      const entryDate = new Date(pos.entry_timestamp);
-      const exitDate = new Date(pos.exit_timestamp);
-      
-      // Fetch cached price data for the trade period
-      const candles = await fetchCachedPrices(supabase, pos.symbol, entryDate, exitDate);
-      
-      // Calculate MAE and MFE
-      const mae = calculateMAE(candles, pos.entry_price, pos.side);
-      const mfe = calculateMFE(candles, pos.entry_price, pos.side);
-      
       // Calculate net PnL (after fees)
       const fees = pos.fees_total || 0;
       const netPnl = (pos.pnl || 0) - fees;
       
-      // Estimate risk
-      const estimatedRisk = estimateRisk(mae, pos.entry_price, pos.quantity, netPnl < 0 ? netPnl : null);
+      // Calculate volatility-adjusted risk (NO market data API calls needed!)
+      const estimatedRisk = calculateVolatilityAdjustedRisk(
+        pos.entry_price,
+        pos.quantity,
+        pos.symbol,
+        pos.asset_class,
+        netPnl
+      );
       
       // Calculate R-Multiple
       const rMultiple = calculateRMultiple(netPnl, estimatedRisk);
       rMultiples.push(rMultiple);
       
       // Count win/loss/breakeven
+      // Win = Net PnL > 0, Loss = Net PnL < 0
       if (netPnl > 0.01) {
         totalWins++;
       } else if (netPnl < -0.01) {
@@ -427,37 +319,46 @@ serve(async (req) => {
         verifiedCount++;
       }
       
-      // Update position with metrics
-      await supabase
+      // Update position with calculated metrics
+      const { error: updateError } = await supabase
         .from('positions')
         .update({
-          mae,
-          mfe,
           r_multiple: rMultiple,
           estimated_risk: estimatedRisk,
           metrics_calculated_at: new Date().toISOString(),
         })
         .eq('id', pos.id);
+      
+      if (updateError) {
+        console.error(`Error updating position ${pos.id}:`, updateError);
+      }
     }
 
     // Calculate aggregate metrics
     const totalTrades = totalWins + totalLosses + totalBreakeven;
     const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : null;
+    
     const averageR = rMultiples.length > 0 
       ? rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length 
-      : 0;
-    const totalR = rMultiples.reduce((a, b) => a + b, 0);
+      : null;
+    
+    const totalR = rMultiples.length > 0 
+      ? rMultiples.reduce((a, b) => a + b, 0) 
+      : null;
+    
     const positiveRPercentage = rMultiples.length > 0
       ? (rMultiples.filter(r => r > 0).length / rMultiples.length) * 100
-      : 0;
-    const rVariance = calculateVariance(rMultiples);
+      : null;
     
-    // Calculate accuracy score
-    const accuracyScore = rMultiples.length >= 30
+    const rVariance = rMultiples.length >= 2 ? calculateVariance(rMultiples) : 0;
+    
+    // Calculate accuracy score (only if 30+ trades)
+    const accuracyScore = rMultiples.length >= 30 && averageR !== null && positiveRPercentage !== null
       ? calculateAccuracyScore(averageR, positiveRPercentage, rVariance)
       : null;
     
     // Determine verification status
+    // Must have active exchange connection AND 30+ verified trades
     const isVerified = hasActiveConnection && verifiedCount >= 30;
 
     const metrics = {
@@ -491,7 +392,12 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Metrics calculated: ${verifiedCount} verified trades, Win Rate: ${winRate?.toFixed(1)}%, Accuracy: ${accuracyScore?.toFixed(1)}`);
+    console.log(`Metrics calculated successfully:
+      - Total trades: ${totalTrades}
+      - Verified: ${verifiedCount}
+      - Win Rate: ${winRate?.toFixed(1)}%
+      - Avg R: ${averageR?.toFixed(2)}
+      - Accuracy Score: ${accuracyScore?.toFixed(0) ?? 'N/A (need 30+ trades)'}`);
 
     return new Response(
       JSON.stringify({ 
@@ -499,23 +405,25 @@ serve(async (req) => {
           total_verified_trades: verifiedCount,
           total_wins: totalWins,
           total_losses: totalLosses,
+          total_breakeven: totalBreakeven,
           win_rate: winRate,
           average_r: averageR,
+          total_r: totalR,
           positive_r_percentage: positiveRPercentage,
           accuracy_score: accuracyScore,
           is_verified: isVerified,
           api_status: hasActiveConnection ? 'connected' : 'disconnected',
-          last_sync_at: lastSyncAt,
         },
-        trades_processed: totalTrades 
+        trades_processed: totalTrades,
+        volatility_model: 'v1',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
-  } catch (error) {
-    console.error('Error calculating metrics:', error);
+  } catch (error: unknown) {
+    console.error('Error in calculate-trade-metrics:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
