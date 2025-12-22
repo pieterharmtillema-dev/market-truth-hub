@@ -194,7 +194,7 @@ export function VerifiedMetricsCard({
                 "font-mono font-semibold",
                 (metrics.average_r ?? 0) > 0 ? "text-gain" : "text-loss"
               )}>
-                {metrics.average_r !== null ? 
+                {metrics.average_r != null ? 
                   `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(2)}R` : 
                   '--'
                 }
@@ -203,7 +203,7 @@ export function VerifiedMetricsCard({
             <div className="text-center">
               <div className="text-xs text-muted-foreground">+R Rate</div>
               <div className="font-mono font-semibold text-foreground">
-                {metrics.positive_r_percentage !== null ? 
+                {metrics.positive_r_percentage != null ? 
                   `${metrics.positive_r_percentage.toFixed(0)}%` : 
                   '--'
                 }
@@ -279,13 +279,13 @@ export function MetricsBadges({ metrics }: { metrics: TradingMetrics | null }) {
           </Tooltip>
         </TooltipProvider>
       )}
-      {metrics.win_rate !== null && (
+      {metrics.win_rate != null && (
         <Badge variant="outline" className="gap-1 text-xs">
           <TrendingUp className="h-3 w-3" />
           {metrics.win_rate.toFixed(0)}% WR
         </Badge>
       )}
-      {metrics.accuracy_score !== null && metrics.total_verified_trades >= 30 && (
+      {metrics.accuracy_score != null && metrics.total_verified_trades >= 30 && (
         <Badge variant="outline" className="gap-1 text-xs">
           <Target className="h-3 w-3" />
           {metrics.accuracy_score.toFixed(0)} Score
