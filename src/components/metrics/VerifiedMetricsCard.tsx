@@ -113,9 +113,9 @@ export function VerifiedMetricsCard({
               <span className={cn(
                 "font-mono font-bold",
                 compact ? "text-xl" : "text-2xl",
-                winRate !== null && winRate >= 50 ? "text-gain" : "text-loss"
+                winRate != null && winRate >= 50 ? "text-gain" : "text-loss"
               )}>
-                {winRate !== null ? `${winRate.toFixed(1)}%` : '--'}
+                {winRate != null ? `${winRate.toFixed(1)}%` : '--'}
               </span>
             </div>
             {metrics && (
@@ -157,7 +157,7 @@ export function VerifiedMetricsCard({
               </TooltipProvider>
             </div>
             <div className="flex items-baseline gap-1">
-              {accuracyScore !== null && hasEnoughTrades ? (
+              {accuracyScore != null && hasEnoughTrades ? (
                 <>
                   <span className={cn(
                     "font-mono font-bold",
