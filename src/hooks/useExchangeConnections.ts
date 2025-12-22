@@ -88,11 +88,18 @@ export function useExchangeConnections() {
     try {
       const response = await supabase.functions.invoke("exchange-connect", {
         method: "DELETE",
-        body: { exchange },
+        body: JSON.stringify({ exchange }),
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.error) {
         return { success: false, error: response.error.message };
+      }
+
+      if (response.data?.error) {
+        return { success: false, error: response.data.error };
       }
 
       // Refresh connections after disconnection
