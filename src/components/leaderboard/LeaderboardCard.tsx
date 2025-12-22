@@ -1,7 +1,8 @@
-import { Trophy, Target, Award, CheckCircle } from "lucide-react";
+import { Trophy, Target, Award, CheckCircle, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { TraderType, tradingStyleLabels, marketFocusLabels } from "@/data/mockData";
 
@@ -20,6 +21,9 @@ export interface LeaderData {
     totalPredictions: number;
     avgReturn: number;
     winStreak: number;
+    winRate?: number | null;
+    accuracyScore?: number | null;
+    isExchangeVerified?: boolean;
   };
   change: number;
 }
@@ -101,8 +105,25 @@ export function LeaderboardCard({ leader, onClick }: LeaderboardCardProps) {
           {/* Stats */}
           <div className="text-right">
             <div className="flex items-center gap-1 justify-end">
+              {leader.stats.isExchangeVerified && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <ShieldCheck className="w-3.5 h-3.5 text-gain" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Exchange-verified trading history</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <Target className="w-3 h-3 text-primary" />
-              <span className="font-mono font-bold text-lg text-primary">{leader.stats.accuracy}%</span>
+              <span className="font-mono font-bold text-lg text-primary">
+                {leader.stats.accuracyScore !== undefined && leader.stats.accuracyScore !== null 
+                  ? leader.stats.accuracyScore.toFixed(0)
+                  : leader.stats.accuracy}
+                {leader.stats.accuracyScore !== undefined && leader.stats.accuracyScore !== null ? '' : '%'}
+              </span>
             </div>
             <div className={cn(
               "text-xs font-mono",
@@ -133,9 +154,23 @@ export function LeaderboardCard({ leader, onClick }: LeaderboardCardProps) {
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
+        <div className={cn(
+          "grid gap-2 mt-3 pt-3 border-t border-border/50",
+          leader.stats.winRate !== undefined ? "grid-cols-4" : "grid-cols-3"
+        )}>
+          {leader.stats.winRate !== undefined && leader.stats.winRate !== null && (
+            <div className="text-center">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Win Rate</div>
+              <div className={cn(
+                "font-mono font-medium text-sm",
+                leader.stats.winRate >= 50 ? "text-gain" : "text-loss"
+              )}>
+                {leader.stats.winRate.toFixed(0)}%
+              </div>
+            </div>
+          )}
           <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Predictions</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Trades</div>
             <div className="font-mono font-medium text-sm">{leader.stats.totalPredictions}</div>
           </div>
           <div className="text-center">
