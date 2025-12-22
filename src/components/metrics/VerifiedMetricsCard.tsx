@@ -101,9 +101,12 @@ export function VerifiedMetricsCard({
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="font-semibold mb-1">Win Rate</p>
-                    <p className="text-xs">
-                      Win Rate shows the percentage of your closed trades that were 
-                      profitable, based on verified exchange data.
+                    <p className="text-xs mb-2">
+                      Percentage of your closed trades that were profitable, 
+                      based on verified exchange data (after fees).
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      All stats are based on verified exchange data.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -137,15 +140,17 @@ export function VerifiedMetricsCard({
                   <TooltipContent className="max-w-xs">
                     <p className="font-semibold mb-1">Accuracy Score</p>
                     <p className="text-xs mb-2">
-                      Your Accuracy Score measures how efficiently you turn risk into profit.
-                      It adjusts for different trading styles by looking at how much you 
-                      actually risked on each trade — not how often you trade or how long 
-                      you hold positions.
+                      Your Accuracy Score measures how efficiently you convert risk 
+                      into profit — not how often you trade or how long you hold positions.
+                    </p>
+                    <p className="text-xs mb-2 text-muted-foreground">
+                      <strong>Risk Estimation:</strong> We estimate risk based on your 
+                      position size and how much the asset typically moves. This allows 
+                      fair comparison between different trading styles — even when 
+                      stop-loss data isn't available.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Risk is estimated automatically using real price movement while your 
-                      trade was open. This makes scores comparable between day traders and 
-                      swing traders.
+                      Risk is estimated conservatively to prevent overstating performance.
                     </p>
                     {!hasEnoughTrades && (
                       <p className="text-xs text-warning mt-2">
