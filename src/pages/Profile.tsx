@@ -14,7 +14,9 @@ import { FollowingList } from "@/components/social/FollowingList";
 import { UserSearch } from "@/components/social/UserSearch";
 import { ConnectExchangeButton } from "@/components/exchange/ConnectExchangeButton";
 import { ExchangeStatusBadge } from "@/components/exchange/ExchangeStatusBadge";
+import { VerifiedMetricsCard } from "@/components/metrics/VerifiedMetricsCard";
 import { useExchangeConnections } from "@/hooks/useExchangeConnections";
+import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +72,7 @@ const Profile = () => {
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
   const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
   const { connections, loading: loadingExchanges } = useExchangeConnections();
+  const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
 
   // Filter to only show resolved predictions (hit/missed) from real trades
   const resolvedTradePredictions = tradePredictions.filter(p => p.status === "hit" || p.status === "missed");
@@ -337,6 +340,16 @@ const Profile = () => {
               </div>
             )}
           </Card>
+        )}
+
+        {/* Verified Trading Metrics */}
+        {userId && (
+          <VerifiedMetricsCard 
+            metrics={metrics}
+            loading={loadingMetrics}
+            calculating={calculating}
+            onRecalculate={recalculate}
+          />
         )}
 
         {/* Stats Grid */}
