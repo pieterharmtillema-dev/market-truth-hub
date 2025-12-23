@@ -14,9 +14,10 @@ import {
   TrendingDown, 
   Target, 
   Calendar,
-  DollarSign,
   CheckCircle2
 } from 'lucide-react';
+import { StreakCard } from './StreakCard';
+import { SetupPerformanceCard } from './SetupPerformanceCard';
 
 interface Position {
   id: number;
@@ -27,6 +28,7 @@ interface Position {
   entry_timestamp: string;
   pnl: number | null;
   open: boolean;
+  tags: string[] | null;
 }
 
 interface TradeJournalSummaryProps {
@@ -66,9 +68,8 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
 
       const { data, error } = await supabase
         .from('positions')
-        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, pnl, open')
+        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, pnl, open, tags')
         .eq('user_id', user.id)
-        .eq('open', false)
         .order('entry_timestamp', { ascending: false });
 
       if (error) throw error;
@@ -84,14 +85,20 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
     fetchPositions();
   }, [refreshTrigger, fetchPositions]);
 
+  // Filter closed positions
+  const closedPositions = useMemo(() => 
+    positions.filter(p => !p.open), 
+    [positions]
+  );
+
   // Calculate summaries
   const { totalPnL, wins, losses, winRate, avgPnL, bestTrade, worstTrade } = useMemo(() => {
-    const pnlValues = positions.map(p => p.pnl || 0);
+    const pnlValues = closedPositions.map(p => p.pnl || 0);
     const total = pnlValues.reduce((sum, v) => sum + v, 0);
-    const w = positions.filter(p => (p.pnl || 0) > 0).length;
-    const l = positions.filter(p => (p.pnl || 0) < 0).length;
-    const rate = positions.length > 0 ? (w / positions.length) * 100 : 0;
-    const avg = positions.length > 0 ? total / positions.length : 0;
+    const w = closedPositions.filter(p => (p.pnl || 0) > 0).length;
+    const l = closedPositions.filter(p => (p.pnl || 0) < 0).length;
+    const rate = closedPositions.length > 0 ? (w / closedPositions.length) * 100 : 0;
+    const avg = closedPositions.length > 0 ? total / closedPositions.length : 0;
     const best = pnlValues.length > 0 ? Math.max(...pnlValues) : 0;
     const worst = pnlValues.length > 0 ? Math.min(...pnlValues) : 0;
     
@@ -104,12 +111,12 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
       bestTrade: best,
       worstTrade: worst
     };
-  }, [positions]);
+  }, [closedPositions]);
 
   // Daily summaries
   const dailySummaries = useMemo((): DailySummary[] => {
     const byDate: Record<string, Position[]> = {};
-    positions.forEach(position => {
+    closedPositions.forEach(position => {
       const date = format(new Date(position.entry_timestamp), 'yyyy-MM-dd');
       if (!byDate[date]) byDate[date] = [];
       byDate[date].push(position);
@@ -131,12 +138,12 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
       })
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 14); // Last 14 days
-  }, [positions]);
+  }, [closedPositions]);
 
   // Symbol summaries
   const symbolSummaries = useMemo((): SymbolSummary[] => {
     const bySymbol: Record<string, Position[]> = {};
-    positions.forEach(position => {
+    closedPositions.forEach(position => {
       if (!bySymbol[position.symbol]) bySymbol[position.symbol] = [];
       bySymbol[position.symbol].push(position);
     });
@@ -154,7 +161,7 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
         };
       })
       .sort((a, b) => b.pnl - a.pnl);
-  }, [positions]);
+  }, [closedPositions]);
 
   if (loading) {
     return (
@@ -166,7 +173,7 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
     );
   }
 
-  if (positions.length === 0) {
+  if (closedPositions.length === 0) {
     return (
       <Card className="border-border/50 bg-card/50">
         <CardContent className="py-12 text-center text-muted-foreground">
@@ -190,7 +197,7 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-muted/50 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-primary">{positions.length}</p>
+              <p className="text-3xl font-bold text-primary">{closedPositions.length}</p>
               <p className="text-sm text-muted-foreground">Closed Positions</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-4 text-center">
@@ -237,6 +244,12 @@ export function TradeJournalSummary({ refreshTrigger }: TradeJournalSummaryProps
           </div>
         </CardContent>
       </Card>
+
+      {/* Streak Card */}
+      <StreakCard positions={positions} />
+
+      {/* Setup Performance Card */}
+      <SetupPerformanceCard positions={positions} />
 
       {/* Daily Summary */}
       {dailySummaries.length > 0 && (

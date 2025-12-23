@@ -150,6 +150,7 @@ export type Database = {
           r_multiple: number | null
           side: string
           symbol: string
+          tags: string[] | null
           tick_size: number | null
           tick_value: number | null
           ticks: number | null
@@ -184,6 +185,7 @@ export type Database = {
           r_multiple?: number | null
           side: string
           symbol: string
+          tags?: string[] | null
           tick_size?: number | null
           tick_value?: number | null
           ticks?: number | null
@@ -218,6 +220,7 @@ export type Database = {
           r_multiple?: number | null
           side?: string
           symbol?: string
+          tags?: string[] | null
           tick_size?: number | null
           tick_value?: number | null
           ticks?: number | null
@@ -410,6 +413,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      trade_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          position_id: number
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          position_id: number
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          position_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_attachments_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trade_log: {
         Row: {
