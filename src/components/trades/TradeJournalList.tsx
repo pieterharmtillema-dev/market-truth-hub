@@ -1,16 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, Trash2, ChevronDown, ChevronUp, Filter, PenLine, Save, X, Loader2, BookOpen } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TradeTagSelector } from './TradeTagSelector';
+import { TradeScreenshots } from './TradeScreenshots';
+
+interface Attachment {
+  id: string;
+  file_path: string;
+  file_name: string;
+  created_at: string;
+}
 
 interface Position {
   id: number;
@@ -24,6 +32,7 @@ interface Position {
   pnl: number | null;
   platform: string | null;
   open: boolean;
+  tags: string[] | null;
 }
 
 interface TradeJournalListProps {
@@ -35,6 +44,9 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
   const [loading, setLoading] = useState(true);
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
+  const [attachments, setAttachments] = useState<Record<number, Attachment[]>>({});
+  const [editingTags, setEditingTags] = useState<Record<number, string[]>>({});
+  const [savingTags, setSavingTags] = useState<number | null>(null);
   const { toast } = useToast();
 
   const fetchPositions = useCallback(async () => {
@@ -62,9 +74,65 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
     }
   }, [toast]);
 
+  const fetchAttachments = useCallback(async (positionId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('trade_attachments')
+        .select('id, file_path, file_name, created_at')
+        .eq('position_id', positionId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAttachments(prev => ({ ...prev, [positionId]: data || [] }));
+    } catch (error) {
+      console.error('Error fetching attachments:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPositions();
   }, [refreshTrigger, fetchPositions]);
+
+  // Fetch attachments when a trade is expanded
+  useEffect(() => {
+    if (expandedTrade && !attachments[expandedTrade]) {
+      fetchAttachments(expandedTrade);
+    }
+  }, [expandedTrade, attachments, fetchAttachments]);
+
+  const handleTagsChange = (positionId: number, tags: string[]) => {
+    setEditingTags(prev => ({ ...prev, [positionId]: tags }));
+  };
+
+  const saveTags = async (positionId: number) => {
+    const tags = editingTags[positionId];
+    if (tags === undefined) return;
+
+    setSavingTags(positionId);
+    try {
+      const { error } = await supabase
+        .from('positions')
+        .update({ tags: tags.length > 0 ? tags : null })
+        .eq('id', positionId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPositions(prev => prev.map(p => 
+        p.id === positionId ? { ...p, tags: tags.length > 0 ? tags : null } : p
+      ));
+      setEditingTags(prev => {
+        const newState = { ...prev };
+        delete newState[positionId];
+        return newState;
+      });
+      toast({ title: 'Tags saved' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to save tags', variant: 'destructive' });
+    } finally {
+      setSavingTags(null);
+    }
+  };
 
   // Get unique symbols for filter
   const symbols = [...new Set(positions.map(p => p.symbol))].sort();
@@ -79,6 +147,11 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
   const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
   const closedCount = filteredPositions.filter(p => !p.open).length;
   const winRate = closedCount > 0 ? (wins / closedCount) * 100 : 0;
+
+  // Check if position has attachments
+  const hasAttachments = (positionId: number) => {
+    return attachments[positionId]?.length > 0;
+  };
 
   if (loading) {
     return (
@@ -140,78 +213,126 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
       {/* Position Cards */}
       <ScrollArea className="h-[calc(100vh-380px)]">
         <div className="space-y-3 pr-2">
-          {filteredPositions.map((position) => (
-            <Collapsible 
-              key={position.id} 
-              open={expandedTrade === position.id} 
-              onOpenChange={(open) => setExpandedTrade(open ? position.id : null)}
-            >
-              <Card className="border-border/50 bg-card/50 overflow-hidden">
-                <CollapsibleTrigger asChild>
-                  <CardContent className="p-3 cursor-pointer hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge 
-                          variant={position.side === 'long' ? 'default' : 'destructive'} 
-                          className="gap-1"
-                        >
-                          {position.side === 'long' ? (
-                            <ArrowUpRight className="h-3 w-3" />
-                          ) : (
-                            <ArrowDownRight className="h-3 w-3" />
+          {filteredPositions.map((position) => {
+            const currentTags = editingTags[position.id] ?? position.tags ?? [];
+            const hasUnsavedTags = editingTags[position.id] !== undefined;
+            
+            return (
+              <Collapsible 
+                key={position.id} 
+                open={expandedTrade === position.id} 
+                onOpenChange={(open) => setExpandedTrade(open ? position.id : null)}
+              >
+                <Card className="border-border/50 bg-card/50 overflow-hidden">
+                  <CollapsibleTrigger asChild>
+                    <CardContent className="p-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Badge 
+                            variant={position.side === 'long' ? 'default' : 'destructive'} 
+                            className="gap-1"
+                          >
+                            {position.side === 'long' ? (
+                              <ArrowUpRight className="h-3 w-3" />
+                            ) : (
+                              <ArrowDownRight className="h-3 w-3" />
+                            )}
+                            {position.side}
+                          </Badge>
+                          <span className="font-mono font-medium">{position.symbol}</span>
+                          {position.open && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
                           )}
-                          {position.side}
-                        </Badge>
-                        <span className="font-mono font-medium">{position.symbol}</span>
-                        {position.open && (
-                          <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
-                        )}
+                          {hasAttachments(position.id) && (
+                            <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`font-medium ${(position.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {(position.pnl || 0) >= 0 ? '+' : ''}${(position.pnl || 0).toFixed(2)}
+                          </span>
+                          {expandedTrade === position.id ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`font-medium ${(position.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {(position.pnl || 0) >= 0 ? '+' : ''}${(position.pnl || 0).toFixed(2)}
-                        </span>
-                        {expandedTrade === position.id ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span>Entry: ${position.entry_price.toLocaleString()}</span>
+                        <span>Exit: {position.exit_price ? `$${position.exit_price.toLocaleString()}` : '—'}</span>
+                        <span>{format(new Date(position.entry_timestamp), 'MMM d, yy')}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>Entry: ${position.entry_price.toLocaleString()}</span>
-                      <span>Exit: {position.exit_price ? `$${position.exit_price.toLocaleString()}` : '—'}</span>
-                      <span>{format(new Date(position.entry_timestamp), 'MMM d, yy')}</span>
-                    </div>
-                  </CardContent>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent>
-                  <div className="border-t border-border/50 p-3 bg-muted/20 space-y-3">
-                    {/* Position Details */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Quantity:</span>{' '}
-                        <span className="font-medium">{position.quantity}</span>
-                      </div>
-                      {position.platform && (
-                        <div>
-                          <span className="text-muted-foreground">Platform:</span>{' '}
-                          <span className="font-medium">{position.platform}</span>
+                      {/* Show tags inline */}
+                      {position.tags && position.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {position.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-[10px]">
+                              {tag}
+                            </Badge>
+                          ))}
                         </div>
                       )}
-                      {position.exit_timestamp && (
+                    </CardContent>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="border-t border-border/50 p-3 bg-muted/20 space-y-4">
+                      {/* Position Details */}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Exit Time:</span>{' '}
-                          <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
+                          <span className="text-muted-foreground">Quantity:</span>{' '}
+                          <span className="font-medium">{position.quantity}</span>
                         </div>
-                      )}
+                        {position.platform && (
+                          <div>
+                            <span className="text-muted-foreground">Platform:</span>{' '}
+                            <span className="font-medium">{position.platform}</span>
+                          </div>
+                        )}
+                        {position.exit_timestamp && (
+                          <div>
+                            <span className="text-muted-foreground">Exit Time:</span>{' '}
+                            <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tags Section */}
+                      <div className="space-y-2">
+                        <TradeTagSelector
+                          selectedTags={currentTags}
+                          onChange={(tags) => handleTagsChange(position.id, tags)}
+                        />
+                        {hasUnsavedTags && (
+                          <Button
+                            size="sm"
+                            onClick={() => saveTags(position.id)}
+                            disabled={savingTags === position.id}
+                            className="w-full"
+                          >
+                            {savingTags === position.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Tags
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Screenshots Section */}
+                      <TradeScreenshots
+                        positionId={position.id}
+                        attachments={attachments[position.id] || []}
+                        onAttachmentsChange={() => fetchAttachments(position.id)}
+                      />
                     </div>
-                  </div>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          ))}
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
         </div>
       </ScrollArea>
     </div>
