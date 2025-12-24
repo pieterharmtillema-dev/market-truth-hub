@@ -26,29 +26,28 @@ export function StatsGrid({ stats }: StatsGridProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {stats.map((stat, index) => (
-        <Card key={stat.label} variant="glass" className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+        <Card
+          key={stat.label}
+          variant="glass"
+          className="animate-fade-in"
+          style={{ animationDelay: `${index * 50}ms` }}
+        >
           <CardContent className="p-3">
             <div className="flex items-start justify-between mb-2">
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center border",
-                colorClasses[stat.color]
-              )}>
+              <div
+                className={cn("w-8 h-8 rounded-lg flex items-center justify-center border", colorClasses[stat.color])}
+              >
                 <stat.icon className="w-4 h-4" />
               </div>
               {stat.change !== undefined && (
-                <span className={cn(
-                  "text-[10px] font-mono",
-                  stat.change >= 0 ? "text-gain" : "text-loss"
-                )}>
+                <span className={cn("text-[10px] font-mono", stat.change >= 0 ? "text-gain" : "text-loss")}>
                   {stat.change >= 0 ? "↑" : "↓"} {Math.abs(stat.change)}%
                 </span>
               )}
             </div>
-            <div {stat.value !== 0 && stat.value !== "0" && stat.value !== "0%" && (
-  <div className="font-mono font-bold text-xl mb-0.5">
-    {stat.value}
-  </div>
-)}
+            {stat.value !== 0 && stat.value !== "0" && stat.value !== "0%" && (
+              <div className="font-mono font-bold text-xl mb-0.5">{stat.value}</div>
+            )}
 
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</div>
           </CardContent>
