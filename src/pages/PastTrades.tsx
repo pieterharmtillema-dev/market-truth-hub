@@ -12,7 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search, Zap, TestTube, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowUpDown, CalendarIcon, Filter, TrendingUp, TrendingDown, Clock, Search, Zap, TestTube, Trash2, List, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { TradeAnalytics } from "@/components/trades/TradeAnalytics";
 
 interface Position {
   id: number;
@@ -51,6 +53,8 @@ export default function PastTrades() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<'trades' | 'analytics'>('trades');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userRole, setUserRole] = useState<string>('user');
 
   // Filters
@@ -228,6 +232,7 @@ export default function PastTrades() {
                         } else {
                           toast.success('All trades deleted');
                           fetchPositions();
+                          setRefreshTrigger(prev => prev + 1);
                         }
                       }}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -241,7 +246,20 @@ export default function PastTrades() {
           </Card>
         )}
 
-        {/* Filters Card */}
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'trades' | 'analytics')} className="w-full">
+          <TabsList className="w-full bg-card border border-border">
+            <TabsTrigger value="trades" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <List className="w-4 h-4" />
+              Trades
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="trades" className="mt-4 space-y-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -499,6 +517,12 @@ export default function PastTrades() {
             </PaginationContent>
           </Pagination>
         )}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-4">
+            <TradeAnalytics refreshTrigger={refreshTrigger} />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
