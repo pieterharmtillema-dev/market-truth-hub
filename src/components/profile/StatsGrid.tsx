@@ -44,7 +44,12 @@ export function StatsGrid({ stats }: StatsGridProps) {
                 </span>
               )}
             </div>
-            <div className="font-mono font-bold text-xl mb-0.5">{stat.value}</div>
+            <div {stat.value !== 0 && stat.value !== "0" && stat.value !== "0%" && (
+  <div className="font-mono font-bold text-xl mb-0.5">
+    {stat.value}
+  </div>
+)}
+
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</div>
           </CardContent>
         </Card>
