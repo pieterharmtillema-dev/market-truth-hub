@@ -280,7 +280,10 @@ const Profile = () => {
         </Card>
 
         {/* Streak Badge */}
-        {profile.current_streak && profile.current_streak >= 2 && (
+        {typeof profile.current_streak === "number" && profile.current_streak >= 2 && (
+  <StreakBadge ... />
+)}
+
           <div className="flex justify-center">
             <StreakBadge 
               streak={profile.current_streak} 
