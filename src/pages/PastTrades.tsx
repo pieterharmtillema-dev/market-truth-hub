@@ -53,7 +53,7 @@ export default function PastTrades() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<'trades' | 'analytics'>('trades');
+  const [activeTab, setActiveTab] = useState<'trades' | 'analytics'>('analytics');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userRole, setUserRole] = useState<string>('user');
 
@@ -249,13 +249,13 @@ export default function PastTrades() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'trades' | 'analytics')} className="w-full">
           <TabsList className="w-full bg-card border border-border">
-            <TabsTrigger value="trades" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <List className="w-4 h-4" />
-              Trades
-            </TabsTrigger>
             <TabsTrigger value="analytics" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <BarChart3 className="w-4 h-4" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="trades" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <List className="w-4 h-4" />
+              Trades
             </TabsTrigger>
           </TabsList>
 
