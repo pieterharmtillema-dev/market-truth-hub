@@ -23,7 +23,19 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Share2, Target, BookOpen, Users, ArrowUpRight, ArrowDownRight, ChevronRight, User, Calendar, Link2 } from "lucide-react";
+import {
+  Settings,
+  Share2,
+  Target,
+  BookOpen,
+  Users,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronRight,
+  User,
+  Calendar,
+  Link2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
@@ -67,7 +79,7 @@ const Profile = () => {
   });
   const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
   const [showSocialDialog, setShowSocialDialog] = useState(false);
-  
+
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
   const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
@@ -75,27 +87,29 @@ const Profile = () => {
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
 
   // Filter to only show resolved predictions (hit/missed) from real trades
-  const resolvedTradePredictions = tradePredictions.filter(p => p.status === "hit" || p.status === "missed");
+  const resolvedTradePredictions = tradePredictions.filter((p) => p.status === "hit" || p.status === "missed");
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           setLoadingTrades(false);
           setLoadingProfile(false);
           return;
         }
-        
+
         setUserId(user.id);
 
         // Fetch profile with streak data
         const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url, bio, current_streak, streak_type, total_predictions, total_hits')
-          .eq('user_id', user.id)
+          .from("profiles")
+          .select("display_name, avatar_url, bio, current_streak, streak_type, total_predictions, total_hits")
+          .eq("user_id", user.id)
           .single();
-        
+
         if (profileData) {
           setProfile(profileData);
         }
@@ -103,17 +117,17 @@ const Profile = () => {
 
         // Fetch recent trades from positions table (only user's trades, including simulation)
         const { data, error } = await supabase
-          .from('positions')
-          .select('id, symbol, side, entry_price, exit_price, pnl, entry_timestamp, is_simulation')
-          .eq('user_id', user.id)
-          .order('entry_timestamp', { ascending: false })
+          .from("positions")
+          .select("id, symbol, side, entry_price, exit_price, pnl, entry_timestamp, is_simulation")
+          .eq("user_id", user.id)
+          .order("entry_timestamp", { ascending: false })
           .limit(5);
 
         if (!error && data) {
           setRecentTrades(data);
         }
       } catch (err) {
-        console.error('Failed to fetch user data:', err);
+        console.error("Failed to fetch user data:", err);
       } finally {
         setLoadingTrades(false);
         setLoadingProfile(false);
@@ -124,11 +138,11 @@ const Profile = () => {
   }, []);
 
   const getInitials = (name: string | null) => {
-    if (!name) return '';
+    if (!name) return "";
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -139,20 +153,16 @@ const Profile = () => {
 
   const renderAvatar = () => {
     const avatarUrl = profile.avatar_url;
-    
-    if (avatarUrl?.startsWith('emoji:')) {
-      const emoji = avatarUrl.replace('emoji:', '');
-      return (
-        <AvatarFallback className="text-3xl bg-primary/10">
-          {emoji}
-        </AvatarFallback>
-      );
+
+    if (avatarUrl?.startsWith("emoji:")) {
+      const emoji = avatarUrl.replace("emoji:", "");
+      return <AvatarFallback className="text-3xl bg-primary/10">{emoji}</AvatarFallback>;
     }
-    
+
     if (avatarUrl) {
-      return <AvatarImage src={avatarUrl} alt={profile.display_name || 'Profile'} />;
+      return <AvatarImage src={avatarUrl} alt={profile.display_name || "Profile"} />;
     }
-    
+
     return (
       <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
         {profile.display_name ? getInitials(profile.display_name) : <User className="w-8 h-8" />}
@@ -167,15 +177,11 @@ const Profile = () => {
         <Card variant="glass" className="overflow-hidden">
           {/* Banner */}
           <div className="h-24 bg-gradient-to-br from-primary/40 via-primary/20 to-transparent" />
-          
+
           <CardContent className="p-4 -mt-12">
             <div className="flex items-end gap-4 mb-4">
               <Avatar className="w-20 h-20 border-4 border-card shadow-lg">
-                {loadingProfile ? (
-                  <Skeleton className="w-full h-full rounded-full" />
-                ) : (
-                  renderAvatar()
-                )}
+                {loadingProfile ? <Skeleton className="w-full h-full rounded-full" /> : renderAvatar()}
               </Avatar>
               <div className="flex-1 min-w-0 pb-1">
                 {loadingProfile ? (
@@ -185,11 +191,9 @@ const Profile = () => {
                   </div>
                 ) : (
                   <>
-                    <h1 className="font-bold text-xl">
-                      {profile.display_name || 'Set your name'}
-                    </h1>
+                    <h1 className="font-bold text-xl">{profile.display_name || "Set your name"}</h1>
                     <p className="text-sm text-muted-foreground">
-                      {profile.bio ? profile.bio.slice(0, 50) + (profile.bio.length > 50 ? '...' : '') : 'No bio yet'}
+                      {profile.bio ? profile.bio.slice(0, 50) + (profile.bio.length > 50 ? "..." : "") : "No bio yet"}
                     </p>
                   </>
                 )}
@@ -197,11 +201,7 @@ const Profile = () => {
             </div>
 
             {/* Bio */}
-            {profile.bio && (
-              <p className="text-sm text-muted-foreground mb-4">
-                {profile.bio}
-              </p>
-            )}
+            {profile.bio && <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>}
 
             {/* Actions */}
             <div className="flex gap-2">
@@ -214,7 +214,7 @@ const Profile = () => {
                   onProfileUpdated={handleProfileUpdated}
                 />
               )}
-              
+
               {/* Social/Followers Dialog */}
               <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
                 <DialogTrigger asChild>
@@ -235,11 +235,15 @@ const Profile = () => {
                     <TabsList className="w-full">
                       <TabsTrigger value="followers" className="flex-1 gap-1">
                         Followers
-                        <Badge variant="secondary" className="ml-1 text-xs">{followers.length}</Badge>
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {followers.length}
+                        </Badge>
                       </TabsTrigger>
                       <TabsTrigger value="following" className="flex-1 gap-1">
                         Following
-                        <Badge variant="secondary" className="ml-1 text-xs">{following.length}</Badge>
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {following.length}
+                        </Badge>
                       </TabsTrigger>
                       <TabsTrigger value="find" className="flex-1">
                         Find
@@ -249,15 +253,11 @@ const Profile = () => {
                       <FollowersList followerIds={followers} />
                     </TabsContent>
                     <TabsContent value="following" className="mt-4">
-                      <FollowingList 
-                        followingIds={following}
-                        onFollow={followUser}
-                        onUnfollow={unfollowUser}
-                      />
+                      <FollowingList followingIds={following} onFollow={followUser} onUnfollow={unfollowUser} />
                     </TabsContent>
                     <TabsContent value="find" className="mt-4">
                       {userId && (
-                        <UserSearch 
+                        <UserSearch
                           currentUserId={userId}
                           isFollowing={isFollowing}
                           onFollow={followUser}
@@ -278,39 +278,27 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Streak Badge */}
-        {typeof profile.current_streak === "number" && profile.current_streak >= 2 && (
-  <StreakBadge ... />
-)}
-
+        /* Streak Badge */
+        {profile.current_streak >= 2 && (
           <div className="flex justify-center">
-            <StreakBadge 
-              streak={profile.current_streak} 
-              streakType={profile.streak_type || "none"} 
-              size="lg" 
-            />
+            <StreakBadge streak={profile.current_streak} streakType={profile.streak_type || "none"} size="lg" />
           </div>
         )}
-
-        {/* Trader Stats */}
-        {profile.total_predictions && profile.total_predictions > 0 && (
+        /* Trader Stats */
+        {profile.total_predictions > 0 && (
           <Card variant="glass" className="p-4">
-            <TraderStats 
-              totalPredictions={profile.total_predictions || 0}
+            <TraderStats
+              totalPredictions={profile.total_predictions}
               totalHits={profile.total_hits || 0}
               currentStreak={profile.current_streak || 0}
               streakType={profile.streak_type || "none"}
             />
           </Card>
         )}
-
         {/* Trader Profile Section */}
         {userId && <TraderProfileSection userId={userId} />}
-
         {/* Trader Status */}
         <TraderStatusCard />
-
         {/* Exchange Connections */}
         {userId && (
           <Card variant="glass" className="p-4">
@@ -321,7 +309,7 @@ const Profile = () => {
               </div>
               <ConnectExchangeButton variant="outline" size="sm" />
             </div>
-            
+
             {loadingExchanges ? (
               <Skeleton className="h-12 w-full" />
             ) : connections.length === 0 ? (
@@ -344,32 +332,38 @@ const Profile = () => {
             )}
           </Card>
         )}
-
         {/* Verified Trading Metrics */}
         {userId && (
-          <VerifiedMetricsCard 
+          <VerifiedMetricsCard
             metrics={metrics}
             loading={loadingMetrics}
             calculating={calculating}
             onRecalculate={recalculate}
           />
         )}
-
         {/* Stats Grid */}
         <DefaultStatsGrid />
-
         {/* Content Tabs */}
         <Tabs defaultValue="predictions" className="w-full">
           <TabsList className="w-full bg-card border border-border">
-            <TabsTrigger value="predictions" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger
+              value="predictions"
+              className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            >
               <Target className="w-4 h-4" />
               Trades
             </TabsTrigger>
-            <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger
+              value="longterm"
+              className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            >
               <Calendar className="w-4 h-4" />
               Long-Term
             </TabsTrigger>
-            <TabsTrigger value="journal" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+            <TabsTrigger
+              value="journal"
+              className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            >
               <BookOpen className="w-4 h-4" />
               Journal
             </TabsTrigger>
@@ -390,8 +384,8 @@ const Profile = () => {
               </Card>
             ) : (
               resolvedTradePredictions.map((prediction) => (
-                <PublicPredictionCard 
-                  key={prediction.id} 
+                <PublicPredictionCard
+                  key={prediction.id}
                   prediction={prediction}
                   currentUserId={userId || undefined}
                   onAddExplanation={(id) => setExplanationPredictionId(id)}
@@ -411,12 +405,14 @@ const Profile = () => {
               <Card variant="glass" className="p-8 text-center">
                 <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                 <p className="text-sm text-muted-foreground">No long-term predictions yet.</p>
-                <p className="text-xs text-muted-foreground mt-2">Create predictions from the Create Prediction page.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Create predictions from the Create Prediction page.
+                </p>
               </Card>
             ) : (
               longTermPredictions.map((prediction) => (
-                <PublicPredictionCard 
-                  key={prediction.id} 
+                <PublicPredictionCard
+                  key={prediction.id}
                   prediction={prediction}
                   currentUserId={userId || undefined}
                   onAddExplanation={(id) => setExplanationPredictionId(id)}
@@ -436,7 +432,7 @@ const Profile = () => {
               <Card variant="glass" className="p-8 text-center">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                 <p className="text-sm text-muted-foreground">No trades yet. Import your first trades.</p>
-                <Button variant="outline" className="mt-4" onClick={() => navigate('/journal')}>
+                <Button variant="outline" className="mt-4" onClick={() => navigate("/journal")}>
                   Open Trading Journal
                 </Button>
               </Card>
@@ -446,11 +442,8 @@ const Profile = () => {
                   <Card key={trade.id} variant="glass" className="p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Badge 
-                          variant={trade.side === 'long' ? 'default' : 'destructive'} 
-                          className="gap-1"
-                        >
-                          {trade.side === 'long' ? (
+                        <Badge variant={trade.side === "long" ? "default" : "destructive"} className="gap-1">
+                          {trade.side === "long" ? (
                             <ArrowUpRight className="h-3 w-3" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3" />
@@ -460,26 +453,23 @@ const Profile = () => {
                         <div>
                           <span className="font-mono font-medium">{trade.symbol}</span>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(trade.entry_timestamp), 'MMM d, yyyy')}
+                            {format(new Date(trade.entry_timestamp), "MMM d, yyyy")}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
+                        <span className={`font-medium ${(trade.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {(trade.pnl || 0) >= 0 ? "+" : ""}${(trade.pnl || 0).toFixed(2)}
                         </span>
                         <p className="text-xs text-muted-foreground">
-                          ${trade.entry_price.toLocaleString()} → {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : '—'}
+                          ${trade.entry_price.toLocaleString()} →{" "}
+                          {trade.exit_price ? `$${trade.exit_price.toLocaleString()}` : "—"}
                         </p>
                       </div>
                     </div>
                   </Card>
                 ))}
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2" 
-                  onClick={() => navigate('/journal')}
-                >
+                <Button variant="outline" className="w-full gap-2" onClick={() => navigate("/journal")}>
                   View All Trades
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -487,7 +477,6 @@ const Profile = () => {
             )}
           </TabsContent>
         </Tabs>
-
         {/* Explanation Dialog */}
         <ExplanationDialog
           predictionId={explanationPredictionId}
