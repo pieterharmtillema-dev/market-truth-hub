@@ -10,11 +10,18 @@ export default function BetaBadge() {
       <Popover>
         <PopoverTrigger asChild>
           <button
-            className="rounded-md px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest shadow-sm transition-all duration-200 hover:bg-[#7cc30d]/20 hover:shadow-[0_0_10px_rgba(124,195,13,0.35)]"
+            className="
+              rounded-md px-3 py-1.5
+              text-[11px] font-mono uppercase tracking-widest
+              shadow-md transition-all duration-200
+              hover:bg-emerald-400/30
+              hover:shadow-[0_0_14px_rgba(16,185,129,0.6)]
+            "
             style={{
-              border: "1px solid rgba(124, 195, 13, 0.6)",
-              backgroundColor: "rgba(124, 195, 13, 0.14)",
-              color: "#7cc30d",
+              border: "1px solid rgba(16, 185, 129, 0.9)",
+              backgroundColor: "rgba(16, 185, 129, 0.25)",
+              color: "#10b981",
+              boxShadow: "0 0 8px rgba(16, 185, 129, 0.45)",
             }}
           >
             beta
