@@ -2,6 +2,20 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 
+// Fake demo profiles for testing/demo purposes
+const FAKE_PROFILES: Record<string, { display_name: string; avatar_url: string; bio: string; current_streak: number; total_predictions: number; total_hits: number; streak_type: string }> = {
+  '11111111-1111-1111-1111-111111111111': { display_name: 'CryptoKing', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoKing', bio: 'Full-time crypto trader. BTC maximalist.', current_streak: 7, total_predictions: 156, total_hits: 112, streak_type: 'hit' },
+  '22222222-2222-2222-2222-222222222222': { display_name: 'ForexMaster', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ForexMaster', bio: 'Forex scalper | 5+ years experience', current_streak: 3, total_predictions: 89, total_hits: 58, streak_type: 'hit' },
+  '33333333-3333-3333-3333-333333333333': { display_name: 'StockWhisperer', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=StockWhisperer', bio: 'Value investor turned swing trader', current_streak: 2, total_predictions: 234, total_hits: 145, streak_type: 'miss' },
+  '44444444-4444-4444-4444-444444444444': { display_name: 'TechTrader', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TechTrader', bio: 'Tech stocks enthusiast. NASDAQ focused.', current_streak: 5, total_predictions: 67, total_hits: 41, streak_type: 'hit' },
+  '55555555-5555-5555-5555-555555555555': { display_name: 'GoldBull', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoldBull', bio: 'Commodities specialist. Gold & Silver.', current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss' },
+};
+
+const getFakeOrRealProfile = (userId: string, realProfile: any) => {
+  if (realProfile) return realProfile;
+  return FAKE_PROFILES[userId] || null;
+};
+
 // Trade-based predictions (from real trades via extension)
 export function usePublicPredictions(limit = 20) {
   const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
@@ -43,7 +57,7 @@ export function usePublicPredictions(limit = 20) {
         (profilesData || []).map(p => [p.user_id, p])
       );
 
-      // Combine predictions with profiles
+      // Combine predictions with profiles (use fake profiles as fallback)
       const enrichedPredictions: PublicPredictionData[] = predictionsData.map(prediction => ({
         id: prediction.id,
         user_id: prediction.user_id,
@@ -57,7 +71,7 @@ export function usePublicPredictions(limit = 20) {
         resolved_at: prediction.resolved_at,
         explanation: prediction.explanation,
         explanation_public: prediction.explanation_public,
-        profile: profilesMap.get(prediction.user_id) || null,
+        profile: getFakeOrRealProfile(prediction.user_id, profilesMap.get(prediction.user_id)),
       }));
 
       setPredictions(enrichedPredictions);
@@ -218,7 +232,7 @@ export function useLongTermPredictions(limit = 20) {
         data_source: prediction.data_source,
         time_horizon: prediction.time_horizon,
         expiry_timestamp: prediction.expiry_timestamp,
-        profile: profilesMap.get(prediction.user_id) || null,
+        profile: getFakeOrRealProfile(prediction.user_id, profilesMap.get(prediction.user_id)),
       }));
 
       setPredictions(enrichedPredictions);
