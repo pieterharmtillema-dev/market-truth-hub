@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SentimentBar } from "@/components/feed/SentimentBar";
-import { LiveChart } from "@/components/charts/LiveChart";
-import { MiniChart } from "@/components/charts/MiniChart";
 import { RealtimePriceDisplay } from "@/components/charts/RealtimePriceDisplay";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Target, Search, ChevronRight } from "lucide-react";
+import { Users, Target, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +41,6 @@ const marketData: MarketItem[] = [
 ];
 
 const Markets = () => {
-  const [selectedAsset, setSelectedAsset] = useState<MarketItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredMarkets = (filter: string) => {
@@ -61,16 +58,9 @@ const Markets = () => {
   };
 
   const MarketCard = ({ market }: { market: MarketItem }) => (
-    <Card 
-      variant="interactive" 
-      className={cn(
-        "animate-fade-in cursor-pointer transition-all",
-        selectedAsset?.symbol === market.symbol && "ring-2 ring-primary"
-      )}
-      onClick={() => setSelectedAsset(market)}
-    >
+    <Card variant="interactive" className="animate-fade-in">
       <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <span className="font-mono font-bold text-primary text-sm">{market.symbol.slice(0, 2)}</span>
@@ -80,41 +70,28 @@ const Markets = () => {
                 <span className="font-medium">{market.symbol}</span>
                 <Badge variant="outline" className="text-[10px]">{market.name}</Badge>
               </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {market.predictions}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  {market.accuracy}%
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <RealtimePriceDisplay 
-              symbol={market.symbol}
-              initialPrice={market.price}
-              initialChange={market.change}
-              market={market.market}
-              showLiveIndicator={false}
-            />
-            <MiniChart 
-              symbol={market.symbol} 
-              market={market.market} 
-              height={40} 
-              className="w-20"
-              lazyLoad={true}
-            />
-          </div>
+          <RealtimePriceDisplay 
+            symbol={market.symbol}
+            initialPrice={market.price}
+            initialChange={market.change}
+            market={market.market}
+            showLiveIndicator={false}
+          />
         </div>
 
-        <SentimentBar {...market.sentiment} className="mb-3" />
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {market.predictions} predictions
-            </span>
-            <span className="flex items-center gap-1">
-              <Target className="w-3 h-3" />
-              {market.accuracy}% avg accuracy
-            </span>
-          </div>
-          <ChevronRight className="w-4 h-4" />
-        </div>
+        <SentimentBar {...market.sentiment} className="mt-3" />
       </CardContent>
     </Card>
   );
@@ -122,17 +99,6 @@ const Markets = () => {
   return (
     <AppLayout title="Markets">
       <div className="px-4 py-4 space-y-4">
-        {/* Featured Chart */}
-        {selectedAsset ? (
-          <LiveChart 
-            symbol={selectedAsset.symbol} 
-            name={selectedAsset.name}
-            market={selectedAsset.market}
-          />
-        ) : (
-          <LiveChart symbol="AAPL" name="Apple Inc" market="stocks" />
-        )}
-
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
