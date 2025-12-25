@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTradeDetectorSync } from "@/hooks/useTradeDetectorSync";
+
 import Index from "./pages/Index";
 import Markets from "./pages/Markets";
 import Leaderboard from "./pages/Leaderboard";
@@ -17,6 +18,8 @@ import TraderProfile from "./pages/TraderProfile";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+
+import BetaBadge from "@/components/BetaBadge";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +53,9 @@ function AppContent() {
       <BrowserRouter>
         <RouterContent />
       </BrowserRouter>
+
+      {/* ✅ BETA BADGE HERE */}
+      <BetaBadge />
     </>
   );
 }
