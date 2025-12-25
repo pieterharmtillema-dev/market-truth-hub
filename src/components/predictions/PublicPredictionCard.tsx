@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock, UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,7 @@ export function PublicPredictionCard({
   onFollow,
   onUnfollow 
 }: PublicPredictionCardProps) {
+  const navigate = useNavigate();
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(prediction.is_public ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -180,7 +182,10 @@ export function PublicPredictionCard({
 
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate(`/trader/${prediction.user_id}`)}
+          >
             <Avatar className="w-10 h-10 border-2 border-border">
               {avatarUrl && avatarUrl.length <= 4 ? (
                 <div className="w-full h-full flex items-center justify-center text-lg bg-muted">
@@ -197,7 +202,7 @@ export function PublicPredictionCard({
             </Avatar>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-medium text-sm">{displayName}</span>
+                <span className="font-medium text-sm hover:underline">{displayName}</span>
                 {isHotStreak && (
                   <span className="inline-flex items-center gap-0.5 text-xs text-orange-400">
                     <Flame className="w-3 h-3" />
