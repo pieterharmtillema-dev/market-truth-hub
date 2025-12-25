@@ -36,6 +36,15 @@ interface PublicProfile {
   created_at: string | null;
 }
 
+// Fake demo profiles for testing/demo purposes
+const FAKE_PROFILES: Record<string, PublicProfile> = {
+  '11111111-1111-1111-1111-111111111111': { user_id: '11111111-1111-1111-1111-111111111111', display_name: 'CryptoKing', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoKing', bio: 'Full-time crypto trader. BTC maximalist.', current_streak: 7, total_predictions: 156, total_hits: 112, streak_type: 'hit', created_at: '2024-01-15' },
+  '22222222-2222-2222-2222-222222222222': { user_id: '22222222-2222-2222-2222-222222222222', display_name: 'ForexMaster', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ForexMaster', bio: 'Forex scalper | 5+ years experience', current_streak: 3, total_predictions: 89, total_hits: 58, streak_type: 'hit', created_at: '2024-03-22' },
+  '33333333-3333-3333-3333-333333333333': { user_id: '33333333-3333-3333-3333-333333333333', display_name: 'StockWhisperer', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=StockWhisperer', bio: 'Value investor turned swing trader', current_streak: 2, total_predictions: 234, total_hits: 145, streak_type: 'miss', created_at: '2023-11-08' },
+  '44444444-4444-4444-4444-444444444444': { user_id: '44444444-4444-4444-4444-444444444444', display_name: 'TechTrader', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TechTrader', bio: 'Tech stocks enthusiast. NASDAQ focused.', current_streak: 5, total_predictions: 67, total_hits: 41, streak_type: 'hit', created_at: '2024-06-01' },
+  '55555555-5555-5555-5555-555555555555': { user_id: '55555555-5555-5555-5555-555555555555', display_name: 'GoldBull', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoldBull', bio: 'Commodities specialist. Gold & Silver.', current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss', created_at: '2024-08-14' },
+};
+
 const TraderProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -68,12 +77,22 @@ const TraderProfile = () => {
           .from("public_profiles")
           .select("*")
           .eq("user_id", userId)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-        setProfile(data);
+        // Use fake profile if no real profile found
+        if (data) {
+          setProfile(data);
+        } else if (FAKE_PROFILES[userId]) {
+          setProfile(FAKE_PROFILES[userId]);
+        } else {
+          setProfile(null);
+        }
       } catch (err) {
         console.error("Failed to fetch profile:", err);
+        // Fall back to fake profile on error
+        if (userId && FAKE_PROFILES[userId]) {
+          setProfile(FAKE_PROFILES[userId]);
+        }
       } finally {
         setLoading(false);
       }
