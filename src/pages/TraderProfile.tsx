@@ -1,0 +1,367 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useFollows } from "@/hooks/useFollows";
+import { PublicPredictionCard, PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
+import { 
+  Flame, 
+  Snowflake, 
+  Target, 
+  TrendingUp, 
+  Trophy, 
+  UserPlus, 
+  UserMinus, 
+  Loader2,
+  ArrowLeft,
+  Calendar,
+  BarChart3
+} from "lucide-react";
+
+interface PublicProfile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  current_streak: number | null;
+  streak_type: string | null;
+  total_predictions: number | null;
+  total_hits: number | null;
+  created_at: string | null;
+}
+
+const TraderProfile = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followLoading, setFollowLoading] = useState(false);
+  
+  const { following, followUser, unfollowUser, isFollowing } = useFollows(currentUserId);
+  const isOwnProfile = currentUserId === userId;
+  const isFollowingUser = userId ? isFollowing(userId) : false;
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUserId(session?.user?.id || null);
+    };
+    getSession();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("public_profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchPredictions = async () => {
+      setLoadingPredictions(true);
+      try {
+        const { data, error } = await supabase
+          .from("predictions")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+
+        // Map to PublicPredictionData format with profile
+        const mappedPredictions: PublicPredictionData[] = (data || []).map(p => ({
+          ...p,
+          profile: profile ? {
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+            current_streak: profile.current_streak || 0,
+            streak_type: profile.streak_type || "none",
+            total_predictions: profile.total_predictions || 0,
+            total_hits: profile.total_hits || 0,
+          } : null
+        }));
+
+        setPredictions(mappedPredictions);
+      } catch (err) {
+        console.error("Failed to fetch predictions:", err);
+      } finally {
+        setLoadingPredictions(false);
+      }
+    };
+
+    fetchProfile();
+    fetchPredictions();
+  }, [userId]);
+
+  // Re-map predictions when profile loads
+  useEffect(() => {
+    if (profile && predictions.length > 0) {
+      setPredictions(prev => prev.map(p => ({
+        ...p,
+        profile: {
+          display_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+          current_streak: profile.current_streak || 0,
+          streak_type: profile.streak_type || "none",
+          total_predictions: profile.total_predictions || 0,
+          total_hits: profile.total_hits || 0,
+        }
+      })));
+    }
+  }, [profile]);
+
+  const handleFollow = async () => {
+    if (!userId) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowingUser) {
+        await unfollowUser(userId);
+      } else {
+        await followUser(userId);
+      }
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const displayName = profile?.display_name || "Trader";
+  const accuracy = profile?.total_predictions && profile.total_predictions > 0
+    ? Math.round((profile.total_hits || 0) / profile.total_predictions * 100)
+    : 0;
+  const streak = profile?.current_streak || 0;
+  const streakType = profile?.streak_type || "none";
+  const isHotStreak = streakType === "hit" && streak >= 2;
+  const isColdStreak = streakType === "miss" && streak >= 3;
+
+  const tradePredictions = predictions.filter(p => p.data_source === "trade_sync");
+  const longTermPredictions = predictions.filter(p => p.data_source === "user");
+
+  if (loading) {
+    return (
+      <AppLayout title="Trader Profile">
+        <div className="px-4 py-4 space-y-4">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <AppLayout title="Trader Profile">
+        <div className="px-4 py-8 text-center">
+          <p className="text-muted-foreground">Profile not found</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Go Back
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout title="Trader Profile">
+      <div className="px-4 py-4 space-y-4">
+        {/* Back Button */}
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1.5">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+
+        {/* Profile Header */}
+        <Card variant="glass">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <Avatar className="w-20 h-20 border-2 border-border">
+                {profile.avatar_url && profile.avatar_url.length <= 4 ? (
+                  <div className="w-full h-full flex items-center justify-center text-3xl bg-muted">
+                    {profile.avatar_url}
+                  </div>
+                ) : (
+                  <>
+                    <AvatarImage src={profile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-2xl">
+                      {displayName.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </>
+                )}
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl font-bold">{displayName}</h1>
+                  {isHotStreak && (
+                    <Badge variant="outline" className="text-orange-400 border-orange-400/30 gap-1">
+                      <Flame className="w-3 h-3" />
+                      {streak} Win Streak
+                    </Badge>
+                  )}
+                  {isColdStreak && (
+                    <Badge variant="outline" className="text-blue-400 border-blue-400/30 gap-1">
+                      <Snowflake className="w-3 h-3" />
+                      High Variance
+                    </Badge>
+                  )}
+                </div>
+                {profile.bio && (
+                  <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
+                )}
+                {profile.created_at && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Member since {new Date(profile.created_at).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Follow Button */}
+            {currentUserId && !isOwnProfile && (
+              <Button
+                variant={isFollowingUser ? "default" : "outline"}
+                className="w-full mt-4 gap-2"
+                onClick={handleFollow}
+                disabled={followLoading}
+              >
+                {followLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isFollowingUser ? (
+                  <>
+                    <UserMinus className="w-4 h-4" />
+                    Unfollow
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    Follow
+                  </>
+                )}
+              </Button>
+            )}
+
+            {isOwnProfile && (
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => navigate("/profile")}
+              >
+                Edit Profile
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card variant="glass">
+            <CardContent className="p-4 text-center">
+              <Target className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <div className="text-2xl font-bold">{accuracy}%</div>
+              <div className="text-xs text-muted-foreground">Accuracy</div>
+            </CardContent>
+          </Card>
+          <Card variant="glass">
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-gain" />
+              <div className="text-2xl font-bold">{profile.total_hits || 0}</div>
+              <div className="text-xs text-muted-foreground">Wins</div>
+            </CardContent>
+          </Card>
+          <Card variant="glass">
+            <CardContent className="p-4 text-center">
+              <Trophy className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
+              <div className="text-2xl font-bold">{profile.total_predictions || 0}</div>
+              <div className="text-xs text-muted-foreground">Total Trades</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Predictions Tabs */}
+        <Tabs defaultValue="trades" className="w-full">
+          <TabsList className="w-full bg-card border border-border">
+            <TabsTrigger value="trades" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <BarChart3 className="w-4 h-4" />
+              Trades ({tradePredictions.length})
+            </TabsTrigger>
+            <TabsTrigger value="predictions" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Calendar className="w-4 h-4" />
+              Predictions ({longTermPredictions.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="trades" className="mt-4 space-y-4">
+            {loadingPredictions ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : tradePredictions.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <BarChart3 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No shared trades yet</p>
+              </Card>
+            ) : (
+              tradePredictions.map((prediction) => (
+                <PublicPredictionCard 
+                  key={prediction.id} 
+                  prediction={prediction}
+                  currentUserId={currentUserId || undefined}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="predictions" className="mt-4 space-y-4">
+            {loadingPredictions ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : longTermPredictions.length === 0 ? (
+              <Card variant="glass" className="p-8 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No public predictions yet</p>
+              </Card>
+            ) : (
+              longTermPredictions.map((prediction) => (
+                <PublicPredictionCard 
+                  key={prediction.id} 
+                  prediction={prediction}
+                  currentUserId={currentUserId || undefined}
+                />
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default TraderProfile;
