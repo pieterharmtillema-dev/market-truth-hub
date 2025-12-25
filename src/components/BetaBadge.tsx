@@ -17,22 +17,19 @@ export default function BetaBadge() {
         <PopoverContent
           side="top"
           align="end"
-          className="w-64 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-emerald-200 shadow-lg backdrop-blur"
+          className="w-64 border border-border bg-background p-3 text-xs shadow-lg"
         >
-          <div className="space-y-2">
-            <p className="font-semibold text-emerald-300">
+          <div className="space-y-2 text-muted-foreground">
+            <p className="font-semibold text-foreground">
               Trade-Trax is in Beta
             </p>
-            <p className="text-emerald-200/80">
-              You’re using an early-access version of the platform. Some features
-              may change or behave unexpectedly.
+            <p>
+              You’re using an early version of the platform. Some features may
+              change or behave unexpectedly.
             </p>
-            <p className="text-emerald-200/80">
-              Your feedback helps us improve accuracy, performance, and overall
+            <p>
+              Your feedback helps us improve accuracy, performance, and
               usability.
-            </p>
-            <p className="pt-1 text-[10px] uppercase tracking-wider text-emerald-300/60">
-              Early Access · Experimental
             </p>
           </div>
         </PopoverContent>
