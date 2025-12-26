@@ -281,15 +281,34 @@ export function ProfileEditDialog({
                 </Button>
               </div>
             ) : (
-              <>
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+              <div className="space-y-2">
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="New display name"
+                />
+
                 <Input
                   type="password"
                   placeholder="Enter password to confirm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-              </>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingName(false);
+                      setDisplayName(currentName || "");
+                      setPassword("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
 
