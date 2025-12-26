@@ -24,8 +24,6 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
-const finalAvatarUrl = stringifyPremiumConfig(premiumConfig);
-
 export function ProfileEditDialog({
   userId,
   currentName,
@@ -121,6 +119,8 @@ export function ProfileEditDialog({
     setIsSaving(true);
 
     try {
+      const finalAvatarUrl = stringifyPremiumConfig(premiumConfig);
+
       // ❗ Prevent empty name
       if (editingName && !displayName.trim()) {
         toast.error("Display name cannot be empty");
