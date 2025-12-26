@@ -216,8 +216,6 @@ export function ProfileEditDialog({
           <div className="space-y-4">
             <Label>Avatar</Label>
 
-            <div className="flex justify-center">{renderAvatarPreview()}</div>
-
             <div className="flex justify-center">
               <Button type="button" variant="default" className="gap-1">
                 Avatar
