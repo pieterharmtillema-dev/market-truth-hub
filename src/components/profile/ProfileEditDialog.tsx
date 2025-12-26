@@ -53,6 +53,7 @@ export function ProfileEditDialog({
       setDisplayName(currentName || "");
       setBio(currentBio || "");
       setAvatarUrl(currentAvatarUrl || "");
+      setAvatarType(getInitialAvatarType());
       setEditingName(false);
       setPassword("");
     }
