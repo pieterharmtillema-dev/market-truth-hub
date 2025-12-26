@@ -116,6 +116,13 @@ export function ProfileEditDialog({
     setIsSaving(true);
 
     try {
+      // ❗ Prevent empty display name
+      if (editingName && !displayName.trim()) {
+        toast.error("Display name cannot be empty");
+        setIsSaving(false);
+        return;
+      }
+
       // 🔐 Require password ONLY if name changed
       if (editingName && displayName !== currentName) {
         if (!password) {
