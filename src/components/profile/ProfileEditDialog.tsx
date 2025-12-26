@@ -283,12 +283,12 @@ export function ProfileEditDialog({
 
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
-            {avatarType === "premium" && (
-              <PremiumAvatarEditor
-                key={currentAvatarUrl || "default-avatar"}
-                initialConfig={premiumConfig}
-                onConfigChange={handlePremiumConfigChange}
-              />
+           <PremiumAvatarEditor
+  key={avatarEditorKey}
+  initialConfig={premiumConfig}
+  onConfigChange={handlePremiumConfigChange}
+/>
+
             )}
 
             {avatarType === "url" && (
