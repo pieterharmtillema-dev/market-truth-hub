@@ -26,7 +26,6 @@ interface ProfileEditDialogProps {
 
 type AvatarType = "premium";
 
-
 export function ProfileEditDialog({
   userId,
   currentName,
@@ -42,7 +41,6 @@ export function ProfileEditDialog({
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
-  
 
   const [avatarType] = useState<AvatarType>("premium");
 
@@ -54,26 +52,22 @@ export function ProfileEditDialog({
   const [password, setPassword] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
-  
-
-  
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                            */
   /* ------------------------------------------------------------------ */
 
-const deriveAvatarState = (url: string | null) => {
-  if (url?.startsWith("premium:")) {
+  const deriveAvatarState = (url: string | null) => {
+    if (url?.startsWith("premium:")) {
+      return {
+        premiumConfig: parsePremiumConfig(url),
+      };
+    }
+
     return {
-      premiumConfig: parsePremiumConfig(url),
+      premiumConfig: DEFAULT_PREMIUM_CONFIG,
     };
-  }
-
-  return {
-    premiumConfig: DEFAULT_PREMIUM_CONFIG,
   };
-};
-
 
   const getInitials = (name: string) =>
     name
@@ -95,9 +89,8 @@ const deriveAvatarState = (url: string | null) => {
     setBio(currentBio ?? "");
 
     // Reset avatar state from saved profile
-   const derived = deriveAvatarState(currentAvatarUrl);
-setPremiumConfig(derived.premiumConfig);
-
+    const derived = deriveAvatarState(currentAvatarUrl);
+    setPremiumConfig(derived.premiumConfig);
 
     // Force avatar editor to fully remount
     setAvatarEditorKey((prev) => prev + 1);
@@ -258,37 +251,30 @@ setPremiumConfig(derived.premiumConfig);
 
         <div className="space-y-6 py-4">
           {/* Avatar */}
+          {/* Avatar */}
           <div className="space-y-4">
             <Label>Avatar</Label>
 
             <div className="flex justify-center">{renderAvatarPreview()}</div>
 
-           <div className="flex justify-center">
-  <Button type="button" variant="default" className="gap-1">
-    <Sparkles className="w-4 h-4" />
-    Avatar
-  </Button>
-</div>
+            <div className="flex justify-center">
+              <Button type="button" variant="default" className="gap-1">
+                Avatar
+              </Button>
+            </div>
 
+            <div>
+              <PremiumAvatarEditor
+                key={avatarEditorKey}
+                initialConfig={premiumConfig}
+                onConfigChange={handlePremiumConfigChange}
+              />
 
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-
-{avatarType === "premium" && (
-  <div>
-    <PremiumAvatarEditor
-      key={avatarEditorKey}
-      initialConfig={premiumConfig}
-      onConfigChange={handlePremiumConfigChange}
-    />
-
-    <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
-      🖼 NFT avatars coming soon
-    </div>
-  </div>
-)}
-
-
-           
+              <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
+                🖼 NFT avatars coming soon
+              </div>
+            </div>
+          </div>
 
           {/* Display Name */}
           <div className="space-y-2">
