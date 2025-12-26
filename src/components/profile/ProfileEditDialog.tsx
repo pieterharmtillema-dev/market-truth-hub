@@ -24,7 +24,8 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
-type AvatarType = "premium" | "upload" | "url";
+type AvatarType = "premium";
+
 
 export function ProfileEditDialog({
   userId,
@@ -41,9 +42,10 @@ export function ProfileEditDialog({
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  
 
-  const [avatarType, setAvatarType] = useState<AvatarType>("premium");
+  const [avatarType] = useState<AvatarType>("premium");
+
   const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(DEFAULT_PREMIUM_CONFIG);
 
   const [avatarEditorKey, setAvatarEditorKey] = useState(0);
@@ -52,37 +54,26 @@ export function ProfileEditDialog({
   const [password, setPassword] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   /* ------------------------------------------------------------------ */
   /* Helpers                                                            */
   /* ------------------------------------------------------------------ */
 
-  const deriveAvatarState = (url: string | null) => {
-    if (!url) {
-      return {
-        type: "premium" as AvatarType,
-        avatarUrl: "",
-        premiumConfig: DEFAULT_PREMIUM_CONFIG,
-      };
-    }
-
-    if (url.startsWith("premium:")) {
-      return {
-        type: "premium" as AvatarType,
-        avatarUrl: "",
-        premiumConfig: parsePremiumConfig(url),
-      };
-    }
-
+const deriveAvatarState = (url: string | null) => {
+  if (url?.startsWith("premium:")) {
     return {
-      type: "upload" as AvatarType,
-      avatarUrl: url,
-      premiumConfig: DEFAULT_PREMIUM_CONFIG,
+      premiumConfig: parsePremiumConfig(url),
     };
+  }
+
+  return {
+    premiumConfig: DEFAULT_PREMIUM_CONFIG,
   };
+};
+
 
   const getInitials = (name: string) =>
     name
@@ -104,11 +95,9 @@ export function ProfileEditDialog({
     setBio(currentBio ?? "");
 
     // Reset avatar state from saved profile
-    const derived = deriveAvatarState(currentAvatarUrl);
+   const derived = deriveAvatarState(currentAvatarUrl);
+setPremiumConfig(derived.premiumConfig);
 
-    setAvatarType(derived.type);
-    setAvatarUrl(derived.avatarUrl);
-    setPremiumConfig(derived.premiumConfig);
 
     // Force avatar editor to fully remount
     setAvatarEditorKey((prev) => prev + 1);
@@ -274,38 +263,13 @@ export function ProfileEditDialog({
 
             <div className="flex justify-center">{renderAvatarPreview()}</div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                variant={avatarType === "premium" ? "default" : "outline"}
-                onClick={() => setAvatarType("premium")}
-                className="gap-1"
-              >
-                <Sparkles className="w-4 h-4" />
-                Premium
-              </Button>
+           <div className="flex justify-center">
+  <Button type="button" variant="default" className="gap-1">
+    <Sparkles className="w-4 h-4" />
+    Avatar
+  </Button>
+</div>
 
-              <Button
-                type="button"
-                variant={avatarType === "upload" ? "default" : "outline"}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="gap-1"
-              >
-                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload
-              </Button>
-
-              <Button
-                type="button"
-                variant={avatarType === "url" ? "default" : "outline"}
-                onClick={() => setAvatarType("url")}
-                className="gap-1"
-              >
-                <Image className="w-4 h-4" />
-                NFT / URL
-              </Button>
-            </div>
 
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
@@ -316,15 +280,13 @@ export function ProfileEditDialog({
                 onConfigChange={handlePremiumConfigChange}
               />
             )}
+            <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
+      🖼 NFT avatars coming soon
+    </div>
+  </>
+)}
 
-            {avatarType === "url" && (
-              <Input
-                placeholder="NFT image URL or IPFS link"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-              />
-            )}
-          </div>
+           
 
           {/* Display Name */}
           <div className="space-y-2">
