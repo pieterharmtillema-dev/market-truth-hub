@@ -210,18 +210,7 @@ export function ProfileEditDialog({
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Avatar */}
-          {/* Avatar */}
-          <div className="space-y-4">
-            <Label>Avatar</Label>
-
-            <div className="flex justify-center">
-              <Button type="button" variant="default" className="gap-1">
-                Avatar
-              </Button>
-            </div>
-
+       
             <div>
               <PremiumAvatarEditor
                 key={avatarEditorKey}
