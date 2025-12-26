@@ -187,10 +187,14 @@ export function PublicPredictionCard({
             onClick={() => navigate(`/trader/${prediction.user_id}`)}
           >
             <Avatar className="w-10 h-10 border-2 border-border">
-              {avatarUrl && avatarUrl.length <= 4 ? (
-                <div className="w-full h-full flex items-center justify-center text-lg bg-muted">
+              {avatarUrl?.startsWith('emoji:') ? (
+                <AvatarFallback className="text-lg bg-muted">
+                  {avatarUrl.replace('emoji:', '')}
+                </AvatarFallback>
+              ) : avatarUrl && avatarUrl.length <= 4 ? (
+                <AvatarFallback className="text-lg bg-muted">
                   {avatarUrl}
-                </div>
+                </AvatarFallback>
               ) : (
                 <>
                   <AvatarImage src={avatarUrl || undefined} />
@@ -276,7 +280,7 @@ export function PublicPredictionCard({
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
                 {isLongTerm ? "Target" : "Exit"}
               </div>
-              <div className={cn("font-mono font-medium text-sm", isLong ? "text-gain" : "text-loss")}>
+              <div className={cn("font-mono font-medium text-sm", isActive ? (isLong ? "text-gain" : "text-loss") : (isHit ? "text-gain" : "text-loss"))}>
                 ${exitPrice}
               </div>
               {!isActive && exitTime && (

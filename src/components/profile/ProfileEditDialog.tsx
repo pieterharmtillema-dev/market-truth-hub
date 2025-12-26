@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit2, User, Camera, Smile } from 'lucide-react';
+import { Edit2, User, Camera, Smile, Upload, Image, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// Available avatar icons
-const avatarIcons = ['👤', '🧑‍💻', '👨‍💼', '👩‍💼', '🦊', '🐱', '🐶', '🦁', '🐯', '🐻', '🎯', '🚀', '💎', '⚡', '🔥', '🌟'];
+// Available avatar icons - expanded character set
+const avatarIcons = [
+  '👤', '🧑‍💻', '👨‍💼', '👩‍💼', '🧙‍♂️', '🧙‍♀️', '🥷', '🦹', '🦸',
+  '🦊', '🐱', '🐶', '🦁', '🐯', '🐻', '🐼', '🐨', '🐵', '🦄', '🐉', '🦅',
+  '🎯', '🚀', '💎', '⚡', '🔥', '🌟', '👑', '🏆', '💰', '📈', '🎰', '🃏',
+  '🤖', '👾', '🎮', '🕹️', '💀', '👽', '🧠', '👁️', '🌙', '☀️', '⭐', '✨'
+];
 
 interface ProfileEditDialogProps {
   userId: string;
@@ -32,18 +37,62 @@ export function ProfileEditDialog({
   const [displayName, setDisplayName] = useState(currentName || '');
   const [bio, setBio] = useState(currentBio || '');
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl || '');
-  const [avatarType, setAvatarType] = useState<'icon' | 'url'>(
+  const [avatarType, setAvatarType] = useState<'icon' | 'url' | 'upload'>(
     currentAvatarUrl?.startsWith('emoji:') ? 'icon' : 'url'
   );
   const [selectedIcon, setSelectedIcon] = useState(
     currentAvatarUrl?.startsWith('emoji:') ? currentAvatarUrl.replace('emoji:', '') : '👤'
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      setAvatarUrl(publicUrl);
+      setAvatarType('upload');
+      toast.success('Avatar uploaded successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload avatar');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const finalAvatarUrl = avatarType === 'icon' ? `emoji:${selectedIcon}` : avatarUrl;
+      const finalAvatarUrl = avatarType === 'icon' ? `emoji:${selectedIcon}` : avatarUrl || '';
       
       const { error } = await supabase
         .from('profiles')
@@ -122,7 +171,7 @@ export function ProfileEditDialog({
                 type="button"
                 variant={avatarType === 'icon' ? 'default' : 'outline'}
                 size="sm"
-                className="flex-1 gap-2"
+                className="flex-1 gap-1.5"
                 onClick={() => setAvatarType('icon')}
               >
                 <Smile className="w-4 h-4" />
@@ -130,19 +179,43 @@ export function ProfileEditDialog({
               </Button>
               <Button
                 type="button"
+                variant={avatarType === 'upload' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1 gap-1.5"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                NFT / Upload
+              </Button>
+              <Button
+                type="button"
                 variant={avatarType === 'url' ? 'default' : 'outline'}
                 size="sm"
-                className="flex-1 gap-2"
+                className="flex-1 gap-1.5"
                 onClick={() => setAvatarType('url')}
               >
-                <Camera className="w-4 h-4" />
-                Image URL
+                <Image className="w-4 h-4" />
+                URL
               </Button>
             </div>
 
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+
             {/* Icon Picker */}
             {avatarType === 'icon' && (
-              <div className="grid grid-cols-8 gap-2">
+              <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto">
                 {avatarIcons.map((icon) => (
                   <button
                     key={icon}
@@ -163,11 +236,23 @@ export function ProfileEditDialog({
 
             {/* URL Input */}
             {avatarType === 'url' && (
-              <Input
-                placeholder="https://example.com/avatar.jpg"
-                value={avatarUrl.startsWith('emoji:') ? '' : avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-              />
+              <div className="space-y-2">
+                <Input
+                  placeholder="https://example.com/avatar.jpg or NFT URL"
+                  value={avatarUrl.startsWith('emoji:') ? '' : avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste any image URL, OpenSea NFT link, or IPFS URL
+                </p>
+              </div>
+            )}
+
+            {/* Upload preview info */}
+            {avatarType === 'upload' && avatarUrl && !avatarUrl.startsWith('emoji:') && (
+              <div className="text-xs text-muted-foreground text-center">
+                ✓ Image uploaded successfully
+              </div>
             )}
           </div>
 
