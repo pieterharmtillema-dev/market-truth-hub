@@ -19,13 +19,12 @@ import {
 interface ProfileEditDialogProps {
   userId: string;
   currentName: string | null;
-  currentAvatarUrl: string | null;
+  currentAvatarUrl: string | null; // ✅ ADD THIS
   currentBio: string | null;
-  onProfileUpdated: ...
+  onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
-
-type AvatarType = "premium";
+const finalAvatarUrl = stringifyPremiumConfig(premiumConfig);
 
 export function ProfileEditDialog({
   userId,
@@ -43,7 +42,6 @@ export function ProfileEditDialog({
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
 
-  
   const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(DEFAULT_PREMIUM_CONFIG);
 
   const [avatarEditorKey, setAvatarEditorKey] = useState(0);
@@ -117,7 +115,6 @@ export function ProfileEditDialog({
       toast.error("Image must be less than 5MB");
       return;
     }
-
   };
 
   const handleSave = async () => {
@@ -161,8 +158,6 @@ export function ProfileEditDialog({
         }
       }
 
-      
-
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -193,16 +188,13 @@ export function ProfileEditDialog({
   /* ------------------------------------------------------------------ */
   /* Render helpers                                                     */
   /* ------------------------------------------------------------------ */
-const renderAvatarPreview = () => {
-  return (
-    <Avatar className="w-24 h-24 border-4 border-border">
-      <AvatarFallback>
-        {displayName ? getInitials(displayName) : <User />}
-      </AvatarFallback>
-    </Avatar>
-  );
-};
-
+  const renderAvatarPreview = () => {
+    return (
+      <Avatar className="w-24 h-24 border-4 border-border">
+        <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
+      </Avatar>
+    );
+  };
 
   /* ------------------------------------------------------------------ */
   /* JSX                                                                */
