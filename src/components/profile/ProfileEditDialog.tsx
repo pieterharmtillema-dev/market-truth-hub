@@ -19,8 +19,7 @@ import {
 interface ProfileEditDialogProps {
   userId: string;
   currentName: string | null;
-  currentAvatarUrl: string | null;
-  currentBio: string | null;
+   currentBio: string | null;
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
@@ -42,8 +41,7 @@ export function ProfileEditDialog({
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
 
-  const [avatarType] = useState<AvatarType>("premium");
-
+  
   const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(DEFAULT_PREMIUM_CONFIG);
 
   const [avatarEditorKey, setAvatarEditorKey] = useState(0);
@@ -118,27 +116,7 @@ export function ProfileEditDialog({
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const fileName = `${userId}/${Date.now()}.${ext}`;
-
-      const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
-
-      if (error) throw error;
-
-      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
-
-      setAvatarUrl(data.publicUrl);
-      setAvatarType("upload");
-      toast.success("Avatar uploaded");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to upload avatar");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+   
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -181,7 +159,7 @@ export function ProfileEditDialog({
         }
       }
 
-      const finalAvatarUrl = avatarType === "premium" ? stringifyPremiumConfig(premiumConfig) : avatarUrl || "";
+      
 
       const { error } = await supabase
         .from("profiles")
