@@ -33,11 +33,20 @@ export function ProfileEditDialog({
   currentBio,
   onProfileUpdated,
 }: ProfileEditDialogProps) {
+  /* ------------------------------------------------------------------ */
+  /* State                                                              */
+  /* ------------------------------------------------------------------ */
+
   const [open, setOpen] = useState(false);
 
-  const [displayName, setDisplayName] = useState(currentName || "");
-  const [bio, setBio] = useState(currentBio || "");
-  const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl || "");
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  const [avatarType, setAvatarType] = useState<AvatarType>("premium");
+  const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(DEFAULT_PREMIUM_CONFIG);
+
+  const [avatarEditorKey, setAvatarEditorKey] = useState(0);
 
   const [editingName, setEditingName] = useState(false);
   const [password, setPassword] = useState("");
@@ -45,17 +54,45 @@ export function ProfileEditDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const [avatarEditorKey, setAvatarEditorKey] = useState(0);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const deriveAvatarType = (url: string | null): AvatarType => {
-    if (url?.startsWith("avatar:")) return "premium";
-    if (url?.startsWith("http")) return "upload";
-    return "premium";
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                            */
+  /* ------------------------------------------------------------------ */
+
+  const deriveAvatarState = (url: string | null) => {
+    if (url?.startsWith("avatar:")) {
+      return {
+        type: "premium" as AvatarType,
+        config: parsePremiumConfig(url) ?? DEFAULT_PREMIUM_CONFIG,
+      };
+    }
+
+    if (url?.startsWith("http")) {
+      return {
+        type: "upload" as AvatarType,
+        config: DEFAULT_PREMIUM_CONFIG,
+      };
+    }
+
+    return {
+      type: "premium" as AvatarType,
+      config: DEFAULT_PREMIUM_CONFIG,
+    };
   };
 
-  // ✅ Preserve existing data when dialog opens
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+  /* ------------------------------------------------------------------ */
+  /* Reset dialog state on open                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
     if (!open) return;
 
@@ -63,35 +100,20 @@ export function ProfileEditDialog({
     setBio(currentBio || "");
     setAvatarUrl(currentAvatarUrl || "");
 
-    const type = deriveAvatarType(currentAvatarUrl);
-    setAvatarType(type);
+    const derived = deriveAvatarState(currentAvatarUrl);
+    setAvatarType(derived.type);
+    setPremiumConfig(derived.config);
 
-    if (type === "premium" && currentAvatarUrl?.startsWith("avatar:")) {
-      setPremiumConfig(parsePremiumConfig(currentAvatarUrl) ?? DEFAULT_PREMIUM_CONFIG);
-    } else {
-      setPremiumConfig(DEFAULT_PREMIUM_CONFIG);
-    }
-
-    // 🔥 FORCE remount of avatar editor
+    // 🔥 force remount of PremiumAvatarEditor
     setAvatarEditorKey((k) => k + 1);
 
     setEditingName(false);
     setPassword("");
   }, [open, currentName, currentBio, currentAvatarUrl]);
 
-  const getInitialAvatarType = (): AvatarType => {
-    if (currentAvatarUrl?.startsWith("avatar:")) return "premium";
-    if (currentAvatarUrl?.startsWith("http")) return "upload";
-    return "premium";
-  };
-
-  const [avatarType, setAvatarType] = useState<AvatarType>(getInitialAvatarType());
-
-  const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(
-    currentAvatarUrl?.startsWith("avatar:")
-      ? parsePremiumConfig(currentAvatarUrl) || DEFAULT_PREMIUM_CONFIG
-      : DEFAULT_PREMIUM_CONFIG,
-  );
+  /* ------------------------------------------------------------------ */
+  /* Handlers                                                           */
+  /* ------------------------------------------------------------------ */
 
   const handlePremiumConfigChange = useCallback((config: PremiumAvatarConfig) => {
     setPremiumConfig(config);
@@ -113,10 +135,11 @@ export function ProfileEditDialog({
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      const ext = file.name.split(".").pop();
+      const fileName = `${userId}/${Date.now()}.${ext}`;
 
       const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
+
       if (error) throw error;
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
@@ -136,14 +159,14 @@ export function ProfileEditDialog({
     setIsSaving(true);
 
     try {
-      // ❗ Prevent empty display name
+      // ❗ Prevent empty name
       if (editingName && !displayName.trim()) {
         toast.error("Display name cannot be empty");
         setIsSaving(false);
         return;
       }
 
-      // 🔐 Require password ONLY if name changed
+      // 🔐 Re-auth only if name changed
       if (editingName && displayName !== currentName) {
         if (!password) {
           toast.error("Enter your password to change your name");
@@ -202,16 +225,12 @@ export function ProfileEditDialog({
     }
   };
 
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
+  /* ------------------------------------------------------------------ */
+  /* Render helpers                                                     */
+  /* ------------------------------------------------------------------ */
 
   const renderAvatarPreview = () => {
-    if ((avatarType === "upload" || avatarType === "url") && avatarUrl) {
+    if (avatarType !== "premium" && avatarUrl) {
       return (
         <Avatar className="w-24 h-24 border-4 border-border">
           <AvatarImage src={avatarUrl} />
@@ -226,6 +245,10 @@ export function ProfileEditDialog({
       </Avatar>
     );
   };
+
+  /* ------------------------------------------------------------------ */
+  /* JSX                                                                */
+  /* ------------------------------------------------------------------ */
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -246,7 +269,7 @@ export function ProfileEditDialog({
           <div className="space-y-4">
             <Label>Avatar</Label>
 
-            {avatarType !== "premium" && <div className="flex justify-center">{renderAvatarPreview()}</div>}
+            <div className="flex justify-center">{renderAvatarPreview()}</div>
 
             <div className="grid grid-cols-3 gap-2">
               <Button
@@ -313,32 +336,24 @@ export function ProfileEditDialog({
               </div>
             ) : (
               <div className="space-y-2">
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="New display name"
-                />
-
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                 <Input
                   type="password"
                   placeholder="Enter password to confirm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingName(false);
-                      setDisplayName(currentName || "");
-                      setPassword("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingName(false);
+                    setDisplayName(currentName || "");
+                    setPassword("");
+                  }}
+                >
+                  Cancel
+                </Button>
               </div>
             )}
           </div>
