@@ -59,6 +59,18 @@ export function ProfileEditDialog({
     }
   }, [open, currentName, currentBio, currentAvatarUrl]);
 
+  <Button
+    size="sm"
+    variant="ghost"
+    onClick={() => {
+      setEditingName(false);
+      setDisplayName(currentName || "");
+      setPassword("");
+    }}
+  >
+    Cancel
+  </Button>;
+
   const getInitialAvatarType = (): AvatarType => {
     if (currentAvatarUrl?.startsWith("avatar:")) return "premium";
     if (currentAvatarUrl?.startsWith("http")) return "upload";
