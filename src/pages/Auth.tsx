@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { z } from "zod";
 import traxLogo from "@/assets/trax-dino-logo.png";
+import trexOpen from "@/assets/trex-open.png";
+import trexClosed from "@/assets/trex-closed.png";
+
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -291,12 +294,13 @@ export default function Auth() {
 
             {/* Logo */}
             <img
-  src={showPassword ? "/trex-closed.png" : "/trex-open.png"}
+  src={showPassword ? trexClosed : trexOpen}
   alt="Trax Mascot"
-  className={`relative h-40 w-auto animate-mascot-idle cursor-pointer transition-transform duration-300 ${
+  className={`relative h-40 w-auto animate-mascot-idle transition-transform duration-300 ${
     isHovered ? "scale-105" : ""
   }`}
 />
+
 
 
             {/* Tooltip */}
