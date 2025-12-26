@@ -45,6 +45,8 @@ export function ProfileEditDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [avatarEditorKey, setAvatarEditorKey] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const deriveAvatarType = (url: string | null): AvatarType => {
