@@ -47,16 +47,34 @@ export function ProfileEditDialog({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const deriveAvatarType = (url: string | null): AvatarType => {
+    if (url?.startsWith("avatar:")) return "premium";
+    if (url?.startsWith("http")) return "upload";
+    return "premium";
+  };
+
   // ✅ Preserve existing data when dialog opens
   useEffect(() => {
-    if (open) {
-      setDisplayName(currentName || "");
-      setBio(currentBio || "");
-      setAvatarUrl(currentAvatarUrl || "");
-      setAvatarType(getInitialAvatarType());
-      setEditingName(false);
-      setPassword("");
+    if (!open) return;
+
+    // Reset text fields
+    setDisplayName(currentName || "");
+    setBio(currentBio || "");
+    setAvatarUrl(currentAvatarUrl || "");
+
+    // 🔁 Reset avatar state to CURRENTLY SAVED avatar
+    const type = deriveAvatarType(currentAvatarUrl);
+    setAvatarType(type);
+
+    if (type === "premium" && currentAvatarUrl?.startsWith("avatar:")) {
+      setPremiumConfig(parsePremiumConfig(currentAvatarUrl) ?? DEFAULT_PREMIUM_CONFIG);
+    } else {
+      setPremiumConfig(DEFAULT_PREMIUM_CONFIG);
     }
+
+    // Reset name-change state
+    setEditingName(false);
+    setPassword("");
   }, [open, currentName, currentBio, currentAvatarUrl]);
 
   const getInitialAvatarType = (): AvatarType => {
