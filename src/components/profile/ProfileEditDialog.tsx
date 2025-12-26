@@ -207,26 +207,29 @@ export function ProfileEditDialog({
   "
       >
         <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
-        </DialogHeader>
+  <DialogTitle>Edit Profile</DialogTitle>
+</DialogHeader>
 
-       
-            <div>
-              <PremiumAvatarEditor
-                key={avatarEditorKey}
-                initialConfig={premiumConfig}
-                onConfigChange={handlePremiumConfigChange}
-              />
+<div className="space-y-6">
+  {/* Avatar Editor */}
+  <div>
+    <PremiumAvatarEditor
+      key={avatarEditorKey}
+      initialConfig={premiumConfig}
+      onConfigChange={handlePremiumConfigChange}
+    />
 
-              <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
-                🖼 NFT avatars coming soon
-              </div>
-            </div>
-          
+    <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
+      🖼 NFT avatars coming soon
+    </div>
+  </div>
 
-          {/* Display Name */}
-          <div className="space-y-2">
-            <Label>Display Name</Label>
+  {/* Display Name */}
+  <div className="space-y-2">
+    <Label>Display Name</Label>
+    {/* input goes here */}
+  </div>
+</div>
 
             {!editingName ? (
               <div className="flex items-center justify-between">
