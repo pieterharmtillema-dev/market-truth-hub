@@ -156,9 +156,11 @@ const Profile = () => {
   const renderAvatar = () => {
     const avatarUrl = profile.avatar_url;
 
-    // ✅ Premium avatar
+    // ✅ Premium avatar (SAFE)
     if (avatarUrl?.startsWith("avatar:")) {
-      return <PremiumAvatarRenderer configString={avatarUrl} size={80} />;
+      const parsedConfig = parsePremiumConfig(avatarUrl) ?? DEFAULT_PREMIUM_CONFIG;
+
+      return <PremiumAvatarRenderer config={parsedConfig} size={80} />;
     }
 
     // ✅ Uploaded image / NFT
