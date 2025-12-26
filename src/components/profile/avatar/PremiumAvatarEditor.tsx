@@ -3,12 +3,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  Undo2, Redo2, Shuffle, ChevronLeft, ChevronRight, 
-  User, Eye, Scissors, Shirt, Glasses, Palette 
-} from 'lucide-react';
+import { Undo2, Redo2, Shuffle } from 'lucide-react';
 import { PremiumAvatarRenderer } from './PremiumAvatarRenderer';
 import {
   PremiumAvatarConfig,
@@ -18,8 +14,6 @@ import {
   HAIR_COLORS,
   OUTFIT_COLORS,
   BACKGROUND_COLORS,
-  EditorStep,
-  EDITOR_STEPS,
   stringifyPremiumConfig,
   parsePremiumConfig,
 } from './types';
@@ -30,13 +24,14 @@ interface PremiumAvatarEditorProps {
   onSave?: (configString: string) => void;
 }
 
+type TabId = 'appearance' | 'style' | 'extras';
+
 export function PremiumAvatarEditor({ 
   initialConfig, 
   onConfigChange,
-  onSave 
 }: PremiumAvatarEditorProps) {
   const [config, setConfig] = useState<PremiumAvatarConfig>(initialConfig || DEFAULT_PREMIUM_CONFIG);
-  const [currentStep, setCurrentStep] = useState<EditorStep>('face');
+  const [activeTab, setActiveTab] = useState<TabId>('appearance');
   const [history, setHistory] = useState<PremiumAvatarConfig[]>([initialConfig || DEFAULT_PREMIUM_CONFIG]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const isUndoRedo = useRef(false);
@@ -54,7 +49,6 @@ export function PremiumAvatarEditor({
   ) => {
     setConfig(prev => {
       const newConfig = { ...prev, [key]: value };
-      // Add to history
       setHistory(h => [...h.slice(0, historyIndex + 1), newConfig]);
       setHistoryIndex(i => i + 1);
       return newConfig;
@@ -88,28 +82,23 @@ export function PremiumAvatarEditor({
       skinUndertone: randomChoice(['warm', 'neutral', 'cool']),
       freckles: Math.random() > 0.7,
       beautyMark: randomChoice(['none', 'none', 'none', 'left', 'right']),
-      
       eyeShape: randomChoice(['focused', 'relaxed', 'sharp', 'friendly']),
       irisColor: randomChoice(IRIS_COLORS).color,
       eyebrowShape: randomChoice(['natural', 'arched', 'straight', 'thick']),
       eyebrowThickness: 0.8 + Math.random() * 0.4,
-      
       hairStyle: randomChoice(['short', 'fade', 'undercut', 'waves', 'bun', 'curls', 'buzz', 'slick']),
-      hairColor: randomChoice(HAIR_COLORS.slice(0, 10)).color, // Natural colors only
+      hairColor: randomChoice(HAIR_COLORS.slice(0, 10)).color,
       hairHighlights: Math.random() > 0.7,
       facialHair: randomChoice(['none', 'none', 'stubble', 'beard', 'goatee', 'mustache']),
       facialHairDensity: 0.5 + Math.random() * 0.5,
-      
       outfit: randomChoice(['hoodie', 'jacket', 'tee', 'blazer', 'sweater', 'polo']),
       outfitColor: randomChoice(OUTFIT_COLORS).color,
       brandAccent: Math.random() > 0.5,
-      
       glasses: randomChoice(['none', 'none', 'none', 'clear', 'dark', 'metal']),
       headphones: Math.random() > 0.85,
       earring: randomChoice(['none', 'none', 'none', 'left', 'right', 'both']),
-      cap: false, // Caps tend to look busy, disable for random
+      cap: false,
       watch: Math.random() > 0.5,
-      
       background: randomChoice(['solid', 'gradient', 'glow']),
       backgroundColor: randomChoice(BACKGROUND_COLORS).color,
     };
@@ -119,372 +108,275 @@ export function PremiumAvatarEditor({
     setHistoryIndex(i => i + 1);
   }, [historyIndex]);
 
-  const stepIndex = EDITOR_STEPS.findIndex(s => s.id === currentStep);
-  const canGoBack = stepIndex > 0;
-  const canGoForward = stepIndex < EDITOR_STEPS.length - 1;
-
-  const goToStep = (step: EditorStep) => setCurrentStep(step);
-  const goBack = () => canGoBack && setCurrentStep(EDITOR_STEPS[stepIndex - 1].id);
-  const goForward = () => canGoForward && setCurrentStep(EDITOR_STEPS[stepIndex + 1].id);
-
-  const stepIcons: Record<EditorStep, React.ReactNode> = {
-    face: <User className="w-4 h-4" />,
-    eyes: <Eye className="w-4 h-4" />,
-    hair: <Scissors className="w-4 h-4" />,
-    clothing: <Shirt className="w-4 h-4" />,
-    accessories: <Glasses className="w-4 h-4" />,
-    background: <Palette className="w-4 h-4" />,
-  };
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'appearance', label: 'Face & Body' },
+    { id: 'style', label: 'Style' },
+    { id: 'extras', label: 'Extras' },
+  ];
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
-        {/* Live Preview */}
-        <div className="flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse-glow" />
-            <PremiumAvatarRenderer config={config} size={140} animated />
+      <div className="space-y-5">
+        {/* Preview + Controls Row */}
+        <div className="flex items-center gap-4">
+          {/* Avatar Preview */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
+            <PremiumAvatarRenderer config={config} size={100} animated />
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="w-8 h-8"
-                  onClick={undo}
-                  disabled={historyIndex === 0}
-                >
-                  <Undo2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Undo</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="w-8 h-8"
-                  onClick={redo}
-                  disabled={historyIndex === history.length - 1}
-                >
-                  <Redo2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Redo</TooltipContent>
-            </Tooltip>
-          </div>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2"
-                onClick={randomize}
-              >
-                <Shuffle className="w-4 h-4" />
-                Randomize
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Generate random professional avatar</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Step Navigation */}
-        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
-          {EDITOR_STEPS.map((step) => (
-            <Tooltip key={step.id}>
-              <TooltipTrigger asChild>
+          {/* Controls */}
+          <div className="flex-1 space-y-3">
+            {/* Tabs */}
+            <div className="flex gap-1 bg-muted p-1 rounded-lg">
+              {tabs.map((tab) => (
                 <button
-                  onClick={() => goToStep(step.id)}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-md transition-all text-xs font-medium",
-                    currentStep === step.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                    "flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all",
+                    activeTab === tab.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {stepIcons[step.id]}
-                  <span className="hidden sm:inline">{step.label}</span>
+                  {tab.label}
                 </button>
-              </TooltipTrigger>
-              <TooltipContent>{step.label}</TooltipContent>
-            </Tooltip>
-          ))}
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={undo} disabled={historyIndex === 0}>
+                    <Undo2 className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Undo</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={redo} disabled={historyIndex === history.length - 1}>
+                    <Redo2 className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Redo</TooltipContent>
+              </Tooltip>
+              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs ml-auto" onClick={randomize}>
+                <Shuffle className="w-3.5 h-3.5" />
+                Random
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Step Content */}
-        <ScrollArea className="h-[260px] pr-3">
-          <div className="space-y-4 pb-2">
-            {currentStep === 'face' && (
-              <FaceEditor config={config} updateConfig={updateConfig} />
-            )}
-            {currentStep === 'eyes' && (
-              <EyesEditor config={config} updateConfig={updateConfig} />
-            )}
-            {currentStep === 'hair' && (
-              <HairEditor config={config} updateConfig={updateConfig} />
-            )}
-            {currentStep === 'clothing' && (
-              <ClothingEditor config={config} updateConfig={updateConfig} />
-            )}
-            {currentStep === 'accessories' && (
-              <AccessoriesEditor config={config} updateConfig={updateConfig} />
-            )}
-            {currentStep === 'background' && (
-              <BackgroundEditor config={config} updateConfig={updateConfig} />
-            )}
-          </div>
-        </ScrollArea>
-
-        {/* Navigation Arrows */}
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goBack}
-            disabled={!canGoBack}
-            className="gap-1"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {canGoBack && EDITOR_STEPS[stepIndex - 1].label}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {stepIndex + 1} / {EDITOR_STEPS.length}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goForward}
-            disabled={!canGoForward}
-            className="gap-1"
-          >
-            {canGoForward && EDITOR_STEPS[stepIndex + 1].label}
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+        {/* Tab Content */}
+        <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+          {activeTab === 'appearance' && (
+            <AppearanceTab config={config} updateConfig={updateConfig} />
+          )}
+          {activeTab === 'style' && (
+            <StyleTab config={config} updateConfig={updateConfig} />
+          )}
+          {activeTab === 'extras' && (
+            <ExtrasTab config={config} updateConfig={updateConfig} />
+          )}
         </div>
       </div>
     </TooltipProvider>
   );
 }
 
-// Face Editor Component
-function FaceEditor({ 
+// Option Group Component
+function OptionGroup({ 
+  label, 
+  children 
+}: { 
+  label: string; 
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+// Pill Button Component
+function PillButton({ 
+  selected, 
+  onClick, 
+  children,
+  className,
+}: { 
+  selected: boolean; 
+  onClick: () => void; 
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "py-2 px-3 rounded-lg text-xs font-medium transition-all border",
+        selected
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-card hover:bg-secondary border-border text-foreground",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Color Swatch Component
+function ColorSwatch({ 
+  color, 
+  selected, 
+  onClick, 
+  size = 'md',
+  tooltip,
+}: { 
+  color: string; 
+  selected: boolean; 
+  onClick: () => void;
+  size?: 'sm' | 'md';
+  tooltip?: string;
+}) {
+  const sizeClasses = size === 'sm' ? 'w-6 h-6' : 'w-8 h-8';
+  
+  const swatch = (
+    <button
+      onClick={onClick}
+      className={cn(
+        sizeClasses,
+        "rounded-full border-2 transition-all shrink-0",
+        selected
+          ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+          : "border-border/50 hover:border-primary/50 hover:scale-105"
+      )}
+      style={{ backgroundColor: color }}
+    />
+  );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{swatch}</TooltipTrigger>
+        <TooltipContent className="text-xs">{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return swatch;
+}
+
+// Appearance Tab
+function AppearanceTab({ 
   config, 
   updateConfig 
 }: { 
   config: PremiumAvatarConfig; 
   updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
 }) {
-  const faceShapes = [
-    { id: 'round', label: 'Round', desc: 'Soft, circular shape' },
-    { id: 'oval', label: 'Oval', desc: 'Classic balanced shape' },
-    { id: 'angular', label: 'Angular', desc: 'Sharp, defined features' },
-    { id: 'square', label: 'Square', desc: 'Strong jawline' },
-  ] as const;
-
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Face Shape</Label>
+    <div className="space-y-5">
+      {/* Face Shape */}
+      <OptionGroup label="Face Shape">
         <div className="grid grid-cols-4 gap-2">
-          {faceShapes.map((shape) => (
-            <Tooltip key={shape.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('faceShape', shape.id)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                    config.faceShape === shape.id
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                  )}
-                >
-                  {shape.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{shape.desc}</TooltipContent>
-            </Tooltip>
+          {(['round', 'oval', 'angular', 'square'] as const).map((shape) => (
+            <PillButton
+              key={shape}
+              selected={config.faceShape === shape}
+              onClick={() => updateConfig('faceShape', shape)}
+            >
+              {shape.charAt(0).toUpperCase() + shape.slice(1)}
+            </PillButton>
           ))}
         </div>
-      </div>
+      </OptionGroup>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Skin Tone</Label>
+      {/* Skin Tone */}
+      <OptionGroup label="Skin Tone">
         <div className="flex flex-wrap gap-2">
           {SKIN_TONES.map((tone) => (
-            <Tooltip key={tone.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {
-                    updateConfig('skinTone', tone.color);
-                    updateConfig('skinUndertone', tone.undertone);
-                  }}
-                  className={cn(
-                    "w-8 h-8 rounded-full border-2 transition-all",
-                    config.skinTone === tone.color
-                      ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                      : "border-border hover:border-primary/50 hover:scale-105"
-                  )}
-                  style={{ backgroundColor: tone.color }}
-                />
-              </TooltipTrigger>
-              <TooltipContent className="capitalize">{tone.undertone} undertone</TooltipContent>
-            </Tooltip>
+            <ColorSwatch
+              key={tone.id}
+              color={tone.color}
+              selected={config.skinTone === tone.color}
+              onClick={() => {
+                updateConfig('skinTone', tone.color);
+                updateConfig('skinUndertone', tone.undertone);
+              }}
+              tooltip={`${tone.undertone} undertone`}
+            />
           ))}
         </div>
-      </div>
+      </OptionGroup>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Details</Label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => updateConfig('freckles', !config.freckles)}
-            className={cn(
-              "py-1.5 px-3 rounded-lg text-xs font-medium transition-all",
-              config.freckles
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-            )}
-          >
-            Freckles
-          </button>
-          {(['none', 'left', 'right'] as const).map((pos) => (
-            <button
-              key={pos}
-              onClick={() => updateConfig('beautyMark', pos)}
-              className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-medium transition-all",
-                config.beautyMark === pos
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              {pos === 'none' ? 'No Mark' : `Mark ${pos}`}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Eyes Editor Component
-function EyesEditor({ 
-  config, 
-  updateConfig 
-}: { 
-  config: PremiumAvatarConfig; 
-  updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
-}) {
-  const eyeShapes = [
-    { id: 'focused', label: 'Focused', desc: 'Intense, determined look' },
-    { id: 'relaxed', label: 'Relaxed', desc: 'Calm, approachable eyes' },
-    { id: 'sharp', label: 'Sharp', desc: 'Alert, attentive gaze' },
-    { id: 'friendly', label: 'Friendly', desc: 'Warm, welcoming eyes' },
-  ] as const;
-
-  const eyebrowShapes = [
-    { id: 'natural', label: 'Natural' },
-    { id: 'arched', label: 'Arched' },
-    { id: 'straight', label: 'Straight' },
-    { id: 'thick', label: 'Thick' },
-  ] as const;
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Eye Shape</Label>
+      {/* Eyes */}
+      <OptionGroup label="Eye Style">
         <div className="grid grid-cols-4 gap-2">
-          {eyeShapes.map((shape) => (
-            <Tooltip key={shape.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('eyeShape', shape.id)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                    config.eyeShape === shape.id
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                  )}
-                >
-                  {shape.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{shape.desc}</TooltipContent>
-            </Tooltip>
+          {(['focused', 'relaxed', 'sharp', 'friendly'] as const).map((shape) => (
+            <PillButton
+              key={shape}
+              selected={config.eyeShape === shape}
+              onClick={() => updateConfig('eyeShape', shape)}
+            >
+              {shape.charAt(0).toUpperCase() + shape.slice(1)}
+            </PillButton>
           ))}
         </div>
-      </div>
+      </OptionGroup>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Iris Color</Label>
+      {/* Eye Color */}
+      <OptionGroup label="Eye Color">
         <div className="flex flex-wrap gap-2">
           {IRIS_COLORS.map((color) => (
-            <Tooltip key={color.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('irisColor', color.color)}
-                  className={cn(
-                    "w-7 h-7 rounded-full border-2 transition-all",
-                    config.irisColor === color.color
-                      ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                      : "border-border hover:border-primary/50 hover:scale-105"
-                  )}
-                  style={{ backgroundColor: color.color }}
-                />
-              </TooltipTrigger>
-              <TooltipContent>{color.name}</TooltipContent>
-            </Tooltip>
+            <ColorSwatch
+              key={color.id}
+              color={color.color}
+              selected={config.irisColor === color.color}
+              onClick={() => updateConfig('irisColor', color.color)}
+              tooltip={color.name}
+              size="sm"
+            />
           ))}
         </div>
-      </div>
+      </OptionGroup>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Eyebrow Shape</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {eyebrowShapes.map((shape) => (
-            <button
-              key={shape.id}
-              onClick={() => updateConfig('eyebrowShape', shape.id)}
-              className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-medium transition-all",
-                config.eyebrowShape === shape.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              {shape.label}
-            </button>
-          ))}
+      {/* Face Details */}
+      <OptionGroup label="Face Details">
+        <div className="flex flex-wrap gap-2">
+          <PillButton
+            selected={config.freckles}
+            onClick={() => updateConfig('freckles', !config.freckles)}
+          >
+            Freckles
+          </PillButton>
+          <PillButton
+            selected={config.beautyMark === 'left'}
+            onClick={() => updateConfig('beautyMark', config.beautyMark === 'left' ? 'none' : 'left')}
+          >
+            Mark Left
+          </PillButton>
+          <PillButton
+            selected={config.beautyMark === 'right'}
+            onClick={() => updateConfig('beautyMark', config.beautyMark === 'right' ? 'none' : 'right')}
+          >
+            Mark Right
+          </PillButton>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Eyebrow Thickness
-        </Label>
-        <Slider
-          value={[config.eyebrowThickness]}
-          onValueChange={([v]) => updateConfig('eyebrowThickness', v)}
-          min={0.5}
-          max={1.5}
-          step={0.1}
-          className="w-full"
-        />
-      </div>
+      </OptionGroup>
     </div>
   );
 }
 
-// Hair Editor Component
-function HairEditor({ 
+// Style Tab
+function StyleTab({ 
   config, 
   updateConfig 
 }: { 
@@ -504,385 +396,252 @@ function HairEditor({
     { id: 'ponytail', label: 'Ponytail' },
   ] as const;
 
-  const facialHairStyles = [
-    { id: 'none', label: 'None' },
-    { id: 'stubble', label: 'Stubble' },
-    { id: 'beard', label: 'Beard' },
-    { id: 'goatee', label: 'Goatee' },
-    { id: 'mustache', label: 'Mustache' },
+  const outfits = [
+    { id: 'hoodie', label: 'Hoodie' },
+    { id: 'jacket', label: 'Jacket' },
+    { id: 'tee', label: 'T-Shirt' },
+    { id: 'blazer', label: 'Blazer' },
+    { id: 'sweater', label: 'Sweater' },
+    { id: 'polo', label: 'Polo' },
   ] as const;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hair Style</Label>
+    <div className="space-y-5">
+      {/* Hair Style */}
+      <OptionGroup label="Hair Style">
         <div className="grid grid-cols-5 gap-1.5">
           {hairStyles.map((style) => (
-            <button
+            <PillButton
               key={style.id}
+              selected={config.hairStyle === style.id}
               onClick={() => updateConfig('hairStyle', style.id)}
-              className={cn(
-                "py-1.5 px-2 rounded-lg text-xs font-medium transition-all",
-                config.hairStyle === style.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
+              className="px-2"
             >
               {style.label}
-            </button>
+            </PillButton>
           ))}
         </div>
-      </div>
+      </OptionGroup>
 
+      {/* Hair Color */}
       {config.hairStyle !== 'none' && (
-        <>
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hair Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {HAIR_COLORS.map((color) => (
-                <Tooltip key={color.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => updateConfig('hairColor', color.color)}
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 transition-all",
-                        config.hairColor === color.color
-                          ? "border-primary ring-2 ring-primary ring-offset-1 ring-offset-background scale-110"
-                          : "border-border hover:border-primary/50 hover:scale-105"
-                      )}
-                      style={{ backgroundColor: color.color }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>{color.name}</TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => updateConfig('hairHighlights', !config.hairHighlights)}
-              className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-medium transition-all",
-                config.hairHighlights
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              ✨ Highlights
-            </button>
-          </div>
-        </>
-      )}
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Facial Hair</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {facialHairStyles.map((style) => (
-            <button
-              key={style.id}
-              onClick={() => updateConfig('facialHair', style.id)}
-              className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-medium transition-all",
-                config.facialHair === style.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              {style.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {config.facialHair !== 'none' && (
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Facial Hair Density
-          </Label>
-          <Slider
-            value={[config.facialHairDensity]}
-            onValueChange={([v]) => updateConfig('facialHairDensity', v)}
-            min={0.3}
-            max={1}
-            step={0.1}
-            className="w-full"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Clothing Editor Component
-function ClothingEditor({ 
-  config, 
-  updateConfig 
-}: { 
-  config: PremiumAvatarConfig; 
-  updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
-}) {
-  const outfits = [
-    { id: 'hoodie', label: 'Hoodie', desc: 'Casual comfort' },
-    { id: 'jacket', label: 'Jacket', desc: 'Smart casual' },
-    { id: 'tee', label: 'T-Shirt', desc: 'Relaxed style' },
-    { id: 'blazer', label: 'Blazer', desc: 'Professional look' },
-    { id: 'sweater', label: 'Sweater', desc: 'Cozy and refined' },
-    { id: 'polo', label: 'Polo', desc: 'Business casual' },
-  ] as const;
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Outfit Style</Label>
-        <div className="grid grid-cols-3 gap-2">
-          {outfits.map((outfit) => (
-            <Tooltip key={outfit.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('outfit', outfit.id)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                    config.outfit === outfit.id
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                  )}
-                >
-                  {outfit.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{outfit.desc}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Outfit Color</Label>
-        <div className="flex flex-wrap gap-2">
-          {OUTFIT_COLORS.map((color) => (
-            <Tooltip key={color.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('outfitColor', color.color)}
-                  className={cn(
-                    "w-8 h-8 rounded-lg border-2 transition-all",
-                    config.outfitColor === color.color
-                      ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                      : "border-border hover:border-primary/50 hover:scale-105"
-                  )}
-                  style={{ backgroundColor: color.color }}
-                />
-              </TooltipTrigger>
-              <TooltipContent>{color.name}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => updateConfig('brandAccent', !config.brandAccent)}
-          className={cn(
-            "py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center gap-2",
-            config.brandAccent
-              ? "bg-primary text-primary-foreground"
-              : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-          )}
-        >
-          <span className="w-3 h-3 rounded-full bg-[#10B981]" />
-          TRAX Accent
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Accessories Editor Component
-function AccessoriesEditor({ 
-  config, 
-  updateConfig 
-}: { 
-  config: PremiumAvatarConfig; 
-  updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
-}) {
-  const glassesOptions = [
-    { id: 'none', label: 'None' },
-    { id: 'clear', label: 'Clear' },
-    { id: 'dark', label: 'Sunglasses' },
-    { id: 'metal', label: 'Metal Frames' },
-  ] as const;
-
-  const earringOptions = [
-    { id: 'none', label: 'None' },
-    { id: 'left', label: 'Left' },
-    { id: 'right', label: 'Right' },
-    { id: 'both', label: 'Both' },
-  ] as const;
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Glasses</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {glassesOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => updateConfig('glasses', option.id)}
-              className={cn(
-                "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                config.glasses === option.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Earrings</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {earringOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => updateConfig('earring', option.id)}
-              className={cn(
-                "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                config.earring === option.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Other Accessories</Label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => updateConfig('headphones', !config.headphones)}
-            className={cn(
-              "py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
-              config.headphones
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-            )}
-          >
-            🎧 Headphones
-          </button>
-          <button
-            onClick={() => updateConfig('cap', !config.cap)}
-            className={cn(
-              "py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
-              config.cap
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-            )}
-          >
-            🧢 Cap
-          </button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => updateConfig('watch', !config.watch)}
-                className={cn(
-                  "py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
-                  config.watch
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                )}
-              >
-                ⌚ Watch
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Trader's essential timepiece</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Background Editor Component
-function BackgroundEditor({ 
-  config, 
-  updateConfig 
-}: { 
-  config: PremiumAvatarConfig; 
-  updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
-}) {
-  const bgStyles = [
-    { id: 'none', label: 'None', desc: 'Transparent/dark background' },
-    { id: 'solid', label: 'Solid', desc: 'Clean solid color' },
-    { id: 'gradient', label: 'Gradient', desc: 'Subtle color gradient' },
-    { id: 'glow', label: 'Glow', desc: 'Brand glow effect' },
-  ] as const;
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Background Style</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {bgStyles.map((style) => (
-            <Tooltip key={style.id}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => updateConfig('background', style.id)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-medium transition-all",
-                    config.background === style.id
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                  )}
-                >
-                  {style.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{style.desc}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      </div>
-
-      {config.background !== 'none' && (
-        <div className="space-y-2">
-          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Background Color</Label>
+        <OptionGroup label="Hair Color">
           <div className="flex flex-wrap gap-2">
-            {BACKGROUND_COLORS.map((color) => (
-              <Tooltip key={color.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => updateConfig('backgroundColor', color.color)}
-                    className={cn(
-                      "w-8 h-8 rounded-lg border-2 transition-all relative overflow-hidden",
-                      config.backgroundColor === color.color
-                        ? "border-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                        : "border-border hover:border-primary/50 hover:scale-105"
-                    )}
-                    style={{ backgroundColor: color.color }}
-                  >
-                    {color.id === 'brand' && (
-                      <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">
-                        T
-                      </span>
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{color.name}</TooltipContent>
-              </Tooltip>
+            {HAIR_COLORS.map((color) => (
+              <ColorSwatch
+                key={color.id}
+                color={color.color}
+                selected={config.hairColor === color.color}
+                onClick={() => updateConfig('hairColor', color.color)}
+                tooltip={color.name}
+                size="sm"
+              />
             ))}
           </div>
-        </div>
+          <div className="flex items-center gap-2 mt-2">
+            <PillButton
+              selected={config.hairHighlights}
+              onClick={() => updateConfig('hairHighlights', !config.hairHighlights)}
+            >
+              ✨ Add Highlights
+            </PillButton>
+          </div>
+        </OptionGroup>
       )}
+
+      {/* Facial Hair */}
+      <OptionGroup label="Facial Hair">
+        <div className="flex flex-wrap gap-2">
+          {(['none', 'stubble', 'beard', 'goatee', 'mustache'] as const).map((style) => (
+            <PillButton
+              key={style}
+              selected={config.facialHair === style}
+              onClick={() => updateConfig('facialHair', style)}
+            >
+              {style === 'none' ? 'None' : style.charAt(0).toUpperCase() + style.slice(1)}
+            </PillButton>
+          ))}
+        </div>
+        {config.facialHair !== 'none' && (
+          <div className="pt-2">
+            <Label className="text-[10px] text-muted-foreground">Density</Label>
+            <Slider
+              value={[config.facialHairDensity]}
+              onValueChange={([v]) => updateConfig('facialHairDensity', v)}
+              min={0.3}
+              max={1}
+              step={0.1}
+              className="w-full mt-1"
+            />
+          </div>
+        )}
+      </OptionGroup>
+
+      {/* Outfit */}
+      <OptionGroup label="Outfit">
+        <div className="grid grid-cols-3 gap-2">
+          {outfits.map((outfit) => (
+            <PillButton
+              key={outfit.id}
+              selected={config.outfit === outfit.id}
+              onClick={() => updateConfig('outfit', outfit.id)}
+            >
+              {outfit.label}
+            </PillButton>
+          ))}
+        </div>
+      </OptionGroup>
+
+      {/* Outfit Color */}
+      <OptionGroup label="Outfit Color">
+        <div className="flex flex-wrap gap-2">
+          {OUTFIT_COLORS.map((color) => (
+            <ColorSwatch
+              key={color.id}
+              color={color.color}
+              selected={config.outfitColor === color.color}
+              onClick={() => updateConfig('outfitColor', color.color)}
+              tooltip={color.name}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <PillButton
+            selected={config.brandAccent}
+            onClick={() => updateConfig('brandAccent', !config.brandAccent)}
+          >
+            <span className="inline-block w-2 h-2 rounded-full bg-[#10B981] mr-1.5" />
+            TRAX Accent
+          </PillButton>
+        </div>
+      </OptionGroup>
     </div>
   );
 }
 
-// Export helpers
+// Extras Tab  
+function ExtrasTab({ 
+  config, 
+  updateConfig 
+}: { 
+  config: PremiumAvatarConfig; 
+  updateConfig: <K extends keyof PremiumAvatarConfig>(key: K, value: PremiumAvatarConfig[K]) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* Glasses */}
+      <OptionGroup label="Glasses">
+        <div className="grid grid-cols-4 gap-2">
+          {(['none', 'clear', 'dark', 'metal'] as const).map((style) => (
+            <PillButton
+              key={style}
+              selected={config.glasses === style}
+              onClick={() => updateConfig('glasses', style)}
+            >
+              {style === 'none' ? 'None' : style === 'dark' ? 'Shades' : style.charAt(0).toUpperCase() + style.slice(1)}
+            </PillButton>
+          ))}
+        </div>
+      </OptionGroup>
+
+      {/* Accessories */}
+      <OptionGroup label="Accessories">
+        <div className="flex flex-wrap gap-2">
+          <PillButton
+            selected={config.headphones}
+            onClick={() => updateConfig('headphones', !config.headphones)}
+          >
+            🎧 Headphones
+          </PillButton>
+          <PillButton
+            selected={config.cap}
+            onClick={() => updateConfig('cap', !config.cap)}
+          >
+            🧢 Cap
+          </PillButton>
+          <PillButton
+            selected={config.watch}
+            onClick={() => updateConfig('watch', !config.watch)}
+          >
+            ⌚ Watch
+          </PillButton>
+        </div>
+      </OptionGroup>
+
+      {/* Earrings */}
+      <OptionGroup label="Earrings">
+        <div className="grid grid-cols-4 gap-2">
+          {(['none', 'left', 'right', 'both'] as const).map((style) => (
+            <PillButton
+              key={style}
+              selected={config.earring === style}
+              onClick={() => updateConfig('earring', style)}
+            >
+              {style === 'none' ? 'None' : style.charAt(0).toUpperCase() + style.slice(1)}
+            </PillButton>
+          ))}
+        </div>
+      </OptionGroup>
+
+      {/* Background */}
+      <OptionGroup label="Background Style">
+        <div className="grid grid-cols-4 gap-2">
+          {(['none', 'solid', 'gradient', 'glow'] as const).map((style) => (
+            <PillButton
+              key={style}
+              selected={config.background === style}
+              onClick={() => updateConfig('background', style)}
+            >
+              {style === 'none' ? 'None' : style.charAt(0).toUpperCase() + style.slice(1)}
+            </PillButton>
+          ))}
+        </div>
+      </OptionGroup>
+
+      {/* Background Color */}
+      {config.background !== 'none' && (
+        <OptionGroup label="Background Color">
+          <div className="flex flex-wrap gap-2">
+            {BACKGROUND_COLORS.map((color) => (
+              <ColorSwatch
+                key={color.id}
+                color={color.color}
+                selected={config.backgroundColor === color.color}
+                onClick={() => updateConfig('backgroundColor', color.color)}
+                tooltip={color.name}
+              />
+            ))}
+          </div>
+        </OptionGroup>
+      )}
+
+      {/* Eyebrows */}
+      <OptionGroup label="Eyebrows">
+        <div className="grid grid-cols-4 gap-2">
+          {(['natural', 'arched', 'straight', 'thick'] as const).map((shape) => (
+            <PillButton
+              key={shape}
+              selected={config.eyebrowShape === shape}
+              onClick={() => updateConfig('eyebrowShape', shape)}
+            >
+              {shape.charAt(0).toUpperCase() + shape.slice(1)}
+            </PillButton>
+          ))}
+        </div>
+        <div className="pt-2">
+          <Label className="text-[10px] text-muted-foreground">Thickness</Label>
+          <Slider
+            value={[config.eyebrowThickness]}
+            onValueChange={([v]) => updateConfig('eyebrowThickness', v)}
+            min={0.5}
+            max={1.5}
+            step={0.1}
+            className="w-full mt-1"
+          />
+        </div>
+      </OptionGroup>
+    </div>
+  );
+}
+
 export { stringifyPremiumConfig, parsePremiumConfig };
