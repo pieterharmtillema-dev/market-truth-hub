@@ -273,7 +273,7 @@ setPremiumConfig(derived.premiumConfig);
 
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
-            {avatarType === "premium" && (
+{avatarType === "premium" && (
   <div>
     <PremiumAvatarEditor
       key={avatarEditorKey}
@@ -286,6 +286,7 @@ setPremiumConfig(derived.premiumConfig);
     </div>
   </div>
 )}
+
 
            
 
