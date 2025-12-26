@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PremiumAvatarRenderer } from "@/components/profile/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Settings,
@@ -154,15 +155,17 @@ const Profile = () => {
   const renderAvatar = () => {
     const avatarUrl = profile.avatar_url;
 
-    if (avatarUrl?.startsWith("emoji:")) {
-      const emoji = avatarUrl.replace("emoji:", "");
-      return <AvatarFallback className="text-3xl bg-primary/10">{emoji}</AvatarFallback>;
+    // ✅ Premium avatar
+    if (avatarUrl?.startsWith("avatar:")) {
+      return <PremiumAvatarRenderer configString={avatarUrl} size={80} />;
     }
 
-    if (avatarUrl) {
+    // ✅ Uploaded image / NFT
+    if (avatarUrl?.startsWith("http")) {
       return <AvatarImage src={avatarUrl} alt={profile.display_name || "Profile"} />;
     }
 
+    // ✅ Fallback initials
     return (
       <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
         {profile.display_name ? getInitials(profile.display_name) : <User className="w-8 h-8" />}
