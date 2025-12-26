@@ -290,11 +290,14 @@ export default function Auth() {
             </div>
 
             {/* Logo */}
-            <img 
-              src={traxLogo} 
-              alt="Trax Logo" 
-              className={`relative h-40 w-auto animate-mascot-idle cursor-pointer transition-transform duration-300 ${isHovered ? 'scale-105' : ''}`}
-            />
+            <img
+  src={showPassword ? "/trex-closed.png" : "/trex-open.png"}
+  alt="Trax Mascot"
+  className={`relative h-40 w-auto animate-mascot-idle cursor-pointer transition-transform duration-300 ${
+    isHovered ? "scale-105" : ""
+  }`}
+/>
+
 
             {/* Tooltip */}
             {showTooltip && (
