@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useFollows } from "@/hooks/useFollows";
 import { PublicPredictionCard, PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
@@ -26,7 +28,8 @@ import {
   Activity,
   Briefcase,
   Zap,
-  LineChart
+  LineChart,
+  Users
 } from "lucide-react";
 
 interface PublicProfile {
@@ -52,6 +55,8 @@ interface FakeTraderMeta {
   total_trades: number;
   is_active: boolean;
   last_active: string;
+  followers: string[];
+  following: string[];
 }
 
 // Fake demo profiles for testing/demo purposes
@@ -61,9 +66,19 @@ const FAKE_PROFILES: Record<string, PublicProfile> = {
   '33333333-3333-3333-3333-333333333333': { user_id: '33333333-3333-3333-3333-333333333333', display_name: 'StockWhisperer', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=StockWhisperer', bio: 'Value investor turned swing trader', current_streak: 2, total_predictions: 234, total_hits: 145, streak_type: 'miss', created_at: '2023-11-08' },
   '44444444-4444-4444-4444-444444444444': { user_id: '44444444-4444-4444-4444-444444444444', display_name: 'TechTrader', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=TechTrader', bio: 'Tech stocks enthusiast. NASDAQ focused.', current_streak: 5, total_predictions: 67, total_hits: 41, streak_type: 'hit', created_at: '2024-06-01' },
   '55555555-5555-5555-5555-555555555555': { user_id: '55555555-5555-5555-5555-555555555555', display_name: 'GoldBull', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoldBull', bio: 'Commodities specialist. Gold & Silver.', current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss', created_at: '2024-08-14' },
+  '66666666-6666-6666-6666-666666666666': { user_id: '66666666-6666-6666-6666-666666666666', display_name: 'SwingKing', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SwingKing', bio: 'Index ETF swing trader. SPY/QQQ specialist.', current_streak: 4, total_predictions: 98, total_hits: 67, streak_type: 'hit', created_at: '2024-02-10' },
+  '77777777-7777-7777-7777-777777777777': { user_id: '77777777-7777-7777-7777-777777777777', display_name: 'ScalpMaster', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ScalpMaster', bio: 'Scalping forex pairs since 2018. Quick in, quick out.', current_streak: 6, total_predictions: 312, total_hits: 198, streak_type: 'hit', created_at: '2023-08-20' },
+  '88888888-8888-8888-8888-888888888888': { user_id: '88888888-8888-8888-8888-888888888888', display_name: 'DiamondHands', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=DiamondHands', bio: 'HODL gang. Long-term crypto investor.', current_streak: 12, total_predictions: 24, total_hits: 21, streak_type: 'hit', created_at: '2021-05-15' },
+  '99999999-9999-9999-9999-999999999999': { user_id: '99999999-9999-9999-9999-999999999999', display_name: 'OptionsWizard', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OptionsWizard', bio: 'Options strategies. Theta gang member.', current_streak: 3, total_predictions: 145, total_hits: 89, streak_type: 'hit', created_at: '2024-01-05' },
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': { user_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', display_name: 'AlgoTrader', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AlgoTrader', bio: 'Quantitative trading. Python & ML enthusiast.', current_streak: 8, total_predictions: 456, total_hits: 298, streak_type: 'hit', created_at: '2023-03-12' },
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': { user_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', display_name: 'MemeStockMaven', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MemeStockMaven', bio: 'Riding the meme wave 🚀 GME/AMC veteran', current_streak: 1, total_predictions: 78, total_hits: 42, streak_type: 'miss', created_at: '2024-04-01' },
+  'cccccccc-cccc-cccc-cccc-cccccccccccc': { user_id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', display_name: 'OilBaron', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OilBaron', bio: 'Energy sector specialist. Crude & Natural Gas.', current_streak: 2, total_predictions: 56, total_hits: 38, streak_type: 'hit', created_at: '2023-10-20' },
+  'dddddddd-dddd-dddd-dddd-dddddddddddd': { user_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', display_name: 'AsianSession', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AsianSession', bio: 'Trading Tokyo & Sydney sessions. JPY pairs focused.', current_streak: 5, total_predictions: 134, total_hits: 89, streak_type: 'hit', created_at: '2024-05-18' },
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee': { user_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', display_name: 'ValueHunter', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ValueHunter', bio: 'Buffett disciple. Deep value investing.', current_streak: 9, total_predictions: 34, total_hits: 28, streak_type: 'hit', created_at: '2022-11-01' },
+  'ffffffff-ffff-ffff-ffff-ffffffffffff': { user_id: 'ffffffff-ffff-ffff-ffff-ffffffffffff', display_name: 'CryptoWhale', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoWhale', bio: 'Alt season hunter. Finding the next 100x.', current_streak: 4, total_predictions: 89, total_hits: 52, streak_type: 'hit', created_at: '2023-12-01' },
 };
 
-// Fake trader metadata
+// Fake trader metadata with followers/following
 const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
   '11111111-1111-1111-1111-111111111111': {
     platform: 'Binance',
@@ -76,6 +91,8 @@ const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
     total_trades: 156,
     is_active: true,
     last_active: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    followers: ['22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+    following: ['88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
   },
   '22222222-2222-2222-2222-222222222222': {
     platform: 'MetaTrader 5',
@@ -88,6 +105,8 @@ const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
     total_trades: 89,
     is_active: false,
     last_active: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    followers: ['77777777-7777-7777-7777-777777777777', 'dddddddd-dddd-dddd-dddd-dddddddddddd'],
+    following: ['11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777'],
   },
   '33333333-3333-3333-3333-333333333333': {
     platform: 'TradingView',
@@ -100,6 +119,8 @@ const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
     total_trades: 234,
     is_active: true,
     last_active: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    followers: ['44444444-4444-4444-4444-444444444444', '99999999-9999-9999-9999-999999999999', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'],
+    following: ['11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666'],
   },
   '44444444-4444-4444-4444-444444444444': {
     platform: 'Interactive Brokers',
@@ -112,6 +133,8 @@ const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
     total_trades: 67,
     is_active: false,
     last_active: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    followers: ['33333333-3333-3333-3333-333333333333'],
+    following: ['11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', '99999999-9999-9999-9999-999999999999'],
   },
   '55555555-5555-5555-5555-555555555555': {
     platform: 'MetaTrader 5',
@@ -124,6 +147,148 @@ const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
     total_trades: 42,
     is_active: true,
     last_active: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+    followers: ['cccccccc-cccc-cccc-cccc-cccccccccccc'],
+    following: ['cccccccc-cccc-cccc-cccc-cccccccccccc'],
+  },
+  '66666666-6666-6666-6666-666666666666': {
+    platform: 'TD Ameritrade',
+    asset_focus: ['SPY', 'QQQ', 'IWM'],
+    experience_level: 'Advanced',
+    holding_time: 'Swing (1-2 weeks)',
+    trade_frequency: 'Weekly',
+    win_rate: 68.4,
+    average_r: 1.9,
+    total_trades: 98,
+    is_active: true,
+    last_active: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    followers: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'],
+    following: ['33333333-3333-3333-3333-333333333333'],
+  },
+  '77777777-7777-7777-7777-777777777777': {
+    platform: 'cTrader',
+    asset_focus: ['EUR/USD', 'USD/JPY', 'GBP/USD'],
+    experience_level: 'Expert',
+    holding_time: 'Scalp (1-30 min)',
+    trade_frequency: '20+ per day',
+    win_rate: 63.5,
+    average_r: 1.2,
+    total_trades: 312,
+    is_active: true,
+    last_active: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
+    followers: ['22222222-2222-2222-2222-222222222222', 'dddddddd-dddd-dddd-dddd-dddddddddddd'],
+    following: ['22222222-2222-2222-2222-222222222222'],
+  },
+  '88888888-8888-8888-8888-888888888888': {
+    platform: 'Coinbase',
+    asset_focus: ['BTC', 'ETH', 'SOL'],
+    experience_level: 'Advanced',
+    holding_time: 'Long-term (months)',
+    trade_frequency: 'Monthly',
+    win_rate: 87.5,
+    average_r: 5.2,
+    total_trades: 24,
+    is_active: false,
+    last_active: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    followers: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+    following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+  },
+  '99999999-9999-9999-9999-999999999999': {
+    platform: 'Tastytrade',
+    asset_focus: ['TSLA', 'NVDA', 'SPY'],
+    experience_level: 'Expert',
+    holding_time: 'Options (weeks)',
+    trade_frequency: 'Daily',
+    win_rate: 61.4,
+    average_r: 2.3,
+    total_trades: 145,
+    is_active: true,
+    last_active: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+    followers: ['44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333'],
+    following: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'],
+  },
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': {
+    platform: 'Bybit',
+    asset_focus: ['BTC', 'ETH', 'LINK'],
+    experience_level: 'Expert',
+    holding_time: 'Algo (variable)',
+    trade_frequency: '50+ per day',
+    win_rate: 65.4,
+    average_r: 1.6,
+    total_trades: 456,
+    is_active: true,
+    last_active: new Date(Date.now() - 30 * 1000).toISOString(),
+    followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+    following: [],
+  },
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': {
+    platform: 'Robinhood',
+    asset_focus: ['GME', 'AMC', 'BBBY'],
+    experience_level: 'Beginner',
+    holding_time: 'Variable',
+    trade_frequency: 'Sporadic',
+    win_rate: 53.8,
+    average_r: 0.8,
+    total_trades: 78,
+    is_active: false,
+    last_active: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    followers: [],
+    following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+  },
+  'cccccccc-cccc-cccc-cccc-cccccccccccc': {
+    platform: 'NinjaTrader',
+    asset_focus: ['CL', 'NG', 'GC'],
+    experience_level: 'Advanced',
+    holding_time: 'Day trading',
+    trade_frequency: 'Daily',
+    win_rate: 67.9,
+    average_r: 2.0,
+    total_trades: 56,
+    is_active: true,
+    last_active: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+    followers: ['55555555-5555-5555-5555-555555555555'],
+    following: ['55555555-5555-5555-5555-555555555555'],
+  },
+  'dddddddd-dddd-dddd-dddd-dddddddddddd': {
+    platform: 'OANDA',
+    asset_focus: ['USD/JPY', 'EUR/JPY', 'AUD/JPY'],
+    experience_level: 'Advanced',
+    holding_time: 'Swing (days)',
+    trade_frequency: 'Few per week',
+    win_rate: 66.4,
+    average_r: 1.8,
+    total_trades: 134,
+    is_active: false,
+    last_active: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    followers: ['77777777-7777-7777-7777-777777777777'],
+    following: ['22222222-2222-2222-2222-222222222222', '77777777-7777-7777-7777-777777777777'],
+  },
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee': {
+    platform: 'Fidelity',
+    asset_focus: ['BRK.B', 'JPM', 'V'],
+    experience_level: 'Expert',
+    holding_time: 'Long-term (years)',
+    trade_frequency: 'Monthly',
+    win_rate: 82.4,
+    average_r: 3.1,
+    total_trades: 34,
+    is_active: false,
+    last_active: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    followers: ['33333333-3333-3333-3333-333333333333'],
+    following: ['33333333-3333-3333-3333-333333333333'],
+  },
+  'ffffffff-ffff-ffff-ffff-ffffffffffff': {
+    platform: 'Kraken',
+    asset_focus: ['SOL', 'AVAX', 'LINK'],
+    experience_level: 'Advanced',
+    holding_time: 'Swing (weeks)',
+    trade_frequency: 'Weekly',
+    win_rate: 58.4,
+    average_r: 3.8,
+    total_trades: 89,
+    is_active: true,
+    last_active: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+    followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888'],
+    following: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
   },
 };
 
@@ -149,6 +314,8 @@ const TraderProfile = () => {
   const [loadingPredictions, setLoadingPredictions] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
   
   const { following, followUser, unfollowUser, isFollowing } = useFollows(currentUserId);
   const isOwnProfile = currentUserId === userId;
@@ -279,6 +446,11 @@ const TraderProfile = () => {
   const tradePredictions = predictions.filter(p => p.data_source === "trade_sync");
   const longTermPredictions = predictions.filter(p => p.data_source === "user");
 
+  const followerCount = traderMeta?.followers.length || 0;
+  const followingCount = traderMeta?.following.length || 0;
+
+  const getProfileForId = (id: string) => FAKE_PROFILES[id] || null;
+
   if (loading) {
     return (
       <AppLayout title="Trader Profile">
@@ -362,6 +534,26 @@ const TraderProfile = () => {
                 
                 {profile.bio && (
                   <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
+                )}
+                
+                {/* Follower/Following Counts */}
+                {traderMeta && (
+                  <div className="flex items-center gap-4 mt-2">
+                    <button 
+                      onClick={() => setShowFollowersModal(true)}
+                      className="text-sm hover:text-primary transition-colors"
+                    >
+                      <span className="font-bold">{followerCount}</span>
+                      <span className="text-muted-foreground ml-1">followers</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowFollowingModal(true)}
+                      className="text-sm hover:text-primary transition-colors"
+                    >
+                      <span className="font-bold">{followingCount}</span>
+                      <span className="text-muted-foreground ml-1">following</span>
+                    </button>
+                  </div>
                 )}
                 
                 {/* Platform Badge */}
@@ -567,6 +759,96 @@ const TraderProfile = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Followers Modal */}
+      <Dialog open={showFollowersModal} onOpenChange={setShowFollowersModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Followers ({followerCount})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-80">
+            <div className="space-y-3">
+              {traderMeta?.followers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No followers yet</p>
+              ) : (
+                traderMeta?.followers.map((followerId) => {
+                  const followerProfile = getProfileForId(followerId);
+                  if (!followerProfile) return null;
+                  return (
+                    <div
+                      key={followerId}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setShowFollowersModal(false);
+                        navigate(`/trader/${followerId}`);
+                      }}
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={followerProfile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                          {(followerProfile.display_name || "?").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{followerProfile.display_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{followerProfile.bio}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Following Modal */}
+      <Dialog open={showFollowingModal} onOpenChange={setShowFollowingModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Following ({followingCount})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-80">
+            <div className="space-y-3">
+              {traderMeta?.following.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Not following anyone yet</p>
+              ) : (
+                traderMeta?.following.map((followingId) => {
+                  const followingProfile = getProfileForId(followingId);
+                  if (!followingProfile) return null;
+                  return (
+                    <div
+                      key={followingId}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setShowFollowingModal(false);
+                        navigate(`/trader/${followingId}`);
+                      }}
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={followingProfile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                          {(followingProfile.display_name || "?").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{followingProfile.display_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{followingProfile.bio}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
