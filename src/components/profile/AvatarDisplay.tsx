@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CharacterAvatar, parseCharacterConfig } from './CharacterBuilder';
+import { PremiumAvatarRenderer, parsePremiumConfig } from './avatar';
 import { cn } from '@/lib/utils';
 
 interface AvatarDisplayProps {
@@ -18,6 +19,14 @@ export function AvatarDisplay({ avatarUrl, displayName, size = 40, className }: 
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Handle premium avatar config
+  if (avatarUrl?.startsWith('avatar:')) {
+    const config = parsePremiumConfig(avatarUrl);
+    if (config) {
+      return <PremiumAvatarRenderer config={config} size={size} className={className} />;
+    }
+  }
 
   // Handle character config
   if (avatarUrl?.startsWith('char:')) {
