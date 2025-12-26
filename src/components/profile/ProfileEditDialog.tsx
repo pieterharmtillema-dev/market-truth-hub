@@ -186,17 +186,6 @@ export function ProfileEditDialog({
   };
 
   /* ------------------------------------------------------------------ */
-  /* Render helpers                                                     */
-  /* ------------------------------------------------------------------ */
-  const renderAvatarPreview = () => {
-    return (
-      <Avatar className="w-24 h-24 border-4 border-border">
-        <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
-      </Avatar>
-    );
-  };
-
-  /* ------------------------------------------------------------------ */
   /* JSX                                                                */
   /* ------------------------------------------------------------------ */
 
