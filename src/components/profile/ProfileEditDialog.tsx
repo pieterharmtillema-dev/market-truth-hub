@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CharacterBuilder, CharacterAvatar, CharacterConfig, parseCharacterConfig, stringifyCharacterConfig } from './CharacterBuilder';
+import { PremiumAvatarEditor, PremiumAvatarRenderer, PremiumAvatarConfig, DEFAULT_PREMIUM_CONFIG, stringifyPremiumConfig, parsePremiumConfig } from './avatar';
 
 // Available avatar icons - expanded character set
 const avatarIcons = [
@@ -27,7 +28,7 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
-type AvatarType = 'icon' | 'character' | 'upload' | 'url';
+type AvatarType = 'icon' | 'character' | 'premium' | 'upload' | 'url';
 
 export function ProfileEditDialog({ 
   userId, 
@@ -43,11 +44,16 @@ export function ProfileEditDialog({
   
   // Determine initial avatar type
   const getInitialAvatarType = (): AvatarType => {
+    if (currentAvatarUrl?.startsWith('avatar:')) return 'premium';
     if (currentAvatarUrl?.startsWith('char:')) return 'character';
     if (currentAvatarUrl?.startsWith('emoji:')) return 'icon';
     if (currentAvatarUrl?.startsWith('http')) return 'upload';
-    return 'icon';
+    return 'premium';
   };
+  
+  const [premiumConfig, setPremiumConfig] = useState<PremiumAvatarConfig>(
+    currentAvatarUrl?.startsWith('avatar:') ? parsePremiumConfig(currentAvatarUrl) || DEFAULT_PREMIUM_CONFIG : DEFAULT_PREMIUM_CONFIG
+  );
   
   const [avatarType, setAvatarType] = useState<AvatarType>(getInitialAvatarType());
   const [selectedIcon, setSelectedIcon] = useState(
