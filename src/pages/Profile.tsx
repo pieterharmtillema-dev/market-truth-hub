@@ -22,7 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PremiumAvatarRenderer } from "@/components/profile/avatar";
+import { PremiumAvatarRenderer, parsePremiumConfig, DEFAULT_PREMIUM_CONFIG } from "@/components/profile/avatar";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Settings,
