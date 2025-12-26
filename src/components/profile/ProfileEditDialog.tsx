@@ -189,90 +189,102 @@ export function ProfileEditDialog({
   /* JSX                                                                */
   /* ------------------------------------------------------------------ */
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="flex-1 gap-2">
-          <Edit2 className="w-4 h-4" />
-          Edit Profile
-        </Button>
-      </DialogTrigger>
-      <DialogContent
-        className="
-    w-[90vw]
-    max-w-[1000px]
-    h-[85vh]
-    p-0
-    overflow-hidden
-  "
-      >
-        <DialogHeader>
-  <DialogTitle>Edit Profile</DialogTitle>
-</DialogHeader>
+return (
+  <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild>
+      <Button className="flex-1 gap-2">
+        <Edit2 className="w-4 h-4" />
+        Edit Profile
+      </Button>
+    </DialogTrigger>
 
-<div className="space-y-6">
-  {/* Avatar Editor */}
-  <div>
-    <PremiumAvatarEditor
-      key={avatarEditorKey}
-      initialConfig={premiumConfig}
-      onConfigChange={handlePremiumConfigChange}
-    />
+    <DialogContent
+      className="
+        w-[90vw]
+        max-w-[1000px]
+        h-[85vh]
+        p-0
+        overflow-hidden
+      "
+    >
+      <DialogHeader>
+        <DialogTitle>Edit Profile</DialogTitle>
+      </DialogHeader>
 
-    <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
-      🖼 NFT avatars coming soon
-    </div>
-  </div>
+      <div className="p-6 space-y-6 overflow-y-auto h-full">
+        {/* Avatar Editor */}
+        <div>
+          <PremiumAvatarEditor
+            key={avatarEditorKey}
+            initialConfig={premiumConfig}
+            onConfigChange={handlePremiumConfigChange}
+          />
 
-  {/* Display Name */}
-  <div className="space-y-2">
-    <Label>Display Name</Label>
-    {/* input goes here */}
-  </div>
-</div>
-
-            {!editingName ? (
-              <div className="flex items-center justify-between">
-                <span className="text-sm">{displayName || "No name set"}</span>
-                <Button size="sm" variant="outline" onClick={() => setEditingName(true)}>
-                  Change
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                <Input
-                  type="password"
-                  placeholder="Enter password to confirm"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditingName(false);
-                    setDisplayName(currentName || "");
-                    setPassword("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
+          <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
+            🖼 NFT avatars coming soon
           </div>
-
-          {/* Bio */}
-          <div className="space-y-2">
-            <Label>Bio</Label>
-            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
-          </div>
-
-          <Button onClick={handleSave} disabled={isSaving} className="w-full">
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+
+        {/* Display Name */}
+        <div className="space-y-2">
+          <Label>Display Name</Label>
+
+          {!editingName ? (
+            <div className="flex items-center justify-between">
+              <span className="text-sm">{displayName || "No name set"}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingName(true)}
+              >
+                Change
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+              <Input
+                type="password"
+                placeholder="Enter password to confirm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingName(false);
+                  setDisplayName(currentName || "");
+                  setPassword("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Bio */}
+        <div className="space-y-2">
+          <Label>Bio</Label>
+          <Textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+          />
+        </div>
+
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full"
+        >
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
