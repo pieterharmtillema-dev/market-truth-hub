@@ -114,79 +114,102 @@ export function PremiumAvatarEditor({
     { id: 'extras', label: 'Extras' },
   ];
 
-  return (
-    <TooltipProvider>
-      <div className="space-y-5">
-        {/* Preview + Controls Row */}
-        <div className="flex items-center gap-4">
-          {/* Avatar Preview */}
-          <div className="relative shrink-0">
-            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
-            <PremiumAvatarRenderer config={config} size={100} animated />
-          </div>
+ return (
+  <TooltipProvider>
+    <div className="grid grid-cols-1 md:grid-cols-[360px_1fr] gap-6">
+      
+      {/* LEFT: Avatar Preview */}
+      <div className="sticky top-4 self-start space-y-4">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+          <PremiumAvatarRenderer
+            config={config}
+            size={180}
+            animated
+          />
+        </div>
 
-          {/* Controls */}
-          <div className="flex-1 space-y-3">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-muted p-1 rounded-lg">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all",
-                    activeTab === tab.id
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* Preview Controls */}
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={undo}
+            disabled={historyIndex === 0}
+          >
+            <Undo2 className="w-4 h-4" />
+          </Button>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={undo} disabled={historyIndex === 0}>
-                    <Undo2 className="w-3.5 h-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Undo</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={redo} disabled={historyIndex === history.length - 1}>
-                    <Redo2 className="w-3.5 h-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Redo</TooltipContent>
-              </Tooltip>
-              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs ml-auto" onClick={randomize}>
-                <Shuffle className="w-3.5 h-3.5" />
-                Random
-              </Button>
-            </div>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={redo}
+            disabled={historyIndex === history.length - 1}
+          >
+            <Redo2 className="w-4 h-4" />
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={randomize}
+            className="gap-1"
+          >
+            <Shuffle className="w-4 h-4" />
+            Random
+          </Button>
+        </div>
+      </div>
+
+      {/* RIGHT: Controls */}
+      <div className="space-y-6">
+        
+        {/* Tabs */}
+        <div className="flex gap-2">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
-        <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+        <div className="rounded-xl border bg-card p-5 space-y-6 max-h-[520px] overflow-y-auto">
           {activeTab === 'appearance' && (
-            <AppearanceTab config={config} updateConfig={updateConfig} />
+            <AppearanceTab
+              config={config}
+              updateConfig={updateConfig}
+            />
           )}
+
           {activeTab === 'style' && (
-            <StyleTab config={config} updateConfig={updateConfig} />
+            <StyleTab
+              config={config}
+              updateConfig={updateConfig}
+            />
           )}
+
           {activeTab === 'extras' && (
-            <ExtrasTab config={config} updateConfig={updateConfig} />
+            <ExtrasTab
+              config={config}
+              updateConfig={updateConfig}
+            />
           )}
         </div>
       </div>
-    </TooltipProvider>
-  );
-}
+    </div>
+  </TooltipProvider>
+);
+
 
 // Option Group Component
 function OptionGroup({ 
