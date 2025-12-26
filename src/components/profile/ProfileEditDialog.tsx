@@ -24,6 +24,13 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
+useEffect(() => {
+  if (open) {
+    setDisplayName(currentName || "");
+    setBio(currentBio || "");
+  }
+}, [open, currentName, currentBio]);
+
 type AvatarType = "premium" | "upload" | "url";
 
 export function ProfileEditDialog({
