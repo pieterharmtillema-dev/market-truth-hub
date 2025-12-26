@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useFollows } from "@/hooks/useFollows";
 import { PublicPredictionCard, PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
+import { AvatarDisplay } from "@/components/profile/AvatarDisplay";
 import { 
   Flame, 
   Snowflake, 
@@ -489,20 +489,12 @@ const TraderProfile = () => {
         <Card variant="glass">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <Avatar className="w-20 h-20 border-2 border-border">
-                {profile.avatar_url && profile.avatar_url.length <= 4 ? (
-                  <div className="w-full h-full flex items-center justify-center text-3xl bg-muted">
-                    {profile.avatar_url}
-                  </div>
-                ) : (
-                  <>
-                    <AvatarImage src={profile.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary text-2xl">
-                      {displayName.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </>
-                )}
-              </Avatar>
+              <AvatarDisplay 
+                avatarUrl={profile.avatar_url} 
+                displayName={displayName} 
+                size={80}
+                className="border-4 border-border"
+              />
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-bold">{displayName}</h1>
@@ -786,12 +778,11 @@ const TraderProfile = () => {
                         navigate(`/trader/${followerId}`);
                       }}
                     >
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={followerProfile.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-primary text-sm">
-                          {(followerProfile.display_name || "?").slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarDisplay 
+                        avatarUrl={followerProfile.avatar_url} 
+                        displayName={followerProfile.display_name || "?"} 
+                        size={40}
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{followerProfile.display_name}</p>
                         <p className="text-xs text-muted-foreground truncate">{followerProfile.bio}</p>
@@ -831,12 +822,11 @@ const TraderProfile = () => {
                         navigate(`/trader/${followingId}`);
                       }}
                     >
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={followingProfile.avatar_url || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-primary text-sm">
-                          {(followingProfile.display_name || "?").slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarDisplay 
+                        avatarUrl={followingProfile.avatar_url} 
+                        displayName={followingProfile.display_name || "?"} 
+                        size={40}
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{followingProfile.display_name}</p>
                         <p className="text-xs text-muted-foreground truncate">{followingProfile.bio}</p>

@@ -1,14 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit2, User, Camera, Smile, Upload, Image, Loader2 } from 'lucide-react';
+import { Edit2, User, Smile, Upload, Image, Loader2, Palette } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CharacterBuilder, CharacterAvatar, CharacterConfig, parseCharacterConfig, stringifyCharacterConfig } from './CharacterBuilder';
 
 // Available avatar icons - expanded character set
 const avatarIcons = [
@@ -26,6 +27,8 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
+type AvatarType = 'icon' | 'character' | 'upload' | 'url';
+
 export function ProfileEditDialog({ 
   userId, 
   currentName, 
@@ -37,11 +40,21 @@ export function ProfileEditDialog({
   const [displayName, setDisplayName] = useState(currentName || '');
   const [bio, setBio] = useState(currentBio || '');
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl || '');
-  const [avatarType, setAvatarType] = useState<'icon' | 'url' | 'upload'>(
-    currentAvatarUrl?.startsWith('emoji:') ? 'icon' : 'url'
-  );
+  
+  // Determine initial avatar type
+  const getInitialAvatarType = (): AvatarType => {
+    if (currentAvatarUrl?.startsWith('char:')) return 'character';
+    if (currentAvatarUrl?.startsWith('emoji:')) return 'icon';
+    if (currentAvatarUrl?.startsWith('http')) return 'upload';
+    return 'icon';
+  };
+  
+  const [avatarType, setAvatarType] = useState<AvatarType>(getInitialAvatarType());
   const [selectedIcon, setSelectedIcon] = useState(
     currentAvatarUrl?.startsWith('emoji:') ? currentAvatarUrl.replace('emoji:', '') : '👤'
+  );
+  const [characterConfig, setCharacterConfig] = useState<CharacterConfig | null>(
+    currentAvatarUrl?.startsWith('char:') ? parseCharacterConfig(currentAvatarUrl) : null
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -51,13 +64,11 @@ export function ProfileEditDialog({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be less than 5MB');
       return;
@@ -89,10 +100,22 @@ export function ProfileEditDialog({
     }
   };
 
+  const handleCharacterConfigChange = useCallback((config: CharacterConfig) => {
+    setCharacterConfig(config);
+  }, []);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const finalAvatarUrl = avatarType === 'icon' ? `emoji:${selectedIcon}` : avatarUrl || '';
+      let finalAvatarUrl = '';
+      
+      if (avatarType === 'icon') {
+        finalAvatarUrl = `emoji:${selectedIcon}`;
+      } else if (avatarType === 'character' && characterConfig) {
+        finalAvatarUrl = stringifyCharacterConfig(characterConfig);
+      } else {
+        finalAvatarUrl = avatarUrl || '';
+      }
       
       const { error } = await supabase
         .from('profiles')
@@ -130,6 +153,41 @@ export function ProfileEditDialog({
       .slice(0, 2);
   };
 
+  const renderAvatarPreview = () => {
+    if (avatarType === 'icon') {
+      return (
+        <Avatar className="w-24 h-24 border-4 border-border">
+          <AvatarFallback className="text-4xl bg-primary/10">
+            {selectedIcon}
+          </AvatarFallback>
+        </Avatar>
+      );
+    }
+    
+    if (avatarType === 'character' && characterConfig) {
+      return <CharacterAvatar config={characterConfig} size={96} />;
+    }
+    
+    if ((avatarType === 'upload' || avatarType === 'url') && avatarUrl && !avatarUrl.startsWith('emoji:') && !avatarUrl.startsWith('char:')) {
+      return (
+        <Avatar className="w-24 h-24 border-4 border-border">
+          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+            {displayName ? getInitials(displayName) : <User className="w-8 h-8" />}
+          </AvatarFallback>
+        </Avatar>
+      );
+    }
+    
+    return (
+      <Avatar className="w-24 h-24 border-4 border-border">
+        <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+          {displayName ? getInitials(displayName) : <User className="w-8 h-8" />}
+        </AvatarFallback>
+      </Avatar>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -138,7 +196,7 @@ export function ProfileEditDialog({
           Edit Profile
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>
@@ -148,40 +206,40 @@ export function ProfileEditDialog({
           <div className="space-y-4">
             <Label>Profile Picture</Label>
             
-            {/* Avatar Preview */}
-            <div className="flex justify-center">
-              <Avatar className="w-24 h-24 border-4 border-border">
-                {avatarType === 'icon' ? (
-                  <AvatarFallback className="text-4xl bg-primary/10">
-                    {selectedIcon}
-                  </AvatarFallback>
-                ) : avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={displayName} />
-                ) : (
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-                    {displayName ? getInitials(displayName) : <User className="w-8 h-8" />}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-            </div>
+            {/* Avatar Preview - only show for non-character mode */}
+            {avatarType !== 'character' && (
+              <div className="flex justify-center">
+                {renderAvatarPreview()}
+              </div>
+            )}
 
             {/* Avatar Type Toggle */}
-            <div className="flex gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
               <Button
                 type="button"
                 variant={avatarType === 'icon' ? 'default' : 'outline'}
                 size="sm"
-                className="flex-1 gap-1.5"
+                className="gap-1"
                 onClick={() => setAvatarType('icon')}
               >
                 <Smile className="w-4 h-4" />
-                Icon
+                <span className="hidden sm:inline">Icon</span>
+              </Button>
+              <Button
+                type="button"
+                variant={avatarType === 'character' ? 'default' : 'outline'}
+                size="sm"
+                className="gap-1"
+                onClick={() => setAvatarType('character')}
+              >
+                <Palette className="w-4 h-4" />
+                <span className="hidden sm:inline">Create</span>
               </Button>
               <Button
                 type="button"
                 variant={avatarType === 'upload' ? 'default' : 'outline'}
                 size="sm"
-                className="flex-1 gap-1.5"
+                className="gap-1"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
               >
@@ -190,17 +248,17 @@ export function ProfileEditDialog({
                 ) : (
                   <Upload className="w-4 h-4" />
                 )}
-                NFT / Upload
+                <span className="hidden sm:inline">Upload</span>
               </Button>
               <Button
                 type="button"
                 variant={avatarType === 'url' ? 'default' : 'outline'}
                 size="sm"
-                className="flex-1 gap-1.5"
+                className="gap-1"
                 onClick={() => setAvatarType('url')}
               >
                 <Image className="w-4 h-4" />
-                URL
+                <span className="hidden sm:inline">URL</span>
               </Button>
             </div>
 
@@ -234,12 +292,20 @@ export function ProfileEditDialog({
               </div>
             )}
 
+            {/* Character Builder */}
+            {avatarType === 'character' && (
+              <CharacterBuilder 
+                initialConfig={characterConfig || undefined}
+                onConfigChange={handleCharacterConfigChange}
+              />
+            )}
+
             {/* URL Input */}
             {avatarType === 'url' && (
               <div className="space-y-2">
                 <Input
                   placeholder="https://example.com/avatar.jpg or NFT URL"
-                  value={avatarUrl.startsWith('emoji:') ? '' : avatarUrl}
+                  value={avatarUrl.startsWith('emoji:') || avatarUrl.startsWith('char:') ? '' : avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -248,8 +314,8 @@ export function ProfileEditDialog({
               </div>
             )}
 
-            {/* Upload preview info */}
-            {avatarType === 'upload' && avatarUrl && !avatarUrl.startsWith('emoji:') && (
+            {/* Upload success message */}
+            {avatarType === 'upload' && avatarUrl && !avatarUrl.startsWith('emoji:') && !avatarUrl.startsWith('char:') && (
               <div className="text-xs text-muted-foreground text-center">
                 ✓ Image uploaded successfully
               </div>

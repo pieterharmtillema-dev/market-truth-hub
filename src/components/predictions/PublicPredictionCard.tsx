@@ -4,12 +4,12 @@ import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowfla
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AvatarDisplay } from "@/components/profile/AvatarDisplay";
 
 export interface PublicPredictionData {
   id: string;
@@ -186,24 +186,11 @@ export function PublicPredictionCard({
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => navigate(`/trader/${prediction.user_id}`)}
           >
-            <Avatar className="w-10 h-10 border-2 border-border">
-              {avatarUrl?.startsWith('emoji:') ? (
-                <AvatarFallback className="text-lg bg-muted">
-                  {avatarUrl.replace('emoji:', '')}
-                </AvatarFallback>
-              ) : avatarUrl && avatarUrl.length <= 4 ? (
-                <AvatarFallback className="text-lg bg-muted">
-                  {avatarUrl}
-                </AvatarFallback>
-              ) : (
-                <>
-                  <AvatarImage src={avatarUrl || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary">
-                    {displayName.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </>
-              )}
-            </Avatar>
+            <AvatarDisplay 
+              avatarUrl={avatarUrl} 
+              displayName={displayName} 
+              size={40}
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-medium text-sm hover:underline">{displayName}</span>
