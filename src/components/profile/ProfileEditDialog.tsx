@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,13 +24,6 @@ interface ProfileEditDialogProps {
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
 }
 
-useEffect(() => {
-  if (open) {
-    setDisplayName(currentName || "");
-    setBio(currentBio || "");
-  }
-}, [open, currentName, currentBio]);
-
 type AvatarType = "premium" | "upload" | "url";
 
 export function ProfileEditDialog({
@@ -41,12 +34,29 @@ export function ProfileEditDialog({
   onProfileUpdated,
 }: ProfileEditDialogProps) {
   const [open, setOpen] = useState(false);
+
   const [displayName, setDisplayName] = useState(currentName || "");
   const [bio, setBio] = useState(currentBio || "");
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl || "");
+
+  const [editingName, setEditingName] = useState(false);
+  const [password, setPassword] = useState("");
+
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ✅ Preserve existing data when dialog opens
+  useEffect(() => {
+    if (open) {
+      setDisplayName(currentName || "");
+      setBio(currentBio || "");
+      setAvatarUrl(currentAvatarUrl || "");
+      setEditingName(false);
+      setPassword("");
+    }
+  }, [open, currentName, currentBio, currentAvatarUrl]);
 
   const getInitialAvatarType = (): AvatarType => {
     if (currentAvatarUrl?.startsWith("avatar:")) return "premium";
@@ -86,16 +96,13 @@ export function ProfileEditDialog({
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
       const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
-
       if (error) throw error;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(data.publicUrl);
       setAvatarType("upload");
-      toast.success("Avatar uploaded successfully");
+      toast.success("Avatar uploaded");
     } catch (err) {
       console.error(err);
       toast.error("Failed to upload avatar");
@@ -106,17 +113,28 @@ export function ProfileEditDialog({
 
   const handleSave = async () => {
     setIsSaving(true);
+
     try {
-      // 🔐 If user is changing name, require password
-      if (editingName) {
+      // 🔐 Require password ONLY if name changed
+      if (editingName && displayName !== currentName) {
         if (!password) {
-          toast.error("Please enter your password to change your name");
+          toast.error("Enter your password to change your name");
+          setIsSaving(false);
+          return;
+        }
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user?.email) {
+          toast.error("Authentication error");
           setIsSaving(false);
           return;
         }
 
         const { error: authError } = await supabase.auth.signInWithPassword({
-          email: (await supabase.auth.getUser()).data.user?.email || "",
+          email: user.email,
           password,
         });
 
@@ -169,18 +187,14 @@ export function ProfileEditDialog({
       return (
         <Avatar className="w-24 h-24 border-4 border-border">
           <AvatarImage src={avatarUrl} />
-          <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-            {displayName ? getInitials(displayName) : <User />}
-          </AvatarFallback>
+          <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
         </Avatar>
       );
     }
 
     return (
       <Avatar className="w-24 h-24 border-4 border-border">
-        <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-          {displayName ? getInitials(displayName) : <User />}
-        </AvatarFallback>
+        <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
       </Avatar>
     );
   };
@@ -200,6 +214,7 @@ export function ProfileEditDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Avatar */}
           <div className="space-y-4">
             <Label>Avatar</Label>
 
@@ -245,22 +260,39 @@ export function ProfileEditDialog({
             )}
 
             {avatarType === "url" && (
-              <div className="space-y-2">
-                <Input
-                  placeholder="NFT image URL or IPFS link"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Paste an NFT image URL, IPFS hash, or hosted image</p>
-              </div>
+              <Input
+                placeholder="NFT image URL or IPFS link"
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+              />
             )}
           </div>
 
+          {/* Display Name */}
           <div className="space-y-2">
             <Label>Display Name</Label>
-            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+
+            {!editingName ? (
+              <div className="flex items-center justify-between">
+                <span className="text-sm">{displayName || "No name set"}</span>
+                <Button size="sm" variant="outline" onClick={() => setEditingName(true)}>
+                  Change
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                <Input
+                  type="password"
+                  placeholder="Enter password to confirm"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </>
+            )}
           </div>
 
+          {/* Bio */}
           <div className="space-y-2">
             <Label>Bio</Label>
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
