@@ -59,12 +59,10 @@ export function ProfileEditDialog({
   useEffect(() => {
     if (!open) return;
 
-    // Reset text fields
     setDisplayName(currentName || "");
     setBio(currentBio || "");
     setAvatarUrl(currentAvatarUrl || "");
 
-    // 🔁 Reset avatar state to CURRENTLY SAVED avatar
     const type = deriveAvatarType(currentAvatarUrl);
     setAvatarType(type);
 
@@ -74,7 +72,9 @@ export function ProfileEditDialog({
       setPremiumConfig(DEFAULT_PREMIUM_CONFIG);
     }
 
-    // Reset name-change state
+    // 🔥 FORCE remount of avatar editor
+    setAvatarEditorKey((k) => k + 1);
+
     setEditingName(false);
     setPassword("");
   }, [open, currentName, currentBio, currentAvatarUrl]);
