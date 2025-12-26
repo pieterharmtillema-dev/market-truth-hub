@@ -208,12 +208,11 @@ export function ProfileEditDialog({
           Edit Profile
         </Button>
       </DialogTrigger>
-
       <DialogContent
         className="
-    w-[95vw]
-    max-w-[1400px]
-    h-[90vh]
+    w-[90vw]
+    max-w-[1000px]
+    h-[85vh]
     p-0
     overflow-hidden
   "
