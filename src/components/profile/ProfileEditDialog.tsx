@@ -97,7 +97,7 @@ export function ProfileEditDialog({
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
-    if (!open) return;
+    if (open) return;
 
     // Reset text fields
     setDisplayName(currentName ?? "");
