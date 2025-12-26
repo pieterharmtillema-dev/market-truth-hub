@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { z } from "zod";
 import traxLogo from "@/assets/trax-dino-logo.png";
-import trexOpen from "@/assets/trex-open.png";
 import trexClosed from "@/assets/trex-closed.png";
 
 
@@ -294,7 +293,7 @@ export default function Auth() {
 
             {/* Logo */}
             <img
-  src={showPassword ? trexClosed : trexOpen}
+  src={showPassword ? traxLogo : trexOpen}
   alt="Trax Mascot"
   className={`relative h-40 w-auto animate-mascot-idle transition-transform duration-300 ${
     isHovered ? "scale-105" : ""
