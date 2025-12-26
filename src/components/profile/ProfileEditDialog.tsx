@@ -19,9 +19,11 @@ import {
 interface ProfileEditDialogProps {
   userId: string;
   currentName: string | null;
-   currentBio: string | null;
-  onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
+  currentAvatarUrl: string | null;
+  currentBio: string | null;
+  onProfileUpdated: ...
 }
+
 
 type AvatarType = "premium";
 
@@ -116,7 +118,7 @@ export function ProfileEditDialog({
       return;
     }
 
-   
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -191,23 +193,16 @@ export function ProfileEditDialog({
   /* ------------------------------------------------------------------ */
   /* Render helpers                                                     */
   /* ------------------------------------------------------------------ */
+const renderAvatarPreview = () => {
+  return (
+    <Avatar className="w-24 h-24 border-4 border-border">
+      <AvatarFallback>
+        {displayName ? getInitials(displayName) : <User />}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
 
-  const renderAvatarPreview = () => {
-    if (avatarType !== "premium" && avatarUrl) {
-      return (
-        <Avatar className="w-24 h-24 border-4 border-border">
-          <AvatarImage src={avatarUrl} />
-          <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
-        </Avatar>
-      );
-    }
-
-    return (
-      <Avatar className="w-24 h-24 border-4 border-border">
-        <AvatarFallback>{displayName ? getInitials(displayName) : <User />}</AvatarFallback>
-      </Avatar>
-    );
-  };
 
   /* ------------------------------------------------------------------ */
   /* JSX                                                                */
