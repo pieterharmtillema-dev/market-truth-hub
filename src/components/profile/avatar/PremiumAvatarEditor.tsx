@@ -198,7 +198,10 @@ export function PremiumAvatarEditor({ initialConfig, onConfigChange, onSave }: P
         </div>
 
         {/* Main Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-[360px_1fr] gap-6">
+        <div
+          className="grid grid-cols-1 md:grid-cols-[320px_1fr]
+ gap-6"
+        >
           {/* LEFT: Avatar Preview */}
           <aside className="sticky top-4 self-start space-y-4">
             <div className="rounded-2xl border bg-card p-5">
