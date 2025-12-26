@@ -61,23 +61,26 @@ export function ProfileEditDialog({
   /* ------------------------------------------------------------------ */
 
   const deriveAvatarState = (url: string | null) => {
-    if (url?.startsWith("avatar:")) {
+    if (!url) {
       return {
         type: "premium" as AvatarType,
-        config: parsePremiumConfig(url) ?? DEFAULT_PREMIUM_CONFIG,
+        avatarUrl: "",
+        premiumConfig: DEFAULT_PREMIUM_CONFIG,
       };
     }
 
-    if (url?.startsWith("http")) {
+    if (url.startsWith("premium:")) {
       return {
-        type: "upload" as AvatarType,
-        config: DEFAULT_PREMIUM_CONFIG,
+        type: "premium" as AvatarType,
+        avatarUrl: "",
+        premiumConfig: parsePremiumConfig(url),
       };
     }
 
     return {
-      type: "premium" as AvatarType,
-      config: DEFAULT_PREMIUM_CONFIG,
+      type: "upload" as AvatarType,
+      avatarUrl: url,
+      premiumConfig: DEFAULT_PREMIUM_CONFIG,
     };
   };
 
@@ -96,19 +99,19 @@ export function ProfileEditDialog({
   useEffect(() => {
     if (!open) return;
 
-    setDisplayName(currentName || "");
-    setBio(currentBio || "");
-    setAvatarUrl(currentAvatarUrl || "");
+    // Reset text fields
+    setDisplayName(currentName ?? "");
+    setBio(currentBio ?? "");
 
+    // Reset avatar state from saved profile
     const derived = deriveAvatarState(currentAvatarUrl);
+
     setAvatarType(derived.type);
-    setPremiumConfig(derived.config);
+    setAvatarUrl(derived.avatarUrl);
+    setPremiumConfig(derived.premiumConfig);
 
-    // 🔥 force remount of PremiumAvatarEditor
-    setAvatarEditorKey((k) => k + 1);
-
-    setEditingName(false);
-    setPassword("");
+    // Force avatar editor to fully remount
+    setAvatarEditorKey((prev) => prev + 1);
   }, [open, currentName, currentBio, currentAvatarUrl]);
 
   /* ------------------------------------------------------------------ */
