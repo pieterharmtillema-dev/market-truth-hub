@@ -222,7 +222,7 @@ export function ProfileEditDialog({
                 🖼 NFT avatars coming soon
               </div>
             </div>
-          </div>
+          
 
           {/* Display Name */}
           <div className="space-y-2">
