@@ -274,16 +274,17 @@ setPremiumConfig(derived.premiumConfig);
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
             {avatarType === "premium" && (
-              <PremiumAvatarEditor
-                key={avatarEditorKey}
-                initialConfig={premiumConfig}
-                onConfigChange={handlePremiumConfigChange}
-              />
-            )}
-            <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
+  <div>
+    <PremiumAvatarEditor
+      key={avatarEditorKey}
+      initialConfig={premiumConfig}
+      onConfigChange={handlePremiumConfigChange}
+    />
+
+    <div className="mt-2 text-xs text-muted-foreground opacity-70 text-center">
       🖼 NFT avatars coming soon
     </div>
-  </>
+  </div>
 )}
 
            
