@@ -21,7 +21,12 @@ import {
   Loader2,
   ArrowLeft,
   Calendar,
-  BarChart3
+  BarChart3,
+  Clock,
+  Activity,
+  Briefcase,
+  Zap,
+  LineChart
 } from "lucide-react";
 
 interface PublicProfile {
@@ -36,6 +41,19 @@ interface PublicProfile {
   created_at: string | null;
 }
 
+interface FakeTraderMeta {
+  platform: string;
+  asset_focus: string[];
+  experience_level: string;
+  holding_time: string;
+  trade_frequency: string;
+  win_rate: number;
+  average_r: number;
+  total_trades: number;
+  is_active: boolean;
+  last_active: string;
+}
+
 // Fake demo profiles for testing/demo purposes
 const FAKE_PROFILES: Record<string, PublicProfile> = {
   '11111111-1111-1111-1111-111111111111': { user_id: '11111111-1111-1111-1111-111111111111', display_name: 'CryptoKing', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoKing', bio: 'Full-time crypto trader. BTC maximalist.', current_streak: 7, total_predictions: 156, total_hits: 112, streak_type: 'hit', created_at: '2024-01-15' },
@@ -45,10 +63,87 @@ const FAKE_PROFILES: Record<string, PublicProfile> = {
   '55555555-5555-5555-5555-555555555555': { user_id: '55555555-5555-5555-5555-555555555555', display_name: 'GoldBull', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoldBull', bio: 'Commodities specialist. Gold & Silver.', current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss', created_at: '2024-08-14' },
 };
 
+// Fake trader metadata
+const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
+  '11111111-1111-1111-1111-111111111111': {
+    platform: 'Binance',
+    asset_focus: ['BTC', 'ETH', 'SOL'],
+    experience_level: 'Advanced',
+    holding_time: 'Swing (days)',
+    trade_frequency: 'Daily',
+    win_rate: 71.8,
+    average_r: 2.1,
+    total_trades: 156,
+    is_active: true,
+    last_active: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  },
+  '22222222-2222-2222-2222-222222222222': {
+    platform: 'MetaTrader 5',
+    asset_focus: ['EUR/USD', 'GBP/JPY', 'USD/JPY'],
+    experience_level: 'Expert',
+    holding_time: 'Scalp (minutes)',
+    trade_frequency: 'Multiple daily',
+    win_rate: 65.2,
+    average_r: 1.8,
+    total_trades: 89,
+    is_active: false,
+    last_active: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  '33333333-3333-3333-3333-333333333333': {
+    platform: 'TradingView',
+    asset_focus: ['AAPL', 'NVDA', 'MSFT', 'META'],
+    experience_level: 'Advanced',
+    holding_time: 'Swing (days)',
+    trade_frequency: 'Weekly',
+    win_rate: 62.0,
+    average_r: 1.5,
+    total_trades: 234,
+    is_active: true,
+    last_active: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+  },
+  '44444444-4444-4444-4444-444444444444': {
+    platform: 'Interactive Brokers',
+    asset_focus: ['AMD', 'GOOGL', 'AMZN'],
+    experience_level: 'Intermediate',
+    holding_time: 'Day trading',
+    trade_frequency: 'Daily',
+    win_rate: 61.2,
+    average_r: 1.7,
+    total_trades: 67,
+    is_active: false,
+    last_active: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+  },
+  '55555555-5555-5555-5555-555555555555': {
+    platform: 'MetaTrader 5',
+    asset_focus: ['XAU/USD', 'XAG/USD'],
+    experience_level: 'Intermediate',
+    holding_time: 'Swing (days)',
+    trade_frequency: 'Few per week',
+    win_rate: 66.7,
+    average_r: 1.4,
+    total_trades: 42,
+    is_active: true,
+    last_active: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+  },
+};
+
+function getTimeAgo(dateString: string): string {
+  const diff = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
 const TraderProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [traderMeta, setTraderMeta] = useState<FakeTraderMeta | null>(null);
   const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPredictions, setLoadingPredictions] = useState(true);
@@ -86,6 +181,11 @@ const TraderProfile = () => {
           setProfile(FAKE_PROFILES[userId]);
         } else {
           setProfile(null);
+        }
+        
+        // Set fake trader meta if available
+        if (FAKE_TRADER_META[userId]) {
+          setTraderMeta(FAKE_TRADER_META[userId]);
         }
       } catch (err) {
         console.error("Failed to fetch profile:", err);
@@ -234,6 +334,18 @@ const TraderProfile = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-bold">{displayName}</h1>
+                  
+                  {/* Active Status Badge */}
+                  {traderMeta && (
+                    <Badge 
+                      variant="outline" 
+                      className={`gap-1 ${traderMeta.is_active ? 'text-gain border-gain/30 bg-gain/10' : 'text-muted-foreground border-border'}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${traderMeta.is_active ? 'bg-gain animate-pulse' : 'bg-muted-foreground'}`} />
+                      {traderMeta.is_active ? 'Active' : getTimeAgo(traderMeta.last_active)}
+                    </Badge>
+                  )}
+                  
                   {isHotStreak && (
                     <Badge variant="outline" className="text-orange-400 border-orange-400/30 gap-1">
                       <Flame className="w-3 h-3" />
@@ -247,9 +359,26 @@ const TraderProfile = () => {
                     </Badge>
                   )}
                 </div>
+                
                 {profile.bio && (
                   <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
                 )}
+                
+                {/* Platform Badge */}
+                {traderMeta && (
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <Badge variant="secondary" className="gap-1">
+                      <Briefcase className="w-3 h-3" />
+                      {traderMeta.platform}
+                    </Badge>
+                    {traderMeta.asset_focus.slice(0, 3).map((asset) => (
+                      <Badge key={asset} variant="outline" className="text-xs">
+                        {asset}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
                 {profile.created_at && (
                   <p className="text-xs text-muted-foreground mt-2">
                     Member since {new Date(profile.created_at).toLocaleDateString()}
@@ -293,6 +422,65 @@ const TraderProfile = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Trading Metrics */}
+        {traderMeta && (
+          <Card variant="glass">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <LineChart className="w-4 h-4 text-primary" />
+                Trading Metrics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gain">{traderMeta.win_rate}%</div>
+                  <div className="text-xs text-muted-foreground">Win Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{traderMeta.average_r}R</div>
+                  <div className="text-xs text-muted-foreground">Avg R</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{traderMeta.total_trades}</div>
+                  <div className="text-xs text-muted-foreground">Total Trades</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Trader Profile Info */}
+        {traderMeta && (
+          <Card variant="glass">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="w-4 h-4 text-primary" />
+                Trader Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Zap className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Experience:</span>
+                  <span className="font-medium">{traderMeta.experience_level}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Holding:</span>
+                  <span className="font-medium">{traderMeta.holding_time}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm col-span-2">
+                  <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Frequency:</span>
+                  <span className="font-medium">{traderMeta.trade_frequency}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
