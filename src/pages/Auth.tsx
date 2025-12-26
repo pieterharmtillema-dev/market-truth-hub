@@ -293,7 +293,7 @@ export default function Auth() {
 
             {/* Logo */}
             <img
-  src={showPassword ? traxLogo : trexOpen}
+  src={showPassword ? traxLogo : trexClosed}
   alt="Trax Mascot"
   className={`relative h-40 w-auto animate-mascot-idle transition-transform duration-300 ${
     isHovered ? "scale-105" : ""
