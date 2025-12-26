@@ -107,6 +107,26 @@ export function ProfileEditDialog({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // 🔐 If user is changing name, require password
+      if (editingName) {
+        if (!password) {
+          toast.error("Please enter your password to change your name");
+          setIsSaving(false);
+          return;
+        }
+
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: (await supabase.auth.getUser()).data.user?.email || "",
+          password,
+        });
+
+        if (authError) {
+          toast.error("Incorrect password");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       const finalAvatarUrl = avatarType === "premium" ? stringifyPremiumConfig(premiumConfig) : avatarUrl || "";
 
       const { error } = await supabase
