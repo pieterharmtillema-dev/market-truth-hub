@@ -62,9 +62,18 @@ export function usePublicPredictions(limit = 20) {
         .select("user_id, display_name, avatar_url, current_streak, streak_type, total_predictions, total_hits")
         .in("user_id", userIds);
 
-      // Map profiles by user_id
+      // Check which users have connected exchanges (verified)
+      const { data: exchangeConnections } = await supabase
+        .from("exchange_connections")
+        .select("user_id")
+        .in("user_id", userIds)
+        .eq("status", "connected");
+
+      const verifiedUserIds = new Set((exchangeConnections || []).map(ec => ec.user_id));
+
+      // Map profiles by user_id with verification status
       const profilesMap = new Map(
-        (profilesData || []).map(p => [p.user_id, p])
+        (profilesData || []).map(p => [p.user_id, { ...p, is_verified: verifiedUserIds.has(p.user_id) }])
       );
 
       // Combine predictions with profiles (use fake profiles as fallback)
@@ -222,8 +231,17 @@ export function useLongTermPredictions(limit = 20) {
         .select("user_id, display_name, avatar_url, current_streak, streak_type, total_predictions, total_hits")
         .in("user_id", userIds);
 
+      // Check which users have connected exchanges (verified)
+      const { data: exchangeConnections } = await supabase
+        .from("exchange_connections")
+        .select("user_id")
+        .in("user_id", userIds)
+        .eq("status", "connected");
+
+      const verifiedUserIds = new Set((exchangeConnections || []).map(ec => ec.user_id));
+
       const profilesMap = new Map(
-        (profilesData || []).map(p => [p.user_id, p])
+        (profilesData || []).map(p => [p.user_id, { ...p, is_verified: verifiedUserIds.has(p.user_id) }])
       );
 
       const enrichedPredictions: PublicPredictionData[] = predictionsData.map(prediction => ({

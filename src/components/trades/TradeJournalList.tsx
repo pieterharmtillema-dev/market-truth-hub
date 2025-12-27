@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save, Plug, Chrome, Shield } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,8 @@ interface Position {
   platform: string | null;
   open: boolean;
   tags: string[] | null;
+  exchange_source: string | null;
+  is_exchange_verified: boolean | null;
 }
 
 interface TradeJournalListProps {
@@ -242,6 +244,25 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
                           <span className="font-mono font-medium">{position.symbol}</span>
                           {position.open && (
                             <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
+                          )}
+                          {/* Trade Source Badge */}
+                          {position.exchange_source && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-primary/50 text-primary">
+                              <Plug className="h-2.5 w-2.5" />
+                              API
+                            </Badge>
+                          )}
+                          {!position.exchange_source && position.platform && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-muted-foreground/50 text-muted-foreground">
+                              <Chrome className="h-2.5 w-2.5" />
+                              Extension
+                            </Badge>
+                          )}
+                          {position.is_exchange_verified && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-500">
+                              <Shield className="h-2.5 w-2.5" />
+                              Verified
+                            </Badge>
                           )}
                           {hasAttachments(position.id) && (
                             <Camera className="h-3.5 w-3.5 text-muted-foreground" />
