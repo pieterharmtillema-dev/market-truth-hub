@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock, UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Target, Globe, Lock, UserPlus, UserMinus, Loader2, BadgeCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export interface PublicPredictionData {
     streak_type?: string;
     total_predictions?: number;
     total_hits?: number;
+    is_verified?: boolean;
   } | null;
 }
 
@@ -145,6 +146,7 @@ export function PublicPredictionCard({
 
   const displayName = prediction.profile?.display_name || "Trader";
   const avatarUrl = prediction.profile?.avatar_url;
+  const isVerified = prediction.profile?.is_verified || false;
 
   // Format dates
   const entryTime = prediction.created_at ? format(new Date(prediction.created_at), "MMM d, yyyy HH:mm") : "";
@@ -194,6 +196,11 @@ export function PublicPredictionCard({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-medium text-sm hover:underline">{displayName}</span>
+                {isVerified && (
+                  <span title="Verified Trader - Connected Exchange">
+                    <BadgeCheck className="w-4 h-4 text-primary" />
+                  </span>
+                )}
                 {isHotStreak && (
                   <span className="inline-flex items-center gap-0.5 text-xs text-orange-400">
                     <Flame className="w-3 h-3" />
