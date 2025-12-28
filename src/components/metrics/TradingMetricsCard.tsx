@@ -117,7 +117,7 @@ export function TradingMetricsCard({
               {/* Pre-Rating Badge */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-blue-400 text-[#0f1419] font-semibold hover:bg-blue-400">
+                  <Badge className="bg-primary text-primary-foreground font-semibold hover:bg-primary">
                     PRE-RATING
                   </Badge>
                   <span className="text-xs text-white font-medium">Qualification Progress</span>
@@ -137,7 +137,7 @@ export function TradingMetricsCard({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Complete{" "}
-                  <span className="text-blue-400 font-semibold">
+                  <span className="text-primary font-semibold">
                     {tradesRemaining} more {tradesRemaining === 1 ? 'trade' : 'trades'}
                   </span>{" "}
                   to unlock your official rating
