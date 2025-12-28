@@ -114,7 +114,7 @@ export function ProfileHeader({
 
         {/* Trader Profile Section */}
         {userId && (
-          <div className="mt-6 pt-6 border-t border-[#1f2937]">
+          <div className="mt-6">
             <TraderProfileSection userId={userId} />
           </div>
         )}
