@@ -92,7 +92,7 @@ export default function Onboarding() {
         .from("trader_profiles")
         .update({
           ...answers,
-          trader_category: traderCategory,
+          trader_category: traderCategory as any, // RPC returns text, DB accepts enum
           onboarding_completed: true,
           onboarding_skipped: false,
         })
@@ -105,7 +105,8 @@ export default function Onboarding() {
         scalper: "Scalper",
         day_trader: "Day Trader",
         swing_trader: "Swing Trader",
-        long_term_trader: "Long-Term Trader",
+        position_trader: "Position Trader",
+        investor: "Investor",
       };
 
       const categoryName = traderCategory ? categoryNames[traderCategory] : null;
