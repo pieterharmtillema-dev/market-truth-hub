@@ -99,17 +99,28 @@ export function TradingMetricsCard({
           </div>
 
           {/* Win Rate Display */}
-          <div className={cn(
-            "flex items-baseline gap-3 transition-all duration-300",
-            totalTrades <= 1 && "blur-sm select-none"
-          )}>
-            <span className="text-[56px] font-bold leading-none text-gain">
-              {winRate.toFixed(1)}%
-            </span>
-            <div className="text-sm font-medium mb-2">
-              <span className="text-gain">{wins}W</span>
-              <span className="text-muted-foreground mx-1">/</span>
-              <span className="text-[#ef4444]">{losses}L</span>
+          <div className="relative">
+            {totalTrades <= 1 && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <div className="bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-border">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Unlocks after 2 trades
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className={cn(
+              "flex items-baseline gap-3 transition-all duration-300",
+              totalTrades <= 1 && "blur-md select-none"
+            )}>
+              <span className="text-[56px] font-bold leading-none text-gain">
+                {winRate.toFixed(1)}%
+              </span>
+              <div className="text-sm font-medium mb-2">
+                <span className="text-gain">{wins}W</span>
+                <span className="text-muted-foreground mx-1">/</span>
+                <span className="text-[#ef4444]">{losses}L</span>
+              </div>
             </div>
           </div>
 
