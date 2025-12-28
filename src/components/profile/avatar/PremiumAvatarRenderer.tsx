@@ -459,7 +459,7 @@ export function PremiumAvatarRenderer({
   };
 
   const renderClothing = () => {
-    const color = config.outfitColor;
+    const color = config.outfitColor || '#1C1C1C';
     const accentColor = config.brandAccent ? '#10B981' : adjustColorBrightness(color, 20);
     const shadowColor = adjustColorBrightness(color, -20);
     
