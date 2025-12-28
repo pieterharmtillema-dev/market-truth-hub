@@ -18,8 +18,6 @@ interface TradingMetricsCardProps {
 export function TradingMetricsCard({
   metrics,
   loading = false,
-  calculating = false,
-  onRecalculate,
 }: TradingMetricsCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [progressWidth, setProgressWidth] = useState(0);

@@ -316,42 +316,45 @@ const Profile = () => {
         {/* Trader Profile Section */}
         {userId && <TraderProfileSection userId={userId} />}
 
-        {/* Trader Status */}
-        <TraderStatusCard />
+        {/* Trader Status & Exchange Connections - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Trader Status */}
+          <TraderStatusCard />
 
-        {/* Exchange Connections */}
-        {userId && (
-          <Card variant="glass" className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-muted-foreground" />
-                <h3 className="font-medium">Exchange Connections</h3>
+          {/* Exchange Connections */}
+          {userId && (
+            <Card variant="glass" className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium">Exchange Connections</h3>
+                </div>
+                <ConnectExchangeButton variant="outline" size="sm" />
               </div>
-              <ConnectExchangeButton variant="outline" size="sm" />
-            </div>
 
-            {loadingExchanges ? (
-              <Skeleton className="h-12 w-full" />
-            ) : connections.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Connect your exchange to automatically sync and verify your trades.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {connections.map((conn) => (
-                  <ExchangeStatusBadge
-                    key={conn.id}
-                    exchange={conn.exchange}
-                    status={conn.status}
-                    lastSyncAt={conn.last_sync_at}
-                    verifiedTradesCount={conn.verified_trades_count}
-                    showDetails
-                  />
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
+              {loadingExchanges ? (
+                <Skeleton className="h-12 w-full" />
+              ) : connections.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Connect your exchange to automatically sync and verify your trades.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {connections.map((conn) => (
+                    <ExchangeStatusBadge
+                      key={conn.id}
+                      exchange={conn.exchange}
+                      status={conn.status}
+                      lastSyncAt={conn.last_sync_at}
+                      verifiedTradesCount={conn.verified_trades_count}
+                      showDetails
+                    />
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
 
         {/* Trading Metrics */}
         {userId && (
