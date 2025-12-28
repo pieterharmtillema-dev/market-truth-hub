@@ -66,33 +66,13 @@ export default function Onboarding() {
 
   const handleSubmit = async () => {
     if (!userId) return;
-
+    
     setIsSubmitting(true);
     try {
-      // Derive the trader category based on answers
-      let traderCategory: string | null = null;
-      try {
-        const { data: categoryData, error: categoryError } = await supabase
-          .rpc("derive_trader_category", {
-            p_holding_time: answers.holding_time || null,
-            p_trade_frequency: answers.trade_frequency || null,
-            p_risk_per_trade: answers.risk_per_trade || null,
-          });
-
-        if (!categoryError && categoryData) {
-          traderCategory = categoryData;
-        }
-      } catch (err) {
-        console.error("Error deriving category:", err);
-        // Continue without category if derivation fails
-      }
-
-      // Update profile with answers and category
       const { error } = await supabase
         .from("trader_profiles")
         .update({
           ...answers,
-          trader_category: traderCategory,
           onboarding_completed: true,
           onboarding_skipped: false,
         })
@@ -100,23 +80,11 @@ export default function Onboarding() {
 
       if (error) throw error;
 
-      // Format category name for display
-      const categoryNames: Record<string, string> = {
-        scalper: "Scalper",
-        day_trader: "Day Trader",
-        swing_trader: "Swing Trader",
-        long_term_trader: "Long-Term Trader",
-      };
-
-      const categoryName = traderCategory ? categoryNames[traderCategory] : null;
-
       toast({
         title: "Profile saved! 🦖",
-        description: categoryName
-          ? `You're categorized as a ${categoryName}.`
-          : "Your trading profile has been set up.",
+        description: "Your trading profile has been set up.",
       });
-
+      
       navigate("/");
     } catch (error) {
       toast({

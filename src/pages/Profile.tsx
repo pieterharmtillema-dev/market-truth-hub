@@ -15,6 +15,8 @@ import { UserSearch } from "@/components/social/UserSearch";
 import { ConnectExchangeButton } from "@/components/exchange/ConnectExchangeButton";
 import { ExchangeStatusBadge } from "@/components/exchange/ExchangeStatusBadge";
 import { VerifiedMetricsCard } from "@/components/metrics/VerifiedMetricsCard";
+import { CategoryStatsCard } from "@/components/metrics/CategoryStatsCard";
+import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 import { useExchangeConnections } from "@/hooks/useExchangeConnections";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,6 +83,7 @@ const Profile = () => {
   });
   const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
   const [showSocialDialog, setShowSocialDialog] = useState(false);
+  const [traderCategory, setTraderCategory] = useState<TraderCategory | null>(null);
 
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
@@ -115,6 +118,18 @@ const Profile = () => {
         if (profileData) {
           setProfile(profileData);
         }
+
+        // Fetch trader category
+        const { data: traderProfileData } = await supabase
+          .from("trader_profiles")
+          .select("trader_category")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (traderProfileData?.trader_category) {
+          setTraderCategory(traderProfileData.trader_category as TraderCategory);
+        }
+
         setLoadingProfile(false);
 
         // Fetch recent trades from positions table (only user's trades, including simulation)
@@ -201,6 +216,11 @@ const Profile = () => {
                     <p className="text-sm text-muted-foreground">
                       {profile.bio ? profile.bio.slice(0, 50) + (profile.bio.length > 50 ? "..." : "") : "No bio yet"}
                     </p>
+                    {traderCategory && (
+                      <div className="mt-2">
+                        <CategoryBadge category={traderCategory} size="sm" />
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -351,6 +371,9 @@ const Profile = () => {
             onRecalculate={recalculate}
           />
         )}
+
+        {/* Category Stats */}
+        {userId && <CategoryStatsCard userId={userId} />}
 
         {/* Stats Grid */}
         <DefaultStatsGrid />
