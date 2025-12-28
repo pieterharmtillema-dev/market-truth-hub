@@ -112,16 +112,9 @@ export function ProfileHeader({
           </div>
         </div>
 
-        {/* Trader Category Badge */}
-        {traderCategory && (
-          <div className="flex justify-center mt-6 pt-6 border-t border-[#1f2937]">
-            <CategoryBadge category={traderCategory} size="sm" />
-          </div>
-        )}
-
         {/* Trader Profile Section */}
         {userId && (
-          <div className="mt-4">
+          <div className="mt-6 pt-6 border-t border-[#1f2937]">
             <TraderProfileSection userId={userId} />
           </div>
         )}
