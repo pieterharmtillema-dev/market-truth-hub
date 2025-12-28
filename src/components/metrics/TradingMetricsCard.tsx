@@ -101,7 +101,7 @@ export function TradingMetricsCard({
           {/* Win Rate Display */}
           <div className={cn(
             "flex items-baseline gap-3 transition-all duration-300",
-            totalTrades <= 1 && "blur-md select-none"
+            totalTrades <= 1 && "blur-sm select-none"
           )}>
             <span className="text-[56px] font-bold leading-none text-gain">
               {winRate.toFixed(1)}%
