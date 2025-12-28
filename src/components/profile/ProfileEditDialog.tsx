@@ -19,9 +19,11 @@ import {
 interface ProfileEditDialogProps {
   userId: string;
   currentName: string | null;
-  currentAvatarUrl: string | null; // ✅ ADD THIS
+  currentAvatarUrl: string | null;
   currentBio: string | null;
   onProfileUpdated: (data: { display_name: string; avatar_url: string; bio: string }) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ProfileEditDialog({
@@ -30,12 +32,18 @@ export function ProfileEditDialog({
   currentAvatarUrl,
   currentBio,
   onProfileUpdated,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: ProfileEditDialogProps) {
   /* ------------------------------------------------------------------ */
   /* State                                                              */
   /* ------------------------------------------------------------------ */
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use external control if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");

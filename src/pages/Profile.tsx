@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
@@ -83,6 +84,7 @@ const Profile = () => {
   });
   const [explanationPredictionId, setExplanationPredictionId] = useState<string | null>(null);
   const [showSocialDialog, setShowSocialDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [traderCategory, setTraderCategory] = useState<TraderCategory | null>(null);
 
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
@@ -195,115 +197,104 @@ const Profile = () => {
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
         {/* Profile Header */}
-        <Card variant="glass" className="overflow-hidden">
-          {/* Banner */}
-          <div className="h-24 bg-gradient-to-br from-primary/40 via-primary/20 to-transparent" />
-
-          <CardContent className="p-4 -mt-12">
-            <div className="flex items-end gap-4 mb-4">
-              <Avatar className="w-20 h-20 border-4 border-card shadow-lg">
-                {loadingProfile ? <Skeleton className="w-full h-full rounded-full" /> : renderAvatar()}
-              </Avatar>
-              <div className="flex-1 min-w-0 pb-1">
-                {loadingProfile ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                ) : (
-                  <>
-                    <h1 className="font-bold text-xl">{profile.display_name || "Set your name"}</h1>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.bio ? profile.bio.slice(0, 50) + (profile.bio.length > 50 ? "..." : "") : "No bio yet"}
-                    </p>
-                    {traderCategory && (
-                      <div className="mt-2">
-                        <CategoryBadge category={traderCategory} size="sm" />
-                      </div>
-                    )}
-                  </>
-                )}
+        {loadingProfile ? (
+          <Card variant="glass" className="p-8">
+            <div className="flex items-center gap-8">
+              <Skeleton className="w-[100px] h-[100px] rounded-full" />
+              <div className="flex-1 space-y-3">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-64" />
               </div>
             </div>
+          </Card>
+        ) : (
+          <ProfileHeader
+            displayName={profile.display_name}
+            avatarUrl={profile.avatar_url}
+            bio={profile.bio}
+            isOwnProfile={true}
+            onEditClick={() => setShowEditDialog(true)}
+            onFriendsClick={() => setShowSocialDialog(true)}
+            onShareClick={() => {
+              // Handle share functionality
+              if (navigator.share) {
+                navigator.share({
+                  title: `${profile.display_name || 'Trader'}'s Profile`,
+                  text: `Check out my trading profile on trade-trax.com`,
+                  url: window.location.href,
+                });
+              }
+            }}
+            onSettingsClick={() => {
+              // Navigate to settings or open settings dialog
+              console.log('Settings clicked');
+            }}
+          />
+        )}
 
-            {/* Bio */}
-            {profile.bio && <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>}
+        {/* Trader Category Badge */}
+        {traderCategory && (
+          <div className="flex justify-center">
+            <CategoryBadge category={traderCategory} size="sm" />
+          </div>
+        )}
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              {userId && (
-                <ProfileEditDialog
-                  userId={userId}
-                  currentName={profile.display_name}
-                  currentAvatarUrl={profile.avatar_url}
-                  currentBio={profile.bio}
-                  onProfileUpdated={handleProfileUpdated}
-                />
-              )}
+        {/* Profile Edit Dialog */}
+        {userId && (
+          <ProfileEditDialog
+            userId={userId}
+            currentName={profile.display_name}
+            currentAvatarUrl={profile.avatar_url}
+            currentBio={profile.bio}
+            onProfileUpdated={handleProfileUpdated}
+            open={showEditDialog}
+            onOpenChange={setShowEditDialog}
+          />
+        )}
 
-              {/* Social/Followers Dialog */}
-              <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="icon" className="relative">
-                    <Users className="w-4 h-4" />
-                    {followers.length > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
-                        {followers.length}
-                      </span>
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Connections</DialogTitle>
-                  </DialogHeader>
-                  <Tabs defaultValue="followers" className="w-full">
-                    <TabsList className="w-full">
-                      <TabsTrigger value="followers" className="flex-1 gap-1">
-                        Followers
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                          {followers.length}
-                        </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger value="following" className="flex-1 gap-1">
-                        Following
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                          {following.length}
-                        </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger value="find" className="flex-1">
-                        Find
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="followers" className="mt-4">
-                      <FollowersList followerIds={followers} />
-                    </TabsContent>
-                    <TabsContent value="following" className="mt-4">
-                      <FollowingList followingIds={following} onFollow={followUser} onUnfollow={unfollowUser} />
-                    </TabsContent>
-                    <TabsContent value="find" className="mt-4">
-                      {userId && (
-                        <UserSearch
-                          currentUserId={userId}
-                          isFollowing={isFollowing}
-                          onFollow={followUser}
-                          onUnfollow={unfollowUser}
-                        />
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </DialogContent>
-              </Dialog>
-
-              <Button variant="outline" size="icon">
-                <Share2 className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Settings className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Social/Followers Dialog */}
+        <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Connections</DialogTitle>
+            </DialogHeader>
+            <Tabs defaultValue="followers" className="w-full">
+              <TabsList className="w-full">
+                <TabsTrigger value="followers" className="flex-1 gap-1">
+                  Followers
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {followers.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="following" className="flex-1 gap-1">
+                  Following
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {following.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="find" className="flex-1">
+                  Find
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="followers" className="mt-4">
+                <FollowersList followerIds={followers} />
+              </TabsContent>
+              <TabsContent value="following" className="mt-4">
+                <FollowingList followingIds={following} onFollow={followUser} onUnfollow={unfollowUser} />
+              </TabsContent>
+              <TabsContent value="find" className="mt-4">
+                {userId && (
+                  <UserSearch
+                    currentUserId={userId}
+                    isFollowing={isFollowing}
+                    onFollow={followUser}
+                    onUnfollow={unfollowUser}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
 
         {profile.current_streak >= 2 && (
           <div className="flex justify-center">
