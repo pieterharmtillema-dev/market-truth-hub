@@ -232,12 +232,29 @@ const Profile = () => {
           />
         )}
 
-        {/* Trader Category Badge */}
-        {traderCategory && (
-          <div className="flex justify-center">
-            <CategoryBadge category={traderCategory} size="sm" />
-          </div>
-        )}
+        {/* Avatar Tab with Trader Category and Profile */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="w-full bg-card border border-border">
+            <TabsTrigger
+              value="overview"
+              className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            >
+              Avatar
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-4 space-y-4">
+            {/* Trader Category Badge */}
+            {traderCategory && (
+              <div className="flex justify-center">
+                <CategoryBadge category={traderCategory} size="sm" />
+              </div>
+            )}
+
+            {/* Trader Profile Section */}
+            {userId && <TraderProfileSection userId={userId} />}
+          </TabsContent>
+        </Tabs>
 
         {/* Profile Edit Dialog */}
         {userId && (
@@ -312,9 +329,6 @@ const Profile = () => {
             />
           </Card>
         )}
-
-        {/* Trader Profile Section */}
-        {userId && <TraderProfileSection userId={userId} />}
 
         {/* Trader Status & Exchange Connections - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
