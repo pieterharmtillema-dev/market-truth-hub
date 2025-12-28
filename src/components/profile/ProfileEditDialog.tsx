@@ -199,12 +199,15 @@ export function ProfileEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="flex-1 gap-2">
-          <Edit2 className="w-4 h-4" />
-          Edit Profile
-        </Button>
-      </DialogTrigger>
+      {/* Only show trigger button if dialog is not externally controlled */}
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button className="flex-1 gap-2">
+            <Edit2 className="w-4 h-4" />
+            Edit Profile
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent
         className="
