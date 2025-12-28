@@ -120,11 +120,13 @@ export function TradingMetricsCard({
                 </div>
               )}
             </div>
-            <div className="text-sm font-medium mb-2">
-              <span className="text-gain">{wins}W</span>
-              <span className="text-muted-foreground mx-1">/</span>
-              <span className="text-[#ef4444]">{losses}L</span>
-            </div>
+            {totalTrades > 1 && (
+              <div className="text-sm font-medium mb-2">
+                <span className="text-gain">{wins}W</span>
+                <span className="text-muted-foreground mx-1">/</span>
+                <span className="text-[#ef4444]">{losses}L</span>
+              </div>
+            )}
           </div>
 
           {/* Conditional Section: Pre-Rating or Verified */}
