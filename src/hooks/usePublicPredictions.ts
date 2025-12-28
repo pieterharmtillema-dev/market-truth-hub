@@ -2,23 +2,158 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 
-// Fake demo profiles for testing/demo purposes
-const FAKE_PROFILES: Record<string, { display_name: string; avatar_url: string; bio: string; current_streak: number; total_predictions: number; total_hits: number; streak_type: string; is_verified: boolean }> = {
-  '11111111-1111-1111-1111-111111111111': { display_name: 'CryptoKing', avatar_url: 'emoji:👑', bio: 'Full-time crypto trader. BTC maximalist.', current_streak: 7, total_predictions: 156, total_hits: 112, streak_type: 'hit', is_verified: true },
-  '22222222-2222-2222-2222-222222222222': { display_name: 'ForexMaster', avatar_url: 'emoji:🧙‍♂️', bio: 'Forex scalper | 5+ years experience', current_streak: 3, total_predictions: 89, total_hits: 58, streak_type: 'hit', is_verified: true },
-  '33333333-3333-3333-3333-333333333333': { display_name: 'StockWhisperer', avatar_url: 'emoji:🦊', bio: 'Value investor turned swing trader', current_streak: 2, total_predictions: 234, total_hits: 145, streak_type: 'miss', is_verified: false },
-  '44444444-4444-4444-4444-444444444444': { display_name: 'TechTrader', avatar_url: 'emoji:🤖', bio: 'Tech stocks enthusiast. NASDAQ focused.', current_streak: 5, total_predictions: 67, total_hits: 41, streak_type: 'hit', is_verified: true },
-  '55555555-5555-5555-5555-555555555555': { display_name: 'GoldBull', avatar_url: 'emoji:🦁', bio: 'Commodities specialist. Gold & Silver.', current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss', is_verified: false },
-  '66666666-6666-6666-6666-666666666666': { display_name: 'SwingKing', avatar_url: 'emoji:⚡', bio: 'Index ETF swing trader. SPY/QQQ specialist.', current_streak: 4, total_predictions: 98, total_hits: 67, streak_type: 'hit', is_verified: true },
-  '77777777-7777-7777-7777-777777777777': { display_name: 'ScalpMaster', avatar_url: 'emoji:🥷', bio: 'Scalping forex pairs since 2018.', current_streak: 6, total_predictions: 312, total_hits: 198, streak_type: 'hit', is_verified: true },
-  '88888888-8888-8888-8888-888888888888': { display_name: 'DiamondHands', avatar_url: 'emoji:💎', bio: 'HODL gang. Long-term crypto investor.', current_streak: 12, total_predictions: 24, total_hits: 21, streak_type: 'hit', is_verified: true },
-  '99999999-9999-9999-9999-999999999999': { display_name: 'OptionsWizard', avatar_url: 'emoji:🎰', bio: 'Options strategies. Theta gang member.', current_streak: 3, total_predictions: 145, total_hits: 89, streak_type: 'hit', is_verified: false },
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': { display_name: 'AlgoTrader', avatar_url: 'emoji:🧠', bio: 'Quantitative trading. Python & ML.', current_streak: 8, total_predictions: 456, total_hits: 298, streak_type: 'hit', is_verified: true },
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': { display_name: 'MemeStockMaven', avatar_url: 'emoji:🚀', bio: 'Riding the meme wave 🚀', current_streak: 1, total_predictions: 78, total_hits: 42, streak_type: 'miss', is_verified: false },
-  'cccccccc-cccc-cccc-cccc-cccccccccccc': { display_name: 'OilBaron', avatar_url: 'emoji:🛢️', bio: 'Energy sector specialist.', current_streak: 2, total_predictions: 56, total_hits: 38, streak_type: 'hit', is_verified: true },
-  'dddddddd-dddd-dddd-dddd-dddddddddddd': { display_name: 'AsianSession', avatar_url: 'emoji:🌙', bio: 'Trading Tokyo & Sydney sessions.', current_streak: 5, total_predictions: 134, total_hits: 89, streak_type: 'hit', is_verified: true },
-  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee': { display_name: 'ValueHunter', avatar_url: 'emoji:🦅', bio: 'Buffett disciple. Deep value investing.', current_streak: 9, total_predictions: 34, total_hits: 28, streak_type: 'hit', is_verified: false },
-  'ffffffff-ffff-ffff-ffff-ffffffffffff': { display_name: 'CryptoWhale', avatar_url: 'emoji:🐋', bio: 'Alt season hunter. Finding the next 100x.', current_streak: 4, total_predictions: 89, total_hits: 52, streak_type: 'hit', is_verified: true },
+// Premium avatar config helper - creates avatar: prefixed configs
+const createPremiumAvatar = (headShape: string, skinTone: string, hairStyle: string, hairColor: string, eyeStyle: string, mouthStyle: string, accessory: string = 'none', bgColor: string = '#1a1a2e') => {
+  return `avatar:${JSON.stringify({ headShape, skinTone, hairStyle, hairColor, eyeStyle, mouthStyle, accessory, bgColor })}`;
+};
+
+// Fake demo profiles with premium avatars
+const FAKE_PROFILES: Record<string, { display_name: string; avatar_url: string; bio: string; current_streak: number; total_predictions: number; total_hits: number; streak_type: string; is_verified: boolean; trader_category?: string }> = {
+  // Crypto traders
+  '11111111-1111-1111-1111-111111111111': { 
+    display_name: 'CryptoKing', 
+    avatar_url: createPremiumAvatar('round', '#f5d0c5', 'spiky', '#ffd700', 'confident', 'smirk', 'crown', '#2d1b4e'),
+    bio: 'Full-time crypto trader. BTC maximalist since 2017.', 
+    current_streak: 7, total_predictions: 156, total_hits: 112, streak_type: 'hit', is_verified: true, trader_category: 'swing_trader'
+  },
+  '88888888-8888-8888-8888-888888888888': { 
+    display_name: 'DiamondHands', 
+    avatar_url: createPremiumAvatar('square', '#8d5524', 'buzz', '#1a1a1a', 'determined', 'grin', 'headphones', '#0d2137'),
+    bio: 'HODL gang. Long-term crypto investor. Never sell.', 
+    current_streak: 12, total_predictions: 24, total_hits: 21, streak_type: 'hit', is_verified: true, trader_category: 'investor'
+  },
+  'ffffffff-ffff-ffff-ffff-ffffffffffff': { 
+    display_name: 'CryptoWhale', 
+    avatar_url: createPremiumAvatar('round', '#c68642', 'long', '#000000', 'calm', 'neutral', 'glasses', '#1a2744'),
+    bio: 'Alt season hunter. Finding the next 100x gem.', 
+    current_streak: 4, total_predictions: 89, total_hits: 52, streak_type: 'hit', is_verified: true, trader_category: 'swing_trader'
+  },
+  
+  // Forex traders
+  '22222222-2222-2222-2222-222222222222': { 
+    display_name: 'ForexMaster', 
+    avatar_url: createPremiumAvatar('oval', '#ffdbac', 'slicked', '#4a3728', 'focused', 'slight_smile', 'none', '#1e3a5f'),
+    bio: 'Forex scalper | 5+ years experience | EUR/USD specialist', 
+    current_streak: 3, total_predictions: 89, total_hits: 58, streak_type: 'hit', is_verified: true, trader_category: 'scalper'
+  },
+  '77777777-7777-7777-7777-777777777777': { 
+    display_name: 'ScalpMaster', 
+    avatar_url: createPremiumAvatar('diamond', '#e0ac69', 'mohawk', '#ff4444', 'intense', 'smirk', 'earring', '#1a1a2e'),
+    bio: 'Scalping forex pairs since 2018. Speed is everything.', 
+    current_streak: 6, total_predictions: 312, total_hits: 198, streak_type: 'hit', is_verified: true, trader_category: 'scalper'
+  },
+  'dddddddd-dddd-dddd-dddd-dddddddddddd': { 
+    display_name: 'AsianSession', 
+    avatar_url: createPremiumAvatar('round', '#f1c27d', 'short', '#1a1a1a', 'calm', 'neutral', 'none', '#2d2d44'),
+    bio: 'Trading Tokyo & Sydney sessions. Night owl life.', 
+    current_streak: 5, total_predictions: 134, total_hits: 89, streak_type: 'hit', is_verified: true, trader_category: 'day_trader'
+  },
+  
+  // Stock traders
+  '33333333-3333-3333-3333-333333333333': { 
+    display_name: 'StockWhisperer', 
+    avatar_url: createPremiumAvatar('oval', '#ffdbac', 'wavy', '#8b4513', 'curious', 'slight_smile', 'glasses', '#1a3a1a'),
+    bio: 'Value investor turned swing trader. Quality over quantity.', 
+    current_streak: 2, total_predictions: 234, total_hits: 145, streak_type: 'miss', is_verified: false, trader_category: 'swing_trader'
+  },
+  '44444444-4444-4444-4444-444444444444': { 
+    display_name: 'TechTrader', 
+    avatar_url: createPremiumAvatar('square', '#f5d0c5', 'messy', '#2c1810', 'focused', 'neutral', 'cap', '#0a1628'),
+    bio: 'Tech stocks enthusiast. NASDAQ focused. AI is the future.', 
+    current_streak: 5, total_predictions: 67, total_hits: 41, streak_type: 'hit', is_verified: true, trader_category: 'day_trader'
+  },
+  '66666666-6666-6666-6666-666666666666': { 
+    display_name: 'SwingKing', 
+    avatar_url: createPremiumAvatar('round', '#d4a574', 'fade', '#1a1a1a', 'confident', 'grin', 'chain', '#2b1055'),
+    bio: 'Index ETF swing trader. SPY/QQQ specialist. Let it ride.', 
+    current_streak: 4, total_predictions: 98, total_hits: 67, streak_type: 'hit', is_verified: true, trader_category: 'swing_trader'
+  },
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee': { 
+    display_name: 'ValueHunter', 
+    avatar_url: createPremiumAvatar('oval', '#c68642', 'bald', '#000000', 'wise', 'slight_smile', 'monocle', '#1a2f1a'),
+    bio: 'Buffett disciple. Deep value investing. Patience pays.', 
+    current_streak: 9, total_predictions: 34, total_hits: 28, streak_type: 'hit', is_verified: false, trader_category: 'investor'
+  },
+  
+  // Commodities & Options
+  '55555555-5555-5555-5555-555555555555': { 
+    display_name: 'GoldBull', 
+    avatar_url: createPremiumAvatar('square', '#8d5524', 'curly', '#ffd700', 'determined', 'neutral', 'none', '#3d2914'),
+    bio: 'Commodities specialist. Gold & Silver. Safe haven advocate.', 
+    current_streak: 1, total_predictions: 42, total_hits: 28, streak_type: 'miss', is_verified: false, trader_category: 'position_trader'
+  },
+  '99999999-9999-9999-9999-999999999999': { 
+    display_name: 'OptionsWizard', 
+    avatar_url: createPremiumAvatar('diamond', '#ffdbac', 'spiky', '#6b21a8', 'mischievous', 'smirk', 'glasses', '#1a1a3e'),
+    bio: 'Options strategies. Theta gang member. Time decay is my friend.', 
+    current_streak: 3, total_predictions: 145, total_hits: 89, streak_type: 'hit', is_verified: false, trader_category: 'day_trader'
+  },
+  'cccccccc-cccc-cccc-cccc-cccccccccccc': { 
+    display_name: 'OilBaron', 
+    avatar_url: createPremiumAvatar('square', '#e0ac69', 'slicked', '#1a1a1a', 'confident', 'neutral', 'cigar', '#2d1f14'),
+    bio: 'Energy sector specialist. Crude & natural gas.', 
+    current_streak: 2, total_predictions: 56, total_hits: 38, streak_type: 'hit', is_verified: true, trader_category: 'position_trader'
+  },
+  
+  // Algo & Quant
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': { 
+    display_name: 'AlgoTrader', 
+    avatar_url: createPremiumAvatar('oval', '#f1c27d', 'short', '#2c1810', 'focused', 'neutral', 'vr_headset', '#0d1117'),
+    bio: 'Quantitative trading. Python & ML. Data-driven decisions.', 
+    current_streak: 8, total_predictions: 456, total_hits: 298, streak_type: 'hit', is_verified: true, trader_category: 'scalper'
+  },
+  
+  // Meme & Fun
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': { 
+    display_name: 'MemeStockMaven', 
+    avatar_url: createPremiumAvatar('round', '#f5d0c5', 'mohawk', '#00ff00', 'excited', 'grin', 'laser_eyes', '#1a0a2e'),
+    bio: 'Riding the meme wave 🚀 YOLO is a strategy.', 
+    current_streak: 1, total_predictions: 78, total_hits: 42, streak_type: 'miss', is_verified: false, trader_category: 'day_trader'
+  },
+  
+  // New traders
+  '12121212-1212-1212-1212-121212121212': { 
+    display_name: 'NightOwlTrader', 
+    avatar_url: createPremiumAvatar('round', '#c68642', 'long', '#1a1a1a', 'tired', 'slight_smile', 'headphones', '#0f0f1a'),
+    bio: 'Trading US markets from Europe. Coffee is my fuel.', 
+    current_streak: 3, total_predictions: 67, total_hits: 45, streak_type: 'hit', is_verified: true, trader_category: 'day_trader'
+  },
+  '13131313-1313-1313-1313-131313131313': { 
+    display_name: 'ChartQueen', 
+    avatar_url: createPremiumAvatar('oval', '#f5d0c5', 'long', '#ff6b6b', 'confident', 'smirk', 'earring', '#2d1b4e'),
+    bio: 'Technical analysis lover. Fibonacci is life.', 
+    current_streak: 6, total_predictions: 189, total_hits: 128, streak_type: 'hit', is_verified: true, trader_category: 'swing_trader'
+  },
+  '14141414-1414-1414-1414-141414141414': { 
+    display_name: 'DeFiDegen', 
+    avatar_url: createPremiumAvatar('diamond', '#8d5524', 'spiky', '#9945ff', 'mischievous', 'grin', 'chain', '#0a0a1e'),
+    bio: 'Yield farming. Liquidity providing. Degen plays only.', 
+    current_streak: 2, total_predictions: 234, total_hits: 134, streak_type: 'miss', is_verified: false, trader_category: 'scalper'
+  },
+  '15151515-1515-1515-1515-151515151515': { 
+    display_name: 'PatientPete', 
+    avatar_url: createPremiumAvatar('square', '#ffdbac', 'bald', '#000000', 'calm', 'neutral', 'glasses', '#1a2f2f'),
+    bio: 'Slow and steady wins the race. Multi-year holds only.', 
+    current_streak: 15, total_predictions: 18, total_hits: 16, streak_type: 'hit', is_verified: true, trader_category: 'investor'
+  },
+  '16161616-1616-1616-1616-161616161616': { 
+    display_name: 'BreakoutBandit', 
+    avatar_url: createPremiumAvatar('round', '#e0ac69', 'fade', '#ff4444', 'intense', 'smirk', 'bandana', '#1a1a2e'),
+    bio: 'Breakout patterns are my bread and butter.', 
+    current_streak: 4, total_predictions: 156, total_hits: 98, streak_type: 'hit', is_verified: true, trader_category: 'day_trader'
+  },
+  '17171717-1717-1717-1717-171717171717': { 
+    display_name: 'IndexInvestor', 
+    avatar_url: createPremiumAvatar('oval', '#d4a574', 'short', '#4a3728', 'wise', 'slight_smile', 'none', '#1e3a2e'),
+    bio: 'Boring but profitable. VOO and chill.', 
+    current_streak: 20, total_predictions: 12, total_hits: 11, streak_type: 'hit', is_verified: false, trader_category: 'investor'
+  },
+  '18181818-1818-1818-1818-181818181818': { 
+    display_name: 'FuturesFreak', 
+    avatar_url: createPremiumAvatar('square', '#f1c27d', 'messy', '#2c1810', 'focused', 'neutral', 'cap', '#0d1628'),
+    bio: 'ES and NQ futures. Leverage is a double-edged sword.', 
+    current_streak: 5, total_predictions: 278, total_hits: 167, streak_type: 'hit', is_verified: true, trader_category: 'scalper'
+  },
 };
 
 // Generate realistic fake trades with explanations
@@ -216,6 +351,135 @@ const generateFakePredictions = (): PublicPredictionData[] => {
       explanation_public: true,
       data_source: 'trade_sync',
       profile: FAKE_PROFILES['55555555-5555-5555-5555-555555555555'],
+    },
+    // New traders predictions
+    {
+      id: 'fake-13',
+      user_id: '12121212-1212-1212-1212-121212121212',
+      asset: 'TSLA',
+      asset_type: 'stock',
+      direction: 'long',
+      current_price: 421.50,
+      target_price: 445.00,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 18 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Elon effect kicking in again. Breaking out of consolidation zone. Delivery numbers beat coming.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['12121212-1212-1212-1212-121212121212'],
+    },
+    {
+      id: 'fake-14',
+      user_id: '13131313-1313-1313-1313-131313131313',
+      asset: 'AMD',
+      asset_type: 'stock',
+      direction: 'long',
+      current_price: 124.80,
+      target_price: 135.50,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 60 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 20 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Perfect Fibonacci retracement to 61.8%. Volume spike confirmation. Target at 1.618 extension.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['13131313-1313-1313-1313-131313131313'],
+    },
+    {
+      id: 'fake-15',
+      user_id: '14141414-1414-1414-1414-141414141414',
+      asset: 'PEPE/USD',
+      asset_type: 'crypto',
+      direction: 'long',
+      current_price: 0.0000185,
+      target_price: 0.0000245,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 36 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 10 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Meme season heating up. Social metrics exploding. Whale accumulation on-chain. Ape in.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['14141414-1414-1414-1414-141414141414'],
+    },
+    {
+      id: 'fake-16',
+      user_id: '15151515-1515-1515-1515-151515151515',
+      asset: 'VOO',
+      asset_type: 'stock',
+      direction: 'long',
+      current_price: 545.00,
+      target_price: 580.00,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 720 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 168 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Q4 historically strong. Long-term thesis unchanged. Added to position on dip. Time in market beats timing.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['15151515-1515-1515-1515-151515151515'],
+    },
+    {
+      id: 'fake-17',
+      user_id: '16161616-1616-1616-1616-161616161616',
+      asset: 'AMZN',
+      asset_type: 'stock',
+      direction: 'long',
+      current_price: 225.40,
+      target_price: 238.00,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 32 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Descending triangle breakout with volume. Cloud revenue growth accelerating. Clean breakout setup.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['16161616-1616-1616-1616-161616161616'],
+    },
+    {
+      id: 'fake-18',
+      user_id: '17171717-1717-1717-1717-171717171717',
+      asset: 'VTI',
+      asset_type: 'stock',
+      direction: 'long',
+      current_price: 278.50,
+      target_price: 295.00,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 480 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 96 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Total market exposure. Dollar cost averaging since 2020. Boring strategy, boring returns (20%+ annually).',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['17171717-1717-1717-1717-171717171717'],
+    },
+    {
+      id: 'fake-19',
+      user_id: '18181818-1818-1818-1818-181818181818',
+      asset: 'ES (S&P Futures)',
+      asset_type: 'futures',
+      direction: 'short',
+      current_price: 6025,
+      target_price: 5985,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Overnight session gap fill play. Fading the European open weakness. Quick 40 points, out before US open.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['18181818-1818-1818-1818-181818181818'],
+    },
+    {
+      id: 'fake-20',
+      user_id: '99999999-9999-9999-9999-999999999999',
+      asset: 'SPY 605C',
+      asset_type: 'options',
+      direction: 'long',
+      current_price: 2.45,
+      target_price: 4.80,
+      status: 'hit',
+      created_at: new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
+      resolved_at: new Date(now.getTime() - 16 * 60 * 60 * 1000).toISOString(),
+      explanation: 'Weekly call scalp. IV crush post-FOMC gave cheap entry. Delta went from 0.25 to 0.65. 2x bagger.',
+      explanation_public: true,
+      data_source: 'trade_sync',
+      profile: FAKE_PROFILES['99999999-9999-9999-9999-999999999999'],
     },
   ];
 
