@@ -5,7 +5,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
-import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
@@ -17,7 +16,7 @@ import { ConnectExchangeButton } from "@/components/exchange/ConnectExchangeButt
 import { ExchangeStatusBadge } from "@/components/exchange/ExchangeStatusBadge";
 import { TradingMetricsCard } from "@/components/metrics/TradingMetricsCard";
 import { CategoryStatsCard } from "@/components/metrics/CategoryStatsCard";
-import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
+import { TraderCategory } from "@/components/profile/CategoryBadge";
 import { useExchangeConnections } from "@/hooks/useExchangeConnections";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import { Card, CardContent } from "@/components/ui/card";
@@ -229,32 +228,10 @@ const Profile = () => {
               // Navigate to settings or open settings dialog
               console.log('Settings clicked');
             }}
+            userId={userId || undefined}
+            traderCategory={traderCategory}
           />
         )}
-
-        {/* Avatar Tab with Trader Category and Profile */}
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-full bg-card border border-border">
-            <TabsTrigger
-              value="overview"
-              className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-            >
-              Avatar
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-4 space-y-4">
-            {/* Trader Category Badge */}
-            {traderCategory && (
-              <div className="flex justify-center">
-                <CategoryBadge category={traderCategory} size="sm" />
-              </div>
-            )}
-
-            {/* Trader Profile Section */}
-            {userId && <TraderProfileSection userId={userId} />}
-          </TabsContent>
-        </Tabs>
 
         {/* Profile Edit Dialog */}
         {userId && (

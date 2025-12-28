@@ -1,8 +1,11 @@
 import { AvatarDisplay } from '@/components/profile/AvatarDisplay';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Edit, Users, Share2, Settings } from 'lucide-react';
+import { CategoryBadge, TraderCategory } from '@/components/profile/CategoryBadge';
+import { TraderProfileSection } from '@/components/profile/TraderProfileSection';
 
 interface ProfileHeaderProps {
   displayName: string | null;
@@ -14,6 +17,8 @@ interface ProfileHeaderProps {
   onShareClick?: () => void;
   onSettingsClick?: () => void;
   className?: string;
+  userId?: string;
+  traderCategory?: TraderCategory | null;
 }
 
 export function ProfileHeader({
@@ -26,6 +31,8 @@ export function ProfileHeader({
   onShareClick,
   onSettingsClick,
   className,
+  userId,
+  traderCategory,
 }: ProfileHeaderProps) {
   return (
     <Card
@@ -104,6 +111,32 @@ export function ProfileHeader({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Tabs Section */}
+        <div className="mt-6">
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="w-full bg-transparent border-t border-[#1f2937] rounded-none pt-4">
+              <TabsTrigger
+                value="overview"
+                className="flex-1 data-[state=active]:bg-[#25c4b7]/10 data-[state=active]:text-[#25c4b7] data-[state=active]:border-b-2 data-[state=active]:border-[#25c4b7] rounded-none"
+              >
+                Avatar
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="mt-4 space-y-4">
+              {/* Trader Category Badge */}
+              {traderCategory && (
+                <div className="flex justify-center">
+                  <CategoryBadge category={traderCategory} size="sm" />
+                </div>
+              )}
+
+              {/* Trader Profile Section */}
+              {userId && <TraderProfileSection userId={userId} />}
+            </TabsContent>
+          </Tabs>
         </div>
       </CardContent>
     </Card>
