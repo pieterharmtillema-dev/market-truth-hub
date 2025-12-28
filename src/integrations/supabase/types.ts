@@ -539,7 +539,6 @@ export type Database = {
           onboarding_skipped: boolean
           risk_per_trade: string | null
           trade_frequency: string | null
-          trader_category: string | null
           updated_at: string
           user_id: string
         }
@@ -554,7 +553,6 @@ export type Database = {
           onboarding_skipped?: boolean
           risk_per_trade?: string | null
           trade_frequency?: string | null
-          trader_category?: string | null
           updated_at?: string
           user_id: string
         }
@@ -569,7 +567,6 @@ export type Database = {
           onboarding_skipped?: boolean
           risk_per_trade?: string | null
           trade_frequency?: string | null
-          trader_category?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -747,14 +744,6 @@ export type Database = {
       }
     }
     Functions: {
-      derive_trader_category: {
-        Args: {
-          p_holding_time: string
-          p_trade_frequency: string
-          p_risk_per_trade: string
-        }
-        Returns: string
-      }
       generate_api_key: { Args: never; Returns: string }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
