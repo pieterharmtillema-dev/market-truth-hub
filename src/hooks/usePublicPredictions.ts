@@ -514,7 +514,18 @@ const generateFakePredictions = (): PublicPredictionData[] => {
 };
 
 const getFakeOrRealProfile = (userId: string, realProfile: any) => {
-  if (realProfile) return realProfile;
+  // If real profile exists and has a display name, use it
+  if (realProfile && realProfile.display_name?.trim()) {
+    return realProfile;
+  }
+  // If real profile exists but display_name is empty, merge with fallback defaults
+  if (realProfile) {
+    return {
+      ...realProfile,
+      display_name: realProfile.display_name?.trim() || 'Anonymous Trader',
+    };
+  }
+  // Fallback to fake profile or null
   return FAKE_PROFILES[userId] || null;
 };
 
