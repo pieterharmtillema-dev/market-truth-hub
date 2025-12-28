@@ -111,10 +111,7 @@ export function TradingMetricsCard({
 
           {/* Win Rate Display */}
           <div className="flex items-baseline gap-3">
-            <span className={cn(
-              "text-[56px] font-bold leading-none",
-              winRate >= 50 ? "text-[#25c4b7]" : "text-[#ef4444]"
-            )}>
+            <span className="text-[56px] font-bold leading-none text-[#25c4b7]">
               {winRate.toFixed(1)}%
             </span>
             <div className="text-sm font-medium mb-2">
