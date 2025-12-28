@@ -154,6 +154,7 @@ export type Database = {
           tick_size: number | null
           tick_value: number | null
           ticks: number | null
+          trade_source: Database["public"]["Enums"]["trade_source"] | null
           updated_at: string | null
           user_id: string
         }
@@ -189,6 +190,7 @@ export type Database = {
           tick_size?: number | null
           tick_value?: number | null
           ticks?: number | null
+          trade_source?: Database["public"]["Enums"]["trade_source"] | null
           updated_at?: string | null
           user_id: string
         }
@@ -224,6 +226,7 @@ export type Database = {
           tick_size?: number | null
           tick_value?: number | null
           ticks?: number | null
+          trade_source?: Database["public"]["Enums"]["trade_source"] | null
           updated_at?: string | null
           user_id?: string
         }
@@ -378,11 +381,14 @@ export type Database = {
           current_streak: number | null
           display_name: string | null
           id: string
+          is_verified: boolean | null
           streak_type: string | null
           total_hits: number | null
           total_predictions: number | null
+          trader_category: Database["public"]["Enums"]["trader_category"] | null
           updated_at: string
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           api_key?: string | null
@@ -392,11 +398,16 @@ export type Database = {
           current_streak?: number | null
           display_name?: string | null
           id?: string
+          is_verified?: boolean | null
           streak_type?: string | null
           total_hits?: number | null
           total_predictions?: number | null
+          trader_category?:
+            | Database["public"]["Enums"]["trader_category"]
+            | null
           updated_at?: string
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           api_key?: string | null
@@ -406,11 +417,16 @@ export type Database = {
           current_streak?: number | null
           display_name?: string | null
           id?: string
+          is_verified?: boolean | null
           streak_type?: string | null
           total_hits?: number | null
           total_predictions?: number | null
+          trader_category?:
+            | Database["public"]["Enums"]["trader_category"]
+            | null
           updated_at?: string
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -539,6 +555,7 @@ export type Database = {
           onboarding_skipped: boolean
           risk_per_trade: string | null
           trade_frequency: string | null
+          trader_category: Database["public"]["Enums"]["trader_category"] | null
           updated_at: string
           user_id: string
         }
@@ -553,6 +570,9 @@ export type Database = {
           onboarding_skipped?: boolean
           risk_per_trade?: string | null
           trade_frequency?: string | null
+          trader_category?:
+            | Database["public"]["Enums"]["trader_category"]
+            | null
           updated_at?: string
           user_id: string
         }
@@ -567,6 +587,9 @@ export type Database = {
           onboarding_skipped?: boolean
           risk_per_trade?: string | null
           trade_frequency?: string | null
+          trader_category?:
+            | Database["public"]["Enums"]["trader_category"]
+            | null
           updated_at?: string
           user_id?: string
         }
@@ -744,6 +767,14 @@ export type Database = {
       }
     }
     Functions: {
+      derive_trader_category: {
+        Args: {
+          p_holding_time: string
+          p_risk_per_trade: string
+          p_trade_frequency: string
+        }
+        Returns: string
+      }
       generate_api_key: { Args: never; Returns: string }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -768,6 +799,13 @@ export type Database = {
         | "options"
         | "other"
       trade_side: "buy" | "sell" | "long" | "short"
+      trade_source: "api" | "extension" | "csv" | "manual"
+      trader_category:
+        | "scalper"
+        | "day_trader"
+        | "swing_trader"
+        | "position_trader"
+        | "investor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -905,6 +943,14 @@ export const Constants = {
         "other",
       ],
       trade_side: ["buy", "sell", "long", "short"],
+      trade_source: ["api", "extension", "csv", "manual"],
+      trader_category: [
+        "scalper",
+        "day_trader",
+        "swing_trader",
+        "position_trader",
+        "investor",
+      ],
     },
   },
 } as const

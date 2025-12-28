@@ -1,8 +1,9 @@
-import { Zap, Clock, TrendingUp, Target, LucideIcon } from "lucide-react";
+import { Zap, Clock, TrendingUp, Target, Landmark, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type TraderCategory = "scalper" | "day_trader" | "swing_trader" | "long_term_trader";
+// Matches the database enum: scalper, day_trader, swing_trader, position_trader, investor
+export type TraderCategory = "scalper" | "day_trader" | "swing_trader" | "position_trader" | "investor";
 
 export interface CategoryConfig {
   label: string;
@@ -35,12 +36,19 @@ export const getCategoryConfig = (category: TraderCategory): CategoryConfig => {
       textColor: "text-green-600 dark:text-green-400",
       borderColor: "border-green-500/20",
     },
-    long_term_trader: {
-      label: "Long-Term Trader",
+    position_trader: {
+      label: "Position Trader",
       icon: Target,
       bgColor: "bg-orange-500/10",
       textColor: "text-orange-600 dark:text-orange-400",
       borderColor: "border-orange-500/20",
+    },
+    investor: {
+      label: "Investor",
+      icon: Landmark,
+      bgColor: "bg-amber-500/10",
+      textColor: "text-amber-600 dark:text-amber-400",
+      borderColor: "border-amber-500/20",
     },
   };
 
