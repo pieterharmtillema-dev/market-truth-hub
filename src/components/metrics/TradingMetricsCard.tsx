@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { BarChart3, HelpCircle, Clock, Loader2, CheckCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { BarChart3, HelpCircle, Loader2, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TradingMetrics } from "@/hooks/useTradingMetrics";
 import { WinRateCalculationModal } from "./WinRateCalculationModal";
@@ -65,7 +64,7 @@ export function TradingMetricsCard({
     <>
       <Card
         className={cn(
-          "bg-card border-border transition-all duration-300 hover:border-[#4dd4ac]",
+          "bg-card border-border",
           "relative overflow-hidden"
         )}
       >
@@ -81,7 +80,7 @@ export function TradingMetricsCard({
 
         <CardHeader className="pb-3">
           {/* Header Section */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-[#4dd4ac]" />
               <h3 className="text-base font-semibold text-white">Trading Metrics</h3>
@@ -92,15 +91,6 @@ export function TradingMetricsCard({
               </Badge>
             )}
           </div>
-
-          {/* Last sync info */}
-          {metrics?.last_api_sync_at && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#4dd4ac] animate-pulse" />
-              <Clock className="h-3 w-3" />
-              Last sync: {formatDistanceToNow(new Date(metrics.last_api_sync_at), { addSuffix: true })}
-            </div>
-          )}
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -268,7 +258,7 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, valueColor = "text-white", tooltip }: MetricCardProps) {
   return (
-    <div className="bg-background/50 rounded-lg p-3 border border-border/50 hover:border-[#4dd4ac]/30 transition-colors">
+    <div className="bg-background/50 rounded-lg p-3 border border-border/50">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
           {label}
@@ -276,7 +266,7 @@ function MetricCard({ label, value, valueColor = "text-white", tooltip }: Metric
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="text-muted-foreground hover:text-[#4dd4ac] transition-colors">
+              <button className="text-muted-foreground">
                 <HelpCircle className="h-3 w-3" />
               </button>
             </TooltipTrigger>
