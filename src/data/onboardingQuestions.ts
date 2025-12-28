@@ -19,25 +19,25 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     dimension: "Trading Style",
     options: [
       {
-        value: "scalper",
+        value: "minutes",
         label: "Seconds to minutes",
         description: "Quick in-and-out trades",
         tags: ["style_scalper", "timeframe_ultra_short", "high_frequency"],
       },
       {
-        value: "day_trader",
+        value: "hours",
         label: "Minutes to hours",
         description: "Close all positions by end of day",
         tags: ["style_day_trader", "timeframe_short", "medium_frequency"],
       },
       {
-        value: "swing_trader",
+        value: "days",
         label: "Days to weeks",
         description: "Hold through minor pullbacks",
         tags: ["style_swing", "timeframe_medium", "low_frequency"],
       },
       {
-        value: "position_trader",
+        value: "weeks",
         label: "Weeks to months",
         description: "Focus on major trends",
         tags: ["style_position", "timeframe_long", "very_low_frequency"],
@@ -83,25 +83,25 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     dimension: "Trade Frequency",
     options: [
       {
-        value: "very_low",
+        value: "monthly",
         label: "A few times per month",
         description: "Highly selective",
         tags: ["frequency_very_low", "selective", "patient"],
       },
       {
-        value: "low",
+        value: "weekly",
         label: "A few times per week",
         description: "Measured approach",
         tags: ["frequency_low", "measured"],
       },
       {
-        value: "moderate",
+        value: "daily",
         label: "Daily",
         description: "Regular trading routine",
         tags: ["frequency_moderate", "active"],
       },
       {
-        value: "high",
+        value: "multiple_daily",
         label: "Multiple times daily",
         description: "Active trader",
         tags: ["frequency_high", "very_active", "engaged"],
