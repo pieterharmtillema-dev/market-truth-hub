@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { BarChart3, HelpCircle, Loader2, CheckCircle } from "lucide-react";
+import { BarChart3, HelpCircle, Loader2, CheckCircle, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TradingMetrics } from "@/hooks/useTradingMetrics";
 import { WinRateCalculationModal } from "./WinRateCalculationModal";
@@ -114,11 +114,14 @@ export function TradingMetricsCard({
               </div>
             </div>
             {totalTrades <= 1 && (
-              <div className="absolute inset-0 flex items-start justify-start z-10 pointer-events-none">
-                <div className="bg-card/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-border mt-2">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    Unlocks after 2 trades
-                  </p>
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <div className="bg-card/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary/30 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-3.5 w-3.5 text-primary" />
+                    <p className="text-xs text-white font-semibold">
+                      Unlocks after 2 trades
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
