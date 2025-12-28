@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { Edit3, Loader2, Check, Clock, TrendingUp, Brain, Heart, Award } from "lucide-react";
 import { onboardingQuestions, TraderProfileAnswers } from "@/data/onboardingQuestions";
+import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 
 interface TraderProfile extends TraderProfileAnswers {
   onboarding_completed: boolean;
   onboarding_skipped: boolean;
+  trader_category?: TraderCategory | null;
 }
 
 interface TraderProfileSectionProps {
@@ -45,7 +47,7 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
     const fetchProfile = async () => {
       const { data, error } = await supabase
         .from("trader_profiles")
-        .select("*")
+        .select("*, trader_category")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -243,31 +245,41 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
       </CardHeader>
       <CardContent className="pt-0">
         {hasAnyAnswers ? (
-          <div className="flex flex-wrap gap-2">
-            {profile.holding_time && (
-              <Badge variant="secondary" className="gap-1.5 py-1">
-                {dimensionIcons.holding_time}
-                {getAnswerLabel("holding_time", profile.holding_time)}
-              </Badge>
+          <div className="space-y-4">
+            {/* Trader Category - Prominent Display */}
+            {profile.trader_category && (
+              <div className="flex justify-center py-3 px-4 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                <CategoryBadge category={profile.trader_category} size="lg" />
+              </div>
             )}
-            {profile.risk_per_trade && (
-              <Badge variant="secondary" className="gap-1.5 py-1">
-                {dimensionIcons.risk_per_trade}
-                {getAnswerLabel("risk_per_trade", profile.risk_per_trade)}
-              </Badge>
-            )}
-            {profile.decision_style && (
-              <Badge variant="secondary" className="gap-1.5 py-1">
-                {dimensionIcons.decision_style}
-                {getAnswerLabel("decision_style", profile.decision_style)}
-              </Badge>
-            )}
-            {profile.experience_level && (
-              <Badge variant="secondary" className="gap-1.5 py-1">
-                {dimensionIcons.experience_level}
-                {getAnswerLabel("experience_level", profile.experience_level)}
-              </Badge>
-            )}
+
+            {/* Trading Preferences */}
+            <div className="flex flex-wrap gap-2">
+              {profile.holding_time && (
+                <Badge variant="secondary" className="gap-1.5 py-1">
+                  {dimensionIcons.holding_time}
+                  {getAnswerLabel("holding_time", profile.holding_time)}
+                </Badge>
+              )}
+              {profile.risk_per_trade && (
+                <Badge variant="secondary" className="gap-1.5 py-1">
+                  {dimensionIcons.risk_per_trade}
+                  {getAnswerLabel("risk_per_trade", profile.risk_per_trade)}
+                </Badge>
+              )}
+              {profile.decision_style && (
+                <Badge variant="secondary" className="gap-1.5 py-1">
+                  {dimensionIcons.decision_style}
+                  {getAnswerLabel("decision_style", profile.decision_style)}
+                </Badge>
+              )}
+              {profile.experience_level && (
+                <Badge variant="secondary" className="gap-1.5 py-1">
+                  {dimensionIcons.experience_level}
+                  {getAnswerLabel("experience_level", profile.experience_level)}
+                </Badge>
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
