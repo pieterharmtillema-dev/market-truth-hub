@@ -100,15 +100,6 @@ export function TradingMetricsCard({
 
           {/* Win Rate Display */}
           <div className="relative">
-            {totalTrades <= 1 && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <div className="bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-border">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    Unlocks after 2 trades
-                  </p>
-                </div>
-              </div>
-            )}
             <div className={cn(
               "flex items-baseline gap-3 transition-all duration-300",
               totalTrades <= 1 && "blur-md select-none"
@@ -122,6 +113,15 @@ export function TradingMetricsCard({
                 <span className="text-[#ef4444]">{losses}L</span>
               </div>
             </div>
+            {totalTrades <= 1 && (
+              <div className="absolute inset-0 flex items-start justify-start z-10 pointer-events-none">
+                <div className="bg-card/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-border mt-2">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Unlocks after 2 trades
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Conditional Section: Pre-Rating or Verified */}
