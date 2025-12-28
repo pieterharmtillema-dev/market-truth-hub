@@ -15,7 +15,7 @@ import { FollowingList } from "@/components/social/FollowingList";
 import { UserSearch } from "@/components/social/UserSearch";
 import { ConnectExchangeButton } from "@/components/exchange/ConnectExchangeButton";
 import { ExchangeStatusBadge } from "@/components/exchange/ExchangeStatusBadge";
-import { VerifiedMetricsCard } from "@/components/metrics/VerifiedMetricsCard";
+import { TradingMetricsCard } from "@/components/metrics/TradingMetricsCard";
 import { CategoryStatsCard } from "@/components/metrics/CategoryStatsCard";
 import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 import { useExchangeConnections } from "@/hooks/useExchangeConnections";
@@ -353,9 +353,9 @@ const Profile = () => {
           </Card>
         )}
 
-        {/* Verified Trading Metrics */}
+        {/* Trading Metrics */}
         {userId && (
-          <VerifiedMetricsCard
+          <TradingMetricsCard
             metrics={metrics}
             loading={loadingMetrics}
             calculating={calculating}
