@@ -99,32 +99,32 @@ export function TradingMetricsCard({
           </div>
 
           {/* Win Rate Display */}
-          <div className="relative">
-            <div className={cn(
-              "flex items-baseline gap-3 transition-all duration-300",
-              totalTrades <= 1 && "blur-md select-none"
-            )}>
-              <span className="text-[56px] font-bold leading-none text-gain">
+          <div className="flex items-baseline gap-3">
+            <div className="relative">
+              <span className={cn(
+                "text-[56px] font-bold leading-none text-gain transition-all duration-300",
+                totalTrades <= 1 && "blur-md select-none"
+              )}>
                 {winRate.toFixed(1)}%
               </span>
-              <div className="text-sm font-medium mb-2">
-                <span className="text-gain">{wins}W</span>
-                <span className="text-muted-foreground mx-1">/</span>
-                <span className="text-[#ef4444]">{losses}L</span>
-              </div>
-            </div>
-            {totalTrades <= 1 && (
-              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <div className="bg-card/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary/30 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-3.5 w-3.5 text-primary" />
-                    <p className="text-xs text-white font-semibold">
-                      Unlocks after 2 trades
-                    </p>
+              {totalTrades <= 1 && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                  <div className="bg-card/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary/30 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-3.5 w-3.5 text-primary" />
+                      <p className="text-xs text-white font-semibold">
+                        Unlocks after 2 trades
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="text-sm font-medium mb-2">
+              <span className="text-gain">{wins}W</span>
+              <span className="text-muted-foreground mx-1">/</span>
+              <span className="text-[#ef4444]">{losses}L</span>
+            </div>
           </div>
 
           {/* Conditional Section: Pre-Rating or Verified */}
