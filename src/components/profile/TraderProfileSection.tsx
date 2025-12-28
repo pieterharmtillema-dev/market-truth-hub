@@ -89,15 +89,18 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
         // Continue without category if derivation fails
       }
 
+      // Use upsert to handle both insert and update cases
       const { error } = await supabase
         .from("trader_profiles")
-        .update({
+        .upsert({
+          user_id: userId,
           ...editAnswers,
           trader_category: traderCategory as any,
           onboarding_completed: true,
           onboarding_skipped: false,
-        })
-        .eq("user_id", userId);
+        }, {
+          onConflict: 'user_id'
+        });
 
       if (error) throw error;
 
@@ -125,7 +128,8 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
 
       // Reload to update the category badge
       window.location.reload();
-    } catch {
+    } catch (err) {
+      console.error("Error saving profile:", err);
       toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
     } finally {
       setIsSaving(false);
