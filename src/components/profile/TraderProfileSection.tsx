@@ -69,10 +69,29 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
   const handleSaveEdit = async () => {
     setIsSaving(true);
     try {
+      // Derive the trader category based on answers
+      let traderCategory: string | null = null;
+      try {
+        const { data: categoryData, error: categoryError } = await supabase
+          .rpc("derive_trader_category", {
+            p_holding_time: editAnswers.holding_time || null,
+            p_trade_frequency: editAnswers.trade_frequency || null,
+            p_risk_per_trade: editAnswers.risk_per_trade || null,
+          });
+
+        if (!categoryError && categoryData) {
+          traderCategory = categoryData;
+        }
+      } catch (err) {
+        console.error("Error deriving category:", err);
+        // Continue without category if derivation fails
+      }
+
       const { error } = await supabase
         .from("trader_profiles")
         .update({
           ...editAnswers,
+          trader_category: traderCategory as any,
           onboarding_completed: true,
           onboarding_skipped: false,
         })
@@ -80,10 +99,30 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
 
       if (error) throw error;
 
-      setProfile(prev => prev ? { ...prev, ...editAnswers, onboarding_completed: true } : null);
+      setProfile(prev => prev ? { ...prev, ...editAnswers, trader_category: traderCategory as any, onboarding_completed: true } : null);
       setEditOpen(false);
       setEditStep(0);
-      toast({ title: "Profile updated!", description: "Your trading profile has been saved." });
+
+      // Format category name for display
+      const categoryNames: Record<string, string> = {
+        scalper: "Scalper",
+        day_trader: "Day Trader",
+        swing_trader: "Swing Trader",
+        position_trader: "Position Trader",
+        long_term_trader: "Long Term Trader",
+      };
+
+      const categoryName = traderCategory ? categoryNames[traderCategory] : null;
+
+      toast({
+        title: "Profile updated!",
+        description: categoryName
+          ? `You're categorized as a ${categoryName}.`
+          : "Your trading profile has been saved."
+      });
+
+      // Reload to update the category badge
+      window.location.reload();
     } catch {
       toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
     } finally {
