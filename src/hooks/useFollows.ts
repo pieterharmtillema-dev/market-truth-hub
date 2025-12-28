@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isFakeTrader, getFakeTraderIds } from "./usePublicPredictions";
+import { isFakeTrader } from "./usePublicPredictions";
 import { PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 
 export interface FollowData {
@@ -29,13 +29,8 @@ const saveFakeFollows = (follows: string[]) => {
 export function useFollows(userId: string | null) {
   const [following, setFollowing] = useState<string[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
-  const [fakeFollowing, setFakeFollowing] = useState<string[]>([]);
+  const [fakeFollowing, setFakeFollowing] = useState<string[]>(() => getFakeFollows());
   const [loading, setLoading] = useState(true);
-
-  // Load fake follows from localStorage on mount
-  useEffect(() => {
-    setFakeFollowing(getFakeFollows());
-  }, []);
 
   const fetchFollows = useCallback(async () => {
     if (!userId) {
@@ -73,14 +68,16 @@ export function useFollows(userId: string | null) {
     fetchFollows();
   }, [fetchFollows]);
 
-  const followUser = async (targetUserId: string) => {
+  const followUser = useCallback(async (targetUserId: string) => {
     if (!userId || userId === targetUserId) return false;
 
     // Handle fake trader follows locally
     if (isFakeTrader(targetUserId)) {
-      const newFakeFollows = [...fakeFollowing, targetUserId];
-      setFakeFollowing(newFakeFollows);
-      saveFakeFollows(newFakeFollows);
+      setFakeFollowing(prev => {
+        const newFakeFollows = [...prev, targetUserId];
+        saveFakeFollows(newFakeFollows);
+        return newFakeFollows;
+      });
       return true;
     }
 
@@ -96,16 +93,18 @@ export function useFollows(userId: string | null) {
       console.error("Error following user:", err);
       return false;
     }
-  };
+  }, [userId]);
 
-  const unfollowUser = async (targetUserId: string) => {
+  const unfollowUser = useCallback(async (targetUserId: string) => {
     if (!userId) return false;
 
     // Handle fake trader unfollows locally
     if (isFakeTrader(targetUserId)) {
-      const newFakeFollows = fakeFollowing.filter(id => id !== targetUserId);
-      setFakeFollowing(newFakeFollows);
-      saveFakeFollows(newFakeFollows);
+      setFakeFollowing(prev => {
+        const newFakeFollows = prev.filter(id => id !== targetUserId);
+        saveFakeFollows(newFakeFollows);
+        return newFakeFollows;
+      });
       return true;
     }
 
@@ -123,18 +122,18 @@ export function useFollows(userId: string | null) {
       console.error("Error unfollowing user:", err);
       return false;
     }
-  };
+  }, [userId]);
 
-  // Combine real and fake follows for isFollowing check
-  const isFollowing = (targetUserId: string) => {
+  // Memoized isFollowing function
+  const isFollowing = useCallback((targetUserId: string) => {
     if (isFakeTrader(targetUserId)) {
       return fakeFollowing.includes(targetUserId);
     }
     return following.includes(targetUserId);
-  };
+  }, [following, fakeFollowing]);
 
-  // Combined following list (real + fake)
-  const allFollowing = [...following, ...fakeFollowing];
+  // Combined following list (real + fake) - memoized
+  const allFollowing = useMemo(() => [...following, ...fakeFollowing], [following, fakeFollowing]);
 
   return {
     following: allFollowing,
@@ -147,15 +146,24 @@ export function useFollows(userId: string | null) {
   };
 }
 
-// Import fake predictions generator
-import { usePublicPredictions } from "./usePublicPredictions";
+// Inline fake predictions for followed fake traders (to avoid circular dependency)
+import { FAKE_PROFILES, generateFakePredictionsForFollowing } from "./fakeTraderData";
 
 export function useFollowingPredictions(userId: string | null, followingIds: string[]) {
   const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
   const [loading, setLoading] = useState(true);
-  const { predictions: allFakePredictions } = usePublicPredictions(30);
+  const previousFollowingRef = useRef<string>("");
+
+  // Memoize followingIds to avoid unnecessary re-fetches
+  const followingKey = useMemo(() => followingIds.sort().join(","), [followingIds]);
 
   useEffect(() => {
+    // Skip if followingIds haven't changed
+    if (previousFollowingRef.current === followingKey && predictions.length > 0) {
+      return;
+    }
+    previousFollowingRef.current = followingKey;
+
     if (!userId || followingIds.length === 0) {
       setPredictions([]);
       setLoading(false);
@@ -217,9 +225,7 @@ export function useFollowingPredictions(userId: string | null, followingIds: str
 
         // Add fake predictions for followed fake traders
         if (fakeUserIds.length > 0) {
-          const fakePredictions = allFakePredictions.filter(p => 
-            fakeUserIds.includes(p.user_id)
-          );
+          const fakePredictions = generateFakePredictionsForFollowing(fakeUserIds);
           enrichedPredictions = [...enrichedPredictions, ...fakePredictions];
         }
 
@@ -239,7 +245,7 @@ export function useFollowingPredictions(userId: string | null, followingIds: str
     };
 
     fetchFollowingPredictions();
-  }, [userId, followingIds, allFakePredictions]);
+  }, [userId, followingKey]);
 
   return { predictions, loading };
 }

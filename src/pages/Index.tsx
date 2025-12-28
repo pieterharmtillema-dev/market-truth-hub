@@ -6,7 +6,7 @@ import { TrendingAssets } from "@/components/feed/TrendingAssets";
 import { MarketTicker } from "@/components/feed/MarketTicker";
 import { mockTrendingAssets, mockTickerData } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Clock, Target, Calendar, Users } from "lucide-react";
+import { Flame, Clock, Target, Calendar, Users, Filter } from "lucide-react";
 import { usePublicPredictions, useLongTermPredictions } from "@/hooks/usePublicPredictions";
 import { useFollows, useFollowingPredictions } from "@/hooks/useFollows";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { UserSearch } from "@/components/social/UserSearch";
 import { FollowingList } from "@/components/social/FollowingList";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Index = () => {
   const { following, followUser, unfollowUser, isFollowing } = useFollows(currentUserId || null);
   const { predictions: followingPredictions, loading: loadingFollowing } = useFollowingPredictions(currentUserId || null, following);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
-
+  const [assetFilter, setAssetFilter] = useState<string>("all");
   useEffect(() => {
     const checkUserAndOnboarding = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -49,21 +50,27 @@ const Index = () => {
     checkUserAndOnboarding();
   }, [navigate]);
 
+  // Filter predictions by asset type
+  const filterByAsset = (preds: typeof tradePredictions) => {
+    if (assetFilter === "all") return preds;
+    return preds.filter(p => p.asset_type === assetFilter);
+  };
+
   // Sort trade predictions for different views
-  const hotPredictions = [...tradePredictions].sort((a, b) => {
+  const hotPredictions = filterByAsset([...tradePredictions]).sort((a, b) => {
     const aStreak = a.profile?.streak_type === "hit" ? (a.profile.current_streak || 0) : 0;
     const bStreak = b.profile?.streak_type === "hit" ? (b.profile.current_streak || 0) : 0;
     return bStreak - aStreak;
   });
 
-  const newTradePredictions = [...tradePredictions].sort((a, b) => 
+  const newTradePredictions = filterByAsset([...tradePredictions]).sort((a, b) => 
     new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime()
   );
 
-  const topPredictions = [...tradePredictions].filter(p => p.status === "hit");
+  const topPredictions = filterByAsset([...tradePredictions]).filter(p => p.status === "hit");
 
   // Long-term predictions sorted by creation date
-  const sortedLongTermPredictions = [...longTermPredictions].sort((a, b) =>
+  const sortedLongTermPredictions = filterByAsset([...longTermPredictions]).sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
@@ -78,30 +85,46 @@ const Index = () => {
 
         {/* Feed Tabs */}
         <Tabs defaultValue="hot" className="w-full">
-          <TabsList className="w-full bg-card border border-border flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="hot" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Flame className="w-4 h-4" />
-              Hot
-            </TabsTrigger>
-            <TabsTrigger value="new" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Clock className="w-4 h-4" />
-              New
-            </TabsTrigger>
-            {currentUserId && (
-              <TabsTrigger value="following" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                <Users className="w-4 h-4" />
-                Following
+          <div className="flex items-center gap-2 mb-2">
+            <TabsList className="flex-1 bg-card border border-border flex-wrap h-auto gap-1 p-1">
+              <TabsTrigger value="hot" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Flame className="w-4 h-4" />
+                Hot
               </TabsTrigger>
-            )}
-            <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Calendar className="w-4 h-4" />
-              Long-Term
-            </TabsTrigger>
-            <TabsTrigger value="top" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-              <Target className="w-4 h-4" />
-              Winners
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="new" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Clock className="w-4 h-4" />
+                New
+              </TabsTrigger>
+              {currentUserId && (
+                <TabsTrigger value="following" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                  <Users className="w-4 h-4" />
+                  Following
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="longterm" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Calendar className="w-4 h-4" />
+                Long-Term
+              </TabsTrigger>
+              <TabsTrigger value="top" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                <Target className="w-4 h-4" />
+                Winners
+              </TabsTrigger>
+            </TabsList>
+            <Select value={assetFilter} onValueChange={setAssetFilter}>
+              <SelectTrigger className="w-[120px] bg-card border-border">
+                <Filter className="w-4 h-4 mr-1" />
+                <SelectValue placeholder="Asset" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assets</SelectItem>
+                <SelectItem value="crypto">Crypto</SelectItem>
+                <SelectItem value="forex">Forex</SelectItem>
+                <SelectItem value="stock">Stocks</SelectItem>
+                <SelectItem value="commodity">Commodities</SelectItem>
+                <SelectItem value="options">Options</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <TabsContent value="hot" className="mt-4 space-y-4">
             {loadingTrades ? (
