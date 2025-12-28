@@ -71,8 +71,8 @@ export function TradingMetricsCard({
           className={cn(
             "absolute top-0 left-0 right-0 h-[2px]",
             isQualified
-              ? "bg-gradient-to-r from-[#25c4b7] to-[#1fa89d]"
-              : "bg-[#25c4b7]"
+              ? "bg-gradient-to-r from-gain to-gain/80"
+              : "bg-gain"
           )}
         />
 
@@ -80,7 +80,7 @@ export function TradingMetricsCard({
           {/* Header Section */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-[#25c4b7]" />
+              <BarChart3 className="h-5 w-5 text-gain" />
               <h3 className="text-base font-semibold text-white">Trading Metrics</h3>
             </div>
             {!isVerified && (
@@ -102,7 +102,7 @@ export function TradingMetricsCard({
               variant="ghost"
               size="sm"
               onClick={() => setIsModalOpen(true)}
-              className="text-xs text-muted-foreground hover:text-[#25c4b7] hover:bg-[#25c4b7]/10 h-auto py-1 px-2"
+              className="text-xs text-muted-foreground hover:text-gain hover:bg-gain/10 h-auto py-1 px-2"
             >
               <HelpCircle className="h-3 w-3 mr-1" />
               How it's calculated
@@ -111,11 +111,11 @@ export function TradingMetricsCard({
 
           {/* Win Rate Display */}
           <div className="flex items-baseline gap-3">
-            <span className="text-[56px] font-bold leading-none text-[#25c4b7]">
+            <span className="text-[56px] font-bold leading-none text-gain">
               {winRate.toFixed(1)}%
             </span>
             <div className="text-sm font-medium mb-2">
-              <span className="text-[#25c4b7]">{wins}W</span>
+              <span className="text-gain">{wins}W</span>
               <span className="text-muted-foreground mx-1">/</span>
               <span className="text-[#ef4444]">{losses}L</span>
             </div>
@@ -128,7 +128,7 @@ export function TradingMetricsCard({
               {/* Pre-Rating Badge */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-[#25c4b7] text-[#0f1419] font-semibold hover:bg-[#25c4b7]">
+                  <Badge className="bg-gain text-[#0f1419] font-semibold hover:bg-gain">
                     PRE-RATING
                   </Badge>
                   <span className="text-xs text-white font-medium">Qualification Progress</span>
@@ -140,15 +140,15 @@ export function TradingMetricsCard({
 
               {/* Progress Bar */}
               <div className="space-y-2">
-                <div className="h-1.5 bg-[#25c4b7]/15 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gain/15 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#25c4b7] to-[#1fa89d] transition-all duration-[800ms] ease-out"
+                    className="h-full bg-gradient-to-r from-gain to-gain/80 transition-all duration-[800ms] ease-out"
                     style={{ width: `${progressWidth}%` }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Complete{" "}
-                  <span className="text-[#25c4b7] font-semibold">
+                  <span className="text-gain font-semibold">
                     {tradesRemaining} more {tradesRemaining === 1 ? 'trade' : 'trades'}
                   </span>{" "}
                   to unlock your official rating
@@ -160,13 +160,13 @@ export function TradingMetricsCard({
                 <MetricCard
                   label="Avg R"
                   value={avgR !== 0 ? `${avgR >= 0 ? "+" : ""}${avgR.toFixed(2)}R` : "--"}
-                  valueColor={avgR > 0 ? "text-[#25c4b7]" : avgR < 0 ? "text-[#ef4444]" : "text-muted-foreground"}
+                  valueColor={avgR > 0 ? "text-gain" : avgR < 0 ? "text-[#ef4444]" : "text-muted-foreground"}
                   tooltip="Average R-multiple across all trades. Positive means you're gaining more than you risk on average."
                 />
                 <MetricCard
                   label="+R Rate"
                   value={plusRRate !== 0 ? `${plusRRate.toFixed(0)}%` : "--"}
-                  valueColor={plusRRate > 0 ? "text-[#25c4b7]" : "text-muted-foreground"}
+                  valueColor={plusRRate > 0 ? "text-gain" : "text-muted-foreground"}
                   tooltip="Percentage of trades with positive R-multiples (gained more than risked)."
                 />
               </div>
@@ -175,13 +175,13 @@ export function TradingMetricsCard({
             // QUALIFIED STATE
             <div className="space-y-3">
               {/* Verified Badge */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#25c4b7]/15 border border-[#25c4b7]/20">
-                <CheckCircle className="h-3.5 w-3.5 text-[#25c4b7]" />
-                <span className="text-xs font-semibold text-[#25c4b7]">Verified Rating</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gain/15 border border-gain/20">
+                <CheckCircle className="h-3.5 w-3.5 text-gain" />
+                <span className="text-xs font-semibold text-gain">Verified Rating</span>
               </div>
 
               {/* Best Streak Display */}
-              <div className="bg-[#25c4b7]/5 border border-[#25c4b7]/20 rounded-lg p-4 text-center">
+              <div className="bg-gain/5 border border-gain/20 rounded-lg p-4 text-center">
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                   BEST STREAK
                 </div>
@@ -198,13 +198,13 @@ export function TradingMetricsCard({
                 <MetricCard
                   label="Avg R"
                   value={avgR !== 0 ? `${avgR >= 0 ? "+" : ""}${avgR.toFixed(2)}R` : "--"}
-                  valueColor={avgR > 0 ? "text-[#25c4b7]" : avgR < 0 ? "text-[#ef4444]" : "text-muted-foreground"}
+                  valueColor={avgR > 0 ? "text-gain" : avgR < 0 ? "text-[#ef4444]" : "text-muted-foreground"}
                   tooltip="Average R-multiple across all trades."
                 />
                 <MetricCard
                   label="+R Rate"
                   value={plusRRate !== 0 ? `${plusRRate.toFixed(0)}%` : "--"}
-                  valueColor={plusRRate > 0 ? "text-[#25c4b7]" : "text-muted-foreground"}
+                  valueColor={plusRRate > 0 ? "text-gain" : "text-muted-foreground"}
                   tooltip="Percentage of trades with positive R-multiples."
                 />
                 <MetricCard
@@ -265,7 +265,7 @@ function MetricCard({ label, value, valueColor = "text-white", tooltip }: Metric
                 <HelpCircle className="h-3 w-3" />
               </button>
             </TooltipTrigger>
-            <TooltipContent className="max-w-xs bg-card border-[#25c4b7]/20">
+            <TooltipContent className="max-w-xs bg-card border-gain/20">
               <p className="text-xs">{tooltip}</p>
             </TooltipContent>
           </Tooltip>
