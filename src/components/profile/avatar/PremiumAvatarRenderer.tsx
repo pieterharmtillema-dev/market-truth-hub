@@ -1,4 +1,4 @@
-import { PremiumAvatarConfig } from './types';
+import { PremiumAvatarConfig, DEFAULT_PREMIUM_CONFIG } from './types';
 import { cn } from '@/lib/utils';
 
 interface PremiumAvatarRendererProps {
@@ -9,11 +9,13 @@ interface PremiumAvatarRendererProps {
 }
 
 export function PremiumAvatarRenderer({ 
-  config, 
+  config: rawConfig, 
   size = 120, 
   className,
   animated = false 
 }: PremiumAvatarRendererProps) {
+  // Merge with defaults to prevent undefined property errors
+  const config: PremiumAvatarConfig = { ...DEFAULT_PREMIUM_CONFIG, ...rawConfig };
   const viewBox = "0 0 200 200";
   
   // Adjust skin tone based on undertone
