@@ -228,6 +228,8 @@ const Profile = () => {
               // Navigate to settings or open settings dialog
               console.log('Settings clicked');
             }}
+            userId={userId || undefined}
+            traderCategory={traderCategory}
           />
         )}
 

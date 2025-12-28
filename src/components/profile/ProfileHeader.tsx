@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Edit, Users, Share2, Settings } from 'lucide-react';
+import { CategoryBadge, TraderCategory } from '@/components/profile/CategoryBadge';
+import { TraderProfileSection } from '@/components/profile/TraderProfileSection';
 
 interface ProfileHeaderProps {
   displayName: string | null;
@@ -14,6 +16,8 @@ interface ProfileHeaderProps {
   onShareClick?: () => void;
   onSettingsClick?: () => void;
   className?: string;
+  userId?: string;
+  traderCategory?: TraderCategory | null;
 }
 
 export function ProfileHeader({
@@ -26,6 +30,8 @@ export function ProfileHeader({
   onShareClick,
   onSettingsClick,
   className,
+  userId,
+  traderCategory,
 }: ProfileHeaderProps) {
   return (
     <Card
@@ -105,6 +111,20 @@ export function ProfileHeader({
             </div>
           </div>
         </div>
+
+        {/* Trader Category Badge */}
+        {traderCategory && (
+          <div className="flex justify-center mt-6 pt-6 border-t border-[#1f2937]">
+            <CategoryBadge category={traderCategory} size="sm" />
+          </div>
+        )}
+
+        {/* Trader Profile Section */}
+        {userId && (
+          <div className="mt-4">
+            <TraderProfileSection userId={userId} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
