@@ -62,20 +62,9 @@ export function TradingMetricsCard({
     <>
       <Card
         className={cn(
-          "bg-card border-border",
-          "relative overflow-hidden"
+          "bg-card border-border"
         )}
       >
-        {/* Top gradient border */}
-        <div
-          className={cn(
-            "absolute top-0 left-0 right-0 h-[2px]",
-            isQualified
-              ? "bg-gradient-to-r from-gain to-gain/80"
-              : "bg-gain"
-          )}
-        />
-
         <CardHeader className="pb-3">
           {/* Header Section */}
           <div className="flex items-center justify-between">
@@ -128,7 +117,7 @@ export function TradingMetricsCard({
               {/* Pre-Rating Badge */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-gain text-[#0f1419] font-semibold hover:bg-gain">
+                  <Badge className="bg-blue-400 text-[#0f1419] font-semibold hover:bg-blue-400">
                     PRE-RATING
                   </Badge>
                   <span className="text-xs text-white font-medium">Qualification Progress</span>
@@ -148,7 +137,7 @@ export function TradingMetricsCard({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Complete{" "}
-                  <span className="text-gain font-semibold">
+                  <span className="text-blue-400 font-semibold">
                     {tradesRemaining} more {tradesRemaining === 1 ? 'trade' : 'trades'}
                   </span>{" "}
                   to unlock your official rating
