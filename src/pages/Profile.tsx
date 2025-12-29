@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
@@ -46,6 +46,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
 import { useFollows } from "@/hooks/useFollows";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Trade {
   id: number;
@@ -93,9 +94,53 @@ const Profile = () => {
   const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
   const { connections, loading: loadingExchanges, syncTrades, syncing } = useExchangeConnections();
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
+  const [positions, setPositions] = useState<any[]>([]);
 
   // Filter to only show resolved predictions (hit/missed) from real trades
   const resolvedTradePredictions = tradePredictions.filter((p) => p.status === "hit" || p.status === "missed");
+
+  // Calculate best streak from positions
+  const bestStreak = useMemo(() => {
+    const closed = positions
+      .filter(p => !p.open && p.pnl !== null && p.pnl !== 0)
+      .sort((a, b) => new Date(a.entry_timestamp).getTime() - new Date(b.entry_timestamp).getTime());
+
+    if (closed.length === 0) return 0;
+
+    let longestWin = 0;
+    let currentStreak = 0;
+    let lastResult: 'win' | 'loss' | null = null;
+
+    for (const position of closed) {
+      const isWin = (position.pnl || 0) > 0;
+      const result = isWin ? 'win' : 'loss';
+
+      if (lastResult === result) {
+        currentStreak++;
+      } else {
+        if (lastResult === 'win') {
+          longestWin = Math.max(longestWin, currentStreak);
+        }
+        currentStreak = 1;
+      }
+      lastResult = result;
+    }
+
+    if (lastResult === 'win') {
+      longestWin = Math.max(longestWin, currentStreak);
+    }
+
+    return longestWin;
+  }, [positions]);
+
+  // Calculate average PnL % from positions
+  const avgReturn = useMemo(() => {
+    const closedTrades = positions.filter(p => !p.open && p.pnl_pct !== null);
+    if (closedTrades.length === 0) return 0;
+
+    const totalPnlPct = closedTrades.reduce((sum, p) => sum + (p.pnl_pct || 0), 0);
+    return totalPnlPct / closedTrades.length;
+  }, [positions]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -145,6 +190,16 @@ const Profile = () => {
 
         if (!error && data) {
           setRecentTrades(data);
+        }
+
+        // Fetch all positions for metrics calculations
+        const { data: allPositions } = await supabase
+          .from("positions")
+          .select("id, pnl, pnl_pct, open, entry_timestamp")
+          .eq("user_id", user.id);
+
+        if (allPositions) {
+          setPositions(allPositions);
         }
       } catch (err) {
         console.error("Failed to fetch user data:", err);
@@ -333,26 +388,66 @@ const Profile = () => {
               <BarChart3 className="w-5 h-5 text-cyan-400" />
               Trading Metrics
             </h2>
-            <span className="text-xs text-muted-foreground">Unverified</span>
+            <span className="text-xs text-muted-foreground">
+              {metrics?.is_verified ? 'Verified' : 'Unverified'}
+            </span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Average R */}
             <div className="text-center p-4 bg-background/50 rounded-lg border border-border/50">
-              <div className="text-2xl font-bold mb-1">78%</div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Accuracy</div>
-            </div>
-            <div className="text-center p-4 bg-background/50 rounded-lg border border-border/50">
-              <div className="text-2xl font-bold text-green-400 mb-1">
-                {metrics?.win_rate ? `${(metrics.win_rate * 100).toFixed(0)}%` : '65%'}
+              <div className={cn(
+                "text-2xl font-bold mb-1",
+                metrics?.average_r && metrics.average_r >= 0 ? "text-green-400" : "text-red-400"
+              )}>
+                {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(2)}R` : '0R'}
               </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Win Rate</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Average R</div>
             </div>
+
+            {/* Win Rate - Blurred if less than 2 trades */}
+            <div className="text-center p-4 bg-background/50 rounded-lg border border-border/50 relative">
+              {positions.length < 2 ? (
+                <>
+                  <div className="text-2xl font-bold text-green-400 mb-1 blur-md select-none">
+                    ---%
+                  </div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Win Rate</div>
+                  <div className="text-[10px] text-amber-400 font-medium">
+                    Preview unlocks after 2 trades
+                  </div>
+                </>
+              ) : positions.length < 30 ? (
+                <>
+                  <div className="text-2xl font-bold text-green-400 mb-1">
+                    {metrics?.win_rate ? `${(metrics.win_rate * 100).toFixed(0)}%` : '0%'}
+                  </div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Win Rate</div>
+                  <div className="text-[10px] text-cyan-400 font-medium">
+                    Official unlocks after 30 trades
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-green-400 mb-1">
+                    {metrics?.win_rate ? `${(metrics.win_rate * 100).toFixed(0)}%` : '0%'}
+                  </div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Win Rate</div>
+                </>
+              )}
+            </div>
+
+            {/* Avg Return */}
             <div className="text-center p-4 bg-background/50 rounded-lg border border-border/50">
-              <div className="text-2xl font-bold text-cyan-400 mb-1">+12.4%</div>
+              <div className={`text-2xl font-bold mb-1 ${avgReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
+              </div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Avg Return</div>
             </div>
+
+            {/* Best Streak */}
             <div className="text-center p-4 bg-background/50 rounded-lg border border-border/50">
-              <div className="text-2xl font-bold text-amber-400 mb-1">14</div>
+              <div className="text-2xl font-bold text-amber-400 mb-1">{bestStreak}</div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Best Streak</div>
             </div>
           </div>

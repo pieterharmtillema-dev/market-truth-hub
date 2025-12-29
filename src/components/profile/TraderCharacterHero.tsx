@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
+import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import {
   Trophy,
   TrendingUp,
@@ -86,15 +87,59 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
   const [totalTrades, setTotalTrades] = useState(0);
   const [winRate, setWinRate] = useState(0);
+  const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statsAnimated, setStatsAnimated] = useState(false);
 
-  // Mock data for stats not yet implemented
-  const accuracy = 78;
-  const avgReturn = 12.4;
-  const bestStreak = 14;
-  const totalCalls = 342;
-  const rank = "#47";
+  // Get real trading metrics
+  const { metrics, loading: loadingMetrics } = useTradingMetrics();
+
+  // Calculate best streak from positions
+  const bestStreak = useMemo(() => {
+    const closed = positions
+      .filter(p => !p.open && p.pnl !== null && p.pnl !== 0)
+      .sort((a, b) => new Date(a.entry_timestamp).getTime() - new Date(b.entry_timestamp).getTime());
+
+    if (closed.length === 0) return 0;
+
+    let longestWin = 0;
+    let currentStreak = 0;
+    let lastResult: 'win' | 'loss' | null = null;
+
+    for (const position of closed) {
+      const isWin = (position.pnl || 0) > 0;
+      const result = isWin ? 'win' : 'loss';
+
+      if (lastResult === result) {
+        currentStreak++;
+      } else {
+        if (lastResult === 'win') {
+          longestWin = Math.max(longestWin, currentStreak);
+        }
+        currentStreak = 1;
+      }
+      lastResult = result;
+    }
+
+    if (lastResult === 'win') {
+      longestWin = Math.max(longestWin, currentStreak);
+    }
+
+    return longestWin;
+  }, [positions]);
+
+  // Calculate average PnL % from positions
+  const avgReturn = useMemo(() => {
+    const closedTrades = positions.filter(p => !p.open && p.pnl_pct !== null);
+    if (closedTrades.length === 0) return 0;
+
+    const totalPnlPct = closedTrades.reduce((sum, p) => sum + (p.pnl_pct || 0), 0);
+    return totalPnlPct / closedTrades.length;
+  }, [positions]);
+
+  // Real data from metrics
+  const accuracy = metrics?.accuracy_score || 0;
+  const totalPredictions = metrics?.total_verified_trades || totalTrades;
 
   // Calculate level
   const level = Math.floor(totalTrades / 25) + 1;
@@ -127,16 +172,17 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         }
 
         // Fetch trading stats from positions
-        const { data: positions } = await supabase
+        const { data: positionsData } = await supabase
           .from("positions")
-          .select("id, pnl")
+          .select("id, pnl, pnl_pct, open, entry_timestamp")
           .eq("user_id", userId);
 
-        if (positions) {
-          setTotalTrades(positions.length);
+        if (positionsData) {
+          setPositions(positionsData);
+          setTotalTrades(positionsData.length);
 
           // Calculate win rate
-          const closedTrades = positions.filter(p => p.pnl !== null);
+          const closedTrades = positionsData.filter(p => p.pnl !== null);
           const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
           const calculatedWinRate = closedTrades.length > 0
             ? (wins / closedTrades.length) * 100
@@ -349,37 +395,16 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 Performance
               </div>
 
-              {/* Total Calls */}
+              {/* Total Predictions */}
               <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-4 hover:border-cyan-400/30 transition-all">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Calls</div>
-                    <div className="text-3xl font-black text-white font-rajdhani">{totalCalls}</div>
+                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Predictions</div>
+                    <div className="text-3xl font-black text-white font-rajdhani">{totalPredictions}</div>
                   </div>
                   <div className="w-12 h-12 bg-cyan-400/10 rounded-xl border border-cyan-400/30 flex items-center justify-center">
                     <BarChart3 className="w-6 h-6 text-cyan-400" />
                   </div>
-                </div>
-                <div className="mt-2 text-xs text-green-400 flex items-center gap-1">
-                  <ArrowUp className="w-3 h-3" />
-                  +15% this month
-                </div>
-              </div>
-
-              {/* Rank */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-4 hover:border-amber-500/30 transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Rank</div>
-                    <div className="text-3xl font-black text-amber-400 font-rajdhani">{rank}</div>
-                  </div>
-                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl border border-amber-500/30 flex items-center justify-center">
-                    <Award className="w-6 h-6 text-amber-400" />
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-green-400 flex items-center gap-1">
-                  <ArrowUp className="w-3 h-3" />
-                  +8% improvement
                 </div>
               </div>
             </div>
@@ -421,30 +446,71 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 <div className="flex-1 h-px bg-gray-800" />
               </div>
 
-              {/* Win Rate (Most Important - First) */}
-              <div className="bg-gray-900/40 border border-green-500/50 rounded-lg p-2.5 hover:border-green-500 transition-all ring-1 ring-green-500/20">
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
-                  <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
-                </div>
-                <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
-                  <div
-                    className="stat-bar-fill h-full bg-green-500"
-                    style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
-                  />
-                </div>
+              {/* Win Rate (Most Important - First) - Blurred if less than 2 trades */}
+              <div className="bg-gray-900/40 border border-green-500/50 rounded-lg p-2.5 hover:border-green-500 transition-all ring-1 ring-green-500/20 relative">
+                {totalTrades < 2 ? (
+                  <>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
+                      <span className="text-green-400 font-bold text-sm blur-md select-none">---%</span>
+                    </div>
+                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-1">
+                      <div className="stat-bar-fill h-full bg-green-500 blur-sm" style={{ width: '50%' }} />
+                    </div>
+                    <div className="text-[9px] text-amber-400 font-medium text-center">
+                      Preview unlocks after 2 trades
+                    </div>
+                  </>
+                ) : totalTrades < 30 ? (
+                  <>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
+                      <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-1">
+                      <div
+                        className="stat-bar-fill h-full bg-green-500"
+                        style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
+                      />
+                    </div>
+                    <div className="text-[9px] text-cyan-400 font-medium text-center">
+                      Official unlocks after 30 trades
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
+                      <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
+                      <div
+                        className="stat-bar-fill h-full bg-green-500"
+                        style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Accuracy */}
+              {/* Average R */}
               <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-400/30 transition-all">
                 <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-gray-400 text-xs">Accuracy</span>
-                  <span className="text-white font-bold text-sm">{accuracy}%</span>
+                  <span className="text-gray-400 text-xs">Average R</span>
+                  <span className={cn(
+                    "font-bold text-sm",
+                    metrics?.average_r && metrics.average_r >= 0 ? "text-green-400" : "text-red-400"
+                  )}>
+                    {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(2)}R` : '0R'}
+                  </span>
                 </div>
                 <div className="h-1 bg-black/50 rounded-full overflow-hidden">
                   <div
-                    className="stat-bar-fill h-full bg-cyan-400"
-                    style={{ width: statsAnimated ? `${accuracy}%` : '0%' }}
+                    className={cn(
+                      "stat-bar-fill h-full",
+                      metrics?.average_r && metrics.average_r >= 0 ? "bg-green-400" : "bg-red-400"
+                    )}
+                    style={{ width: statsAnimated ? `${Math.min(Math.abs(metrics?.average_r || 0) * 50, 100)}%` : '0%' }}
                   />
                 </div>
               </div>
@@ -453,12 +519,20 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-500/30 transition-all">
                 <div className="flex justify-between items-center mb-1.5">
                   <span className="text-gray-400 text-xs">Avg Return</span>
-                  <span className="text-cyan-400 font-bold text-sm">+{avgReturn}%</span>
+                  <span className={cn(
+                    "font-bold text-sm",
+                    avgReturn >= 0 ? "text-green-400" : "text-red-400"
+                  )}>
+                    {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
+                  </span>
                 </div>
                 <div className="h-1 bg-black/50 rounded-full overflow-hidden">
                   <div
-                    className="stat-bar-fill h-full bg-cyan-400"
-                    style={{ width: statsAnimated ? `${Math.min(avgReturn * 5, 100)}%` : '0%' }}
+                    className={cn(
+                      "stat-bar-fill h-full",
+                      avgReturn >= 0 ? "bg-green-400" : "bg-red-400"
+                    )}
+                    style={{ width: statsAnimated ? `${Math.min(Math.abs(avgReturn) * 5, 100)}%` : '0%' }}
                   />
                 </div>
               </div>
