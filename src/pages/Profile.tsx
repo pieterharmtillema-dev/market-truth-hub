@@ -198,7 +198,14 @@ const Profile = () => {
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
         {/* Trader Character Hero - New Game-Style Profile Header */}
-        {userId && <TraderCharacterHero userId={userId} onProfileUpdated={handleProfileUpdated} />}
+        {userId && (
+          <TraderCharacterHero
+            userId={userId}
+            onProfileUpdated={handleProfileUpdated}
+            onSocialClick={() => setShowSocialDialog(true)}
+            followersCount={followers.length}
+          />
+        )}
 
         {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
@@ -243,36 +250,6 @@ const Profile = () => {
             </Tabs>
           </DialogContent>
         </Dialog>
-
-        {/* Quick Actions - Social, Share, Settings */}
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="icon" className="relative" onClick={() => setShowSocialDialog(true)}>
-            <Users className="w-4 h-4" />
-            {followers.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
-                {followers.length}
-              </span>
-            )}
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => {
-            // Handle share functionality
-            if (navigator.share) {
-              navigator.share({
-                title: `${profile.display_name || 'Trader'}'s Profile`,
-                text: `Check out my trading profile on trade-trax.com`,
-                url: window.location.href,
-              });
-            }
-          }}>
-            <Share2 className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => {
-            // Navigate to settings or open settings dialog
-            console.log('Settings clicked');
-          }}>
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
 
         {profile.current_streak >= 2 && (
           <div className="flex justify-center">

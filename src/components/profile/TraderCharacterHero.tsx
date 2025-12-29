@@ -18,6 +18,9 @@ import {
   Clock,
   Shield,
   ArrowUp,
+  Users,
+  Share2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +41,8 @@ interface TraderProfile {
 interface TraderCharacterHeroProps {
   userId: string;
   onProfileUpdated?: (data: { display_name: string; avatar_url: string; bio: string }) => void;
+  onSocialClick?: () => void;
+  followersCount?: number;
 }
 
 // Map holding_time to trading class
@@ -76,7 +81,7 @@ const formatRisk = (risk: string | null): string => {
   return riskMap[risk] || risk;
 };
 
-export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacterHeroProps) {
+export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, followersCount = 0 }: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
   const [totalTrades, setTotalTrades] = useState(0);
@@ -271,6 +276,46 @@ export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacte
                   </div>
                   <div className="text-xs text-gray-500">{totalTrades} Trades Complete</div>
                 </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 justify-end mb-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="relative"
+                    onClick={onSocialClick}
+                  >
+                    <Users className="w-4 h-4" />
+                    {followersCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                        {followersCount}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `${profile?.display_name || 'Trader'}'s Profile`,
+                          text: `Check out my trading profile on trade-trax.com`,
+                          url: window.location.href,
+                        });
+                      }
+                    }}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => console.log('Settings clicked')}
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </div>
+
                 <ProfileEditDialog
                   userId={userId}
                   currentName={profile?.display_name}
