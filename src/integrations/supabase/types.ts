@@ -24,6 +24,7 @@ export type Database = {
           id: string
           label: string | null
           last_sync_at: string | null
+          last_sync_cursor: string | null
           status: string
           updated_at: string
           user_id: string
@@ -38,6 +39,7 @@ export type Database = {
           id?: string
           label?: string | null
           last_sync_at?: string | null
+          last_sync_cursor?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -52,6 +54,7 @@ export type Database = {
           id?: string
           label?: string | null
           last_sync_at?: string | null
+          last_sync_cursor?: string | null
           status?: string
           updated_at?: string
           user_id?: string
