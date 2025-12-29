@@ -16,9 +16,20 @@ export function TraderStatusCard() {
   const [activity, setActivity] = useState<TraderActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const fetchActivity = async () => {
+  const fetchActivity = async (uid?: string) => {
     try {
+      const userIdToUse = uid || userId;
+      if (!userIdToUse) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setLoading(false);
+          return;
+        }
+        setUserId(session.user.id);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         setLoading(false);
@@ -48,13 +59,56 @@ export function TraderStatusCard() {
   };
 
   useEffect(() => {
-    fetchActivity();
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+        await fetchActivity(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    };
 
-    // Poll every 10 seconds
-    const interval = setInterval(fetchActivity, 10000);
+    init();
+
+    // Poll every 30 seconds as fallback
+    const interval = setInterval(fetchActivity, 30000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Subscribe to realtime updates on user_activity table
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('user-activity-profile')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_activity',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('Activity update received on profile:', payload);
+          const newData = payload.new as { is_active: boolean; platform: string | null; timestamp: string; user_id: string };
+          if (newData && newData.user_id === userId) {
+            setActivity({
+              is_active: newData.is_active,
+              platform: newData.platform,
+              timestamp: newData.timestamp,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   if (loading) {
     return (
