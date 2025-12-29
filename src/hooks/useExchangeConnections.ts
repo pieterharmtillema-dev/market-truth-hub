@@ -12,10 +12,23 @@ export interface ExchangeConnection {
   created_at: string;
 }
 
+export interface SyncResult {
+  success: boolean;
+  synced: number;
+  results?: {
+    exchange: string;
+    synced: number;
+    total?: number;
+    error?: string;
+  }[];
+  error?: string;
+}
+
 export function useExchangeConnections() {
   const { user, session } = useAuth();
   const [connections, setConnections] = useState<ExchangeConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchConnections = useCallback(async () => {
@@ -115,6 +128,42 @@ export function useExchangeConnections() {
     }
   };
 
+  const syncTrades = async (exchange?: string): Promise<SyncResult> => {
+    if (!session) {
+      return { success: false, synced: 0, error: "Not authenticated" };
+    }
+
+    setSyncing(true);
+
+    try {
+      const response = await supabase.functions.invoke("exchange-sync", {
+        body: exchange ? { exchange } : {},
+      });
+
+      if (response.error) {
+        return { success: false, synced: 0, error: response.error.message };
+      }
+
+      if (response.data.error) {
+        return { success: false, synced: 0, error: response.data.error };
+      }
+
+      // Refresh connections to get updated sync times
+      await fetchConnections();
+
+      return {
+        success: true,
+        synced: response.data.synced || 0,
+        results: response.data.results,
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Sync failed";
+      return { success: false, synced: 0, error: errorMessage };
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getConnectionStatus = (exchange: string): ExchangeConnection | undefined => {
     return connections.find((c) => c.exchange === exchange);
   };
@@ -122,9 +171,11 @@ export function useExchangeConnections() {
   return {
     connections,
     loading,
+    syncing,
     error,
     connectExchange,
     disconnectExchange,
+    syncTrades,
     getConnectionStatus,
     refetch: fetchConnections,
   };

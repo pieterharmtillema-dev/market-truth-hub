@@ -49,7 +49,7 @@ const EXCHANGES: ExchangeInfo[] = [
 ];
 
 export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnectionModalProps) {
-  const { connections, connectExchange, disconnectExchange, loading } = useExchangeConnections();
+  const { connections, connectExchange, disconnectExchange, syncTrades, syncing, loading } = useExchangeConnections();
   const [selectedExchange, setSelectedExchange] = useState<Exchange | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
@@ -119,6 +119,25 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
     }
   };
 
+  const handleSyncTrades = async (exchange?: string) => {
+    const result = await syncTrades(exchange);
+    
+    if (result.success) {
+      toast({
+        title: "Trades Synced",
+        description: result.synced > 0 
+          ? `Successfully synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
+          : "No new trades found",
+      });
+    } else {
+      toast({
+        title: "Sync Failed",
+        description: result.error || "Failed to sync trades",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getConnectionForExchange = (exchange: Exchange): ExchangeConnection | undefined => {
     return connections.find(c => c.exchange === exchange);
   };
@@ -146,6 +165,9 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
                         {connection.last_sync_at && (
                           <>Last sync: {formatDistanceToNow(new Date(connection.last_sync_at), { addSuffix: true })}</>
                         )}
+                        {connection.verified_trades_count > 0 && (
+                          <> · {connection.verified_trades_count} trades</>
+                        )}
                       </div>
                     )}
                   </div>
@@ -157,6 +179,16 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
                         <CheckCircle2 className="h-3 w-3" />
                         Connected
                       </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSyncTrades(exchange.id)}
+                        disabled={syncing}
+                        className="gap-1"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'Syncing...' : 'Sync'}
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
