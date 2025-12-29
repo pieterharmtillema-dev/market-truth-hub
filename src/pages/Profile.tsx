@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserTradePredictions, useUserLongTermPredictions } from "@/hooks/usePublicPredictions";
 import { useFollows } from "@/hooks/useFollows";
+import { toast } from "@/hooks/use-toast";
 
 interface Trade {
   id: number;
@@ -89,7 +90,7 @@ const Profile = () => {
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
   const { following, followers, followUser, unfollowUser, isFollowing, loading: loadingFollows } = useFollows(userId);
-  const { connections, loading: loadingExchanges } = useExchangeConnections();
+  const { connections, loading: loadingExchanges, syncTrades, syncing } = useExchangeConnections();
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
 
   // Filter to only show resolved predictions (hit/missed) from real trades
@@ -330,7 +331,7 @@ const Profile = () => {
                   Connect your exchange to automatically sync and verify your trades.
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {connections.map((conn) => (
                     <ExchangeStatusBadge
                       key={conn.id}
@@ -339,6 +340,24 @@ const Profile = () => {
                       lastSyncAt={conn.last_sync_at}
                       verifiedTradesCount={conn.verified_trades_count}
                       showDetails
+                      syncing={syncing}
+                      onSync={async () => {
+                        const result = await syncTrades(conn.exchange);
+                        if (result.success) {
+                          toast({
+                            title: "Trades Synced",
+                            description: result.synced > 0 
+                              ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
+                              : "No new trades found",
+                          });
+                        } else {
+                          toast({
+                            title: "Sync Failed",
+                            description: result.error || "Failed to sync trades",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
                     />
                   ))}
                 </div>
