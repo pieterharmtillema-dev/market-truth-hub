@@ -14,8 +14,10 @@ import {
   Zap,
   Award,
   BarChart3,
-  Crown,
-  Star,
+  User,
+  Clock,
+  Shield,
+  ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,27 @@ const getTradeClass = (holdingTime: string | null): string => {
   return mapping[holdingTime] || "Trader";
 };
 
+// Format holding time for display
+const formatHoldingTime = (holdingTime: string | null): string => {
+  if (!holdingTime) return "";
+  return holdingTime.split("_").map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(" ");
+};
+
+// Format risk for display
+const formatRisk = (risk: string | null): string => {
+  if (!risk) return "";
+  const riskMap: Record<string, string> = {
+    "less_than_1": "< 1% Risk",
+    "1_to_2": "1-2% Risk",
+    "2_to_5": "2-5% Risk",
+    "5_to_10": "5-10% Risk",
+    "more_than_10": "> 10% Risk",
+  };
+  return riskMap[risk] || risk;
+};
+
 export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
@@ -63,16 +86,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacte
 
   // Mock data for stats not yet implemented
   const accuracy = 78;
-  const avgReturn = 2.4;
-  const bestStreak = 7;
-  const totalCalls = 142;
+  const avgReturn = 12.4;
+  const bestStreak = 14;
+  const totalCalls = 342;
   const rank = "#47";
 
-  // Calculate level and XP
+  // Calculate level
   const level = Math.floor(totalTrades / 25) + 1;
-  const currentXP = totalTrades % 25;
-  const xpToNextLevel = 25;
-  const xpProgress = (currentXP / xpToNextLevel) * 100;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,7 +142,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacte
         setLoading(false);
 
         // Trigger animation after data loads
-        setTimeout(() => setStatsAnimated(true), 100);
+        setTimeout(() => setStatsAnimated(true), 300);
       } catch (error) {
         console.error("Error fetching trader data:", error);
         setLoading(false);
@@ -163,283 +183,270 @@ export function TraderCharacterHero({ userId, onProfileUpdated }: TraderCharacte
           50% { opacity: 1; }
         }
 
-        @keyframes fill-bar {
-          from { width: 0%; }
-          to { width: var(--target-width); }
-        }
-
-        .float-animation {
+        .float-anim {
           animation: float 4s ease-in-out infinite;
         }
 
-        .pulse-glow {
+        .glow-pulse {
           animation: pulse-glow 2s ease-in-out infinite;
         }
 
-        .stat-bar {
+        .stat-bar-fill {
           transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .scanline {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            transparent 0%,
-            rgba(61, 214, 140, 0.05) 50%,
-            transparent 100%
-          );
-          background-size: 100% 4px;
-          animation: scanline 8s linear infinite;
-          pointer-events: none;
+        .character-glow {
+          filter: drop-shadow(0 0 40px rgba(61, 214, 140, 0.3));
         }
 
-        @keyframes scanline {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100%; }
+        .scanline {
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(61, 214, 140, 0.1) 2px,
+            rgba(61, 214, 140, 0.1) 4px
+          );
         }
       `}</style>
 
-      <Card variant="glass" className="overflow-hidden bg-gradient-to-br from-gray-900 to-black border-border/50">
-        <div className="p-6 space-y-6">
-          {/* Top Section - Profile Info */}
-          <div className="flex items-start justify-between gap-4">
-            {/* Left: Avatar & Info */}
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="relative">
-                <AvatarDisplay
-                  avatarUrl={profile?.avatar_url}
-                  displayName={profile?.display_name || "Trader"}
-                  size={80}
-                  className="border-4 border-cyan-500/20 shadow-lg shadow-cyan-500/10"
-                />
-                <div className="absolute -bottom-2 -right-2 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-background shadow-lg">
-                  LVL {level}
+      <Card variant="glass" className="overflow-hidden relative bg-card/60 backdrop-blur-xl">
+        {/* Atmospheric background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-transparent to-violet-900/10 pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse at 50% 30%, rgba(61, 214, 140, 0.1), transparent 70%)'
+        }} />
+
+        {/* Top Profile Section */}
+        <div className="relative border-b border-border/30">
+          <div className="p-6 pb-4">
+            <div className="flex items-start justify-between">
+              {/* Left: Avatar + Name */}
+              <div className="flex items-start gap-4">
+                <div className="w-20 h-20 rounded-full border-4 border-cyan-400/50 overflow-hidden flex-shrink-0">
+                  <AvatarDisplay
+                    avatarUrl={profile?.avatar_url}
+                    displayName={profile?.display_name || "Trader"}
+                    size={80}
+                    className="border-0"
+                  />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold mb-1 text-foreground">
+                    {profile?.display_name || "Set Your Name"}
+                  </h1>
+                  <p className="text-sm text-cyan-400 mb-3">
+                    {traderClass} • {formatHoldingTime(traderProfile?.holding_time) || "Trading"}
+                  </p>
+
+                  {/* Trader Profile Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    {traderProfile?.trader_category && (
+                      <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 hover:bg-violet-500/30">
+                        <Zap className="w-3.5 h-3.5 mr-1.5" />
+                        {traderProfile.trader_category.replace("_", " ")}
+                      </Badge>
+                    )}
+                    {traderProfile?.holding_time && (
+                      <Badge variant="outline" className="bg-gray-700/50 text-gray-300 border-gray-600">
+                        <Clock className="w-3.5 h-3.5 mr-1.5" />
+                        {formatHoldingTime(traderProfile.holding_time)}
+                      </Badge>
+                    )}
+                    {traderProfile?.risk_per_trade && (
+                      <Badge variant="outline" className="bg-gray-700/50 text-gray-300 border-gray-600">
+                        <Shield className="w-3.5 h-3.5 mr-1.5" />
+                        {formatRisk(traderProfile.risk_per_trade)}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold text-white mb-1 truncate">
-                  {profile?.display_name || "Set Your Name"}
-                </h1>
-                <p className="text-cyan-400 font-rajdhani text-sm mb-2">{traderClass}</p>
-
-                {/* Badges Row */}
-                <div className="flex flex-wrap gap-2 items-center">
-                  {traderProfile?.trader_category && (
-                    <CategoryBadge category={traderProfile.trader_category} size="sm" showIcon={false} />
-                  )}
-                  {traderProfile?.holding_time && (
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs">
-                      {traderProfile.holding_time.replace(/_/g, " ")}
-                    </Badge>
-                  )}
-                  {traderProfile?.risk_per_trade && (
-                    <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-xs">
-                      Risk: {traderProfile.risk_per_trade.replace(/_/g, " ")}
-                    </Badge>
-                  )}
+              {/* Right: Level & Actions */}
+              <div className="text-right">
+                <div className="mb-3">
+                  <div className="text-3xl font-black text-cyan-400 font-rajdhani leading-none">
+                    LVL {level}
+                  </div>
+                  <div className="text-xs text-gray-500">{totalTrades} Trades Complete</div>
                 </div>
+                <ProfileEditDialog
+                  userId={userId}
+                  currentName={profile?.display_name}
+                  currentAvatarUrl={profile?.avatar_url}
+                  currentBio={profile?.bio}
+                  onProfileUpdated={handleProfileUpdate}
+                />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Right: Edit Button */}
-            <ProfileEditDialog
-              userId={userId}
-              currentName={profile?.display_name}
-              currentAvatarUrl={profile?.avatar_url}
-              currentBio={profile?.bio}
-              onProfileUpdated={handleProfileUpdate}
-            />
+        {/* Character Stats Section */}
+        <div className="relative">
+          {/* Header */}
+          <div className="px-6 pt-4 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+              <span className="text-xs text-cyan-400 uppercase tracking-widest font-semibold">
+                Character Stats
+              </span>
+            </div>
           </div>
 
-          {/* Bottom Section - 3 Column Stats Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Left Column - Performance */}
-            <div className="lg:col-span-3 space-y-3">
+          {/* Main Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-6 pb-6">
+            {/* Left: Performance Metrics */}
+            <div className="md:col-span-4 space-y-2">
+              <div className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">
+                <div className="w-3 h-px bg-cyan-400" />
+                Performance
+              </div>
+
               {/* Total Calls */}
-              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-900/10 border-purple-500/20 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/20">
-                    <Trophy className="w-6 h-6 text-purple-400" />
+              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-4 hover:border-cyan-400/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Calls</div>
+                    <div className="text-3xl font-black text-white font-rajdhani">{totalCalls}</div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Total Calls</p>
-                    <p className="text-2xl font-bold font-rajdhani text-white">{totalCalls}</p>
-                    <p className="text-xs text-purple-400 mt-0.5">+15% this month</p>
+                  <div className="w-12 h-12 bg-cyan-400/10 rounded-xl border border-cyan-400/30 flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-cyan-400" />
                   </div>
                 </div>
-              </Card>
+                <div className="mt-2 text-xs text-green-400 flex items-center gap-1">
+                  <ArrowUp className="w-3 h-3" />
+                  +15% this month
+                </div>
+              </div>
 
               {/* Rank */}
-              <Card className="bg-gradient-to-br from-amber-500/10 to-amber-900/10 border-amber-500/20 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/20">
+              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-4 hover:border-amber-500/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Rank</div>
+                    <div className="text-3xl font-black text-amber-400 font-rajdhani">{rank}</div>
+                  </div>
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl border border-amber-500/30 flex items-center justify-center">
                     <Award className="w-6 h-6 text-amber-400" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Global Rank</p>
-                    <p className="text-2xl font-bold font-rajdhani text-white">{rank}</p>
-                    <p className="text-xs text-amber-400 mt-0.5">+8% improvement</p>
-                  </div>
                 </div>
-              </Card>
+                <div className="mt-2 text-xs text-green-400 flex items-center gap-1">
+                  <ArrowUp className="w-3 h-3" />
+                  +8% improvement
+                </div>
+              </div>
             </div>
 
-            {/* Center Column - Character Display */}
-            <div className="lg:col-span-6">
-              <Card className="relative bg-gradient-to-br from-cyan-500/5 to-cyan-900/5 border-cyan-500/20 p-6 backdrop-blur-sm overflow-hidden h-full">
-                <div className="scanline"></div>
+            {/* Center: Character Display */}
+            <div className="md:col-span-4 flex items-center justify-center py-2">
+              <div className="relative float-anim">
+                {/* Glow rings */}
+                <div className="absolute inset-0 blur-3xl bg-cyan-400/20 rounded-full scale-150 glow-pulse" />
+                <div className="absolute inset-0 blur-2xl bg-cyan-400/10 rounded-full scale-125" />
 
-                {/* Floating Character Placeholder */}
-                <div className="relative h-48 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-gradient-radial from-cyan-500/20 via-transparent to-transparent blur-2xl pulse-glow"></div>
-
-                  <div className="relative float-animation">
-                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-cyan-500/30 to-cyan-600/30 border-2 border-cyan-500/40 flex items-center justify-center backdrop-blur-sm">
-                      <Crown className="w-16 h-16 text-cyan-400" />
+                {/* Character container */}
+                <div className="relative character-glow">
+                  <div className="w-36 h-44 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-cyan-400/30 flex items-center justify-center overflow-hidden relative">
+                    {/* Character icon/placeholder */}
+                    <div className="text-center relative z-10">
+                      <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-400/30 to-cyan-400/10 rounded-full border-2 border-cyan-400/40 flex items-center justify-center mb-2">
+                        <User className="w-10 h-10 text-cyan-400" />
+                      </div>
+                      <div className="text-gray-500 text-xs uppercase tracking-wider">Trader</div>
                     </div>
 
-                    {/* Level Badge Overlay */}
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-sm font-bold px-3 py-1.5 rounded-full border-2 border-background shadow-lg">
-                      <Star className="w-4 h-4 inline mr-1" />
-                      {level}
-                    </div>
+                    {/* Scanline effect */}
+                    <div className="absolute inset-0 opacity-20 scanline" />
                   </div>
-                </div>
 
-                {/* XP Progress Bar */}
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Level {level}</span>
-                    <span>{currentXP} / {xpToNextLevel} XP</span>
-                  </div>
-                  <div className="h-2 bg-black/40 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 stat-bar"
-                      style={{ width: statsAnimated ? `${xpProgress}%` : '0%' }}
-                    />
+                  {/* Level badge */}
+                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
+                    <span className="text-sm font-black text-black">{level}</span>
                   </div>
                 </div>
-
-                {/* Quick Stats Grid */}
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <div className="bg-black/20 rounded-lg p-2 text-center">
-                    <p className="text-xs text-muted-foreground">Trades</p>
-                    <p className="text-lg font-bold font-rajdhani text-cyan-400">{totalTrades}</p>
-                  </div>
-                  <div className="bg-black/20 rounded-lg p-2 text-center">
-                    <p className="text-xs text-muted-foreground">Streak</p>
-                    <p className="text-lg font-bold font-rajdhani text-amber-400">{bestStreak}</p>
-                  </div>
-                </div>
-              </Card>
+              </div>
             </div>
 
-            {/* Right Column - Trading Metrics */}
-            <div className="lg:col-span-3 space-y-3">
-              {/* Win Rate - Most Important */}
-              <Card className="bg-gradient-to-br from-green-500/10 to-green-900/10 border-green-500/20 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-green-400" />
-                  <span className="text-xs font-medium text-green-400">WIN RATE</span>
+            {/* Right: Trading Metrics */}
+            <div className="md:col-span-4 space-y-2">
+              <div className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">
+                Trading Metrics
+                <div className="flex-1 h-px bg-gray-800" />
+              </div>
+
+              {/* Win Rate (Most Important - First) */}
+              <div className="bg-gray-900/40 border border-green-500/50 rounded-lg p-2.5 hover:border-green-500 transition-all ring-1 ring-green-500/20">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
+                  <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
                 </div>
-                <p className="text-3xl font-bold font-rajdhani text-white mb-2">
-                  {winRate.toFixed(1)}%
-                </p>
-                <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-green-500 to-green-400 stat-bar"
+                    className="stat-bar-fill h-full bg-green-500"
                     style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
                   />
                 </div>
-              </Card>
+              </div>
 
               {/* Accuracy */}
-              <StatCard
-                icon={Zap}
-                label="Accuracy"
-                value={accuracy}
-                color="blue"
-                animated={statsAnimated}
-              />
+              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-400/30 transition-all">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-gray-400 text-xs">Accuracy</span>
+                  <span className="text-white font-bold text-sm">{accuracy}%</span>
+                </div>
+                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
+                  <div
+                    className="stat-bar-fill h-full bg-cyan-400"
+                    style={{ width: statsAnimated ? `${accuracy}%` : '0%' }}
+                  />
+                </div>
+              </div>
 
               {/* Avg Return */}
-              <StatCard
-                icon={TrendingUp}
-                label="Avg Return"
-                value={avgReturn}
-                suffix="R"
-                color="purple"
-                animated={statsAnimated}
-              />
+              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-500/30 transition-all">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-gray-400 text-xs">Avg Return</span>
+                  <span className="text-cyan-400 font-bold text-sm">+{avgReturn}%</span>
+                </div>
+                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
+                  <div
+                    className="stat-bar-fill h-full bg-cyan-400"
+                    style={{ width: statsAnimated ? `${Math.min(avgReturn * 5, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
 
               {/* Best Streak */}
-              <StatCard
-                icon={BarChart3}
-                label="Best Streak"
-                value={bestStreak}
-                suffix=" wins"
-                color="amber"
-                animated={statsAnimated}
-              />
+              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-amber-500/30 transition-all">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-gray-400 text-xs">Best Streak</span>
+                  <span className="text-amber-400 font-bold text-sm">{bestStreak}</span>
+                </div>
+                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
+                  <div
+                    className="stat-bar-fill h-full bg-amber-500"
+                    style={{ width: statsAnimated ? `${Math.min(bestStreak * 7, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 text-center">
+                  <div className="text-xl font-black text-cyan-400 font-rajdhani">{totalTrades}</div>
+                  <div className="text-gray-500 text-[9px] uppercase tracking-wider">Trades</div>
+                </div>
+                <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 text-center">
+                  <div className="text-xl font-black text-green-400 font-rajdhani">{winRate.toFixed(0)}%</div>
+                  <div className="text-gray-500 text-[9px] uppercase tracking-wider">Win</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </Card>
     </>
-  );
-}
-
-// Reusable stat card component
-interface StatCardProps {
-  icon: React.ElementType;
-  label: string;
-  value: number;
-  suffix?: string;
-  color: "blue" | "purple" | "amber";
-  animated: boolean;
-}
-
-function StatCard({ icon: Icon, label, value, suffix = "%", color, animated }: StatCardProps) {
-  const colorClasses = {
-    blue: {
-      bg: "from-blue-500/10 to-blue-900/10",
-      border: "border-blue-500/20",
-      text: "text-blue-400",
-      bar: "from-blue-500 to-blue-400",
-    },
-    purple: {
-      bg: "from-purple-500/10 to-purple-900/10",
-      border: "border-purple-500/20",
-      text: "text-purple-400",
-      bar: "from-purple-500 to-purple-400",
-    },
-    amber: {
-      bg: "from-amber-500/10 to-amber-900/10",
-      border: "border-amber-500/20",
-      text: "text-amber-400",
-      bar: "from-amber-500 to-amber-400",
-    },
-  };
-
-  const colors = colorClasses[color];
-  const percentage = suffix === "%" ? value : Math.min((value / 10) * 100, 100);
-
-  return (
-    <Card className={cn("bg-gradient-to-br backdrop-blur-sm p-3", colors.bg, colors.border)}>
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon className={cn("w-3.5 h-3.5", colors.text)} />
-        <span className={cn("text-xs font-medium", colors.text)}>{label.toUpperCase()}</span>
-      </div>
-      <p className="text-xl font-bold font-rajdhani text-white mb-1.5">
-        {value}{suffix}
-      </p>
-      <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-        <div
-          className={cn("h-full bg-gradient-to-r stat-bar", colors.bar)}
-          style={{ width: animated ? `${percentage}%` : '0%' }}
-        />
-      </div>
-    </Card>
   );
 }
