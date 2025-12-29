@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
+import { TraderCharacterHero } from "@/components/profile/TraderCharacterHero";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
-import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
@@ -196,58 +196,10 @@ const Profile = () => {
   return (
     <AppLayout title="Profile">
       <div className="px-4 py-4 space-y-4">
-        {/* Profile Header */}
-        {loadingProfile ? (
-          <Card variant="glass" className="p-8">
-            <div className="flex items-center gap-8">
-              <Skeleton className="w-[100px] h-[100px] rounded-full" />
-              <div className="flex-1 space-y-3">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-64" />
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <ProfileHeader
-            displayName={profile.display_name}
-            avatarUrl={profile.avatar_url}
-            bio={profile.bio}
-            isOwnProfile={true}
-            onEditClick={() => setShowEditDialog(true)}
-            onFriendsClick={() => setShowSocialDialog(true)}
-            onShareClick={() => {
-              // Handle share functionality
-              if (navigator.share) {
-                navigator.share({
-                  title: `${profile.display_name || 'Trader'}'s Profile`,
-                  text: `Check out my trading profile on trade-trax.com`,
-                  url: window.location.href,
-                });
-              }
-            }}
-            onSettingsClick={() => {
-              // Navigate to settings or open settings dialog
-              console.log('Settings clicked');
-            }}
-            userId={userId || undefined}
-            traderCategory={traderCategory}
-          />
-        )}
+        {/* Trader Character Hero - New Game-Style Profile Header */}
+        {userId && <TraderCharacterHero userId={userId} onProfileUpdated={handleProfileUpdated} />}
 
-        {/* Profile Edit Dialog */}
-        {userId && (
-          <ProfileEditDialog
-            userId={userId}
-            currentName={profile.display_name}
-            currentAvatarUrl={profile.avatar_url}
-            currentBio={profile.bio}
-            onProfileUpdated={handleProfileUpdated}
-            open={showEditDialog}
-            onOpenChange={setShowEditDialog}
-          />
-        )}
-
-        {/* Social/Followers Dialog */}
+        {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -290,6 +242,36 @@ const Profile = () => {
             </Tabs>
           </DialogContent>
         </Dialog>
+
+        {/* Quick Actions - Social, Share, Settings */}
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="icon" className="relative" onClick={() => setShowSocialDialog(true)}>
+            <Users className="w-4 h-4" />
+            {followers.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                {followers.length}
+              </span>
+            )}
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => {
+            // Handle share functionality
+            if (navigator.share) {
+              navigator.share({
+                title: `${profile.display_name || 'Trader'}'s Profile`,
+                text: `Check out my trading profile on trade-trax.com`,
+                url: window.location.href,
+              });
+            }
+          }}>
+            <Share2 className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => {
+            // Navigate to settings or open settings dialog
+            console.log('Settings clicked');
+          }}>
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
 
         {profile.current_streak >= 2 && (
           <div className="flex justify-center">
