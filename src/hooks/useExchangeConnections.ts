@@ -86,20 +86,24 @@ export function useExchangeConnections() {
     }
 
     try {
-      const response = await supabase.functions.invoke("exchange-connect", {
-        method: "DELETE",
-        body: JSON.stringify({ exchange }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      // Use POST with an action field since supabase.functions.invoke doesn't support DELETE method directly
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exchange-connect`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ exchange }),
+        }
+      );
 
-      if (response.error) {
-        return { success: false, error: response.error.message };
-      }
+      const data = await response.json();
 
-      if (response.data?.error) {
-        return { success: false, error: response.data.error };
+      if (!response.ok || data.error) {
+        return { success: false, error: data.error || "Failed to disconnect" };
       }
 
       // Refresh connections after disconnection
