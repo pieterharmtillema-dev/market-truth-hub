@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, XCircle, AlertCircle, Clock, RefreshCw } from "lucide-react";
+import { formatDistanceToNow, differenceInDays, differenceInHours } from "date-fns";
 import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
@@ -11,6 +12,8 @@ interface ExchangeStatusBadgeProps {
   lastSyncAt?: string | null;
   verifiedTradesCount?: number;
   showDetails?: boolean;
+  onSync?: () => void;
+  syncing?: boolean;
 }
 
 const EXCHANGE_NAMES: Record<string, string> = {
@@ -25,12 +28,33 @@ const EXCHANGE_LOGOS: Record<string, string> = {
   coinbase: coinbaseLogo,
 };
 
+function formatLastSync(lastSyncAt: string): string {
+  const syncDate = new Date(lastSyncAt);
+  const now = new Date();
+  const daysDiff = differenceInDays(now, syncDate);
+  const hoursDiff = differenceInHours(now, syncDate);
+  
+  if (hoursDiff < 1) {
+    return "Synced just now";
+  } else if (hoursDiff < 24) {
+    return `Synced ${hoursDiff}h ago`;
+  } else if (daysDiff === 1) {
+    return "Synced 1 day ago";
+  } else if (daysDiff < 7) {
+    return `Synced ${daysDiff} days ago`;
+  } else {
+    return `Synced ${formatDistanceToNow(syncDate, { addSuffix: true })}`;
+  }
+}
+
 export function ExchangeStatusBadge({
   exchange,
   status,
   lastSyncAt,
   verifiedTradesCount,
   showDetails = false,
+  onSync,
+  syncing = false,
 }: ExchangeStatusBadgeProps) {
   const exchangeName = EXCHANGE_NAMES[exchange] || exchange;
   const exchangeLogo = EXCHANGE_LOGOS[exchange];
@@ -41,21 +65,33 @@ export function ExchangeStatusBadge({
 
   if (status === "connected") {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="success" className="gap-1.5">
           {LogoImage}
           {exchangeName}
           <CheckCircle2 className="h-3 w-3" />
         </Badge>
         {showDetails && (
-          <div className="text-xs text-muted-foreground">
-            {lastSyncAt && (
-              <span>Synced {formatDistanceToNow(new Date(lastSyncAt), { addSuffix: true })}</span>
+          <>
+            <div className="text-xs text-muted-foreground">
+              {lastSyncAt && <span>{formatLastSync(lastSyncAt)}</span>}
+              {verifiedTradesCount !== undefined && verifiedTradesCount > 0 && (
+                <span className="ml-1">• {verifiedTradesCount} trades</span>
+              )}
+            </div>
+            {onSync && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onSync}
+                disabled={syncing}
+                className="h-6 px-2 text-xs gap-1"
+              >
+                <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync'}
+              </Button>
             )}
-            {verifiedTradesCount !== undefined && verifiedTradesCount > 0 && (
-              <span className="ml-2">• {verifiedTradesCount} verified trades</span>
-            )}
-          </div>
+          </>
         )}
       </div>
     );
