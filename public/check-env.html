@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Environment Check</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        pre { background: #000; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Static Environment Check</h1>
+    <p>This page is served directly from /public so it bypasses React entirely.</p>
+
+    <h2>Expected Values:</h2>
+    <pre>
+URL: https://sdvbjhtgzhkphkkpwekd.supabase.co
+Key: eyJhbGci...iat:1765210813...
+    </pre>
+
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open browser DevTools (F12)</li>
+        <li>Go to Console tab</li>
+        <li>Type: <code>import.meta.env.VITE_SUPABASE_URL</code></li>
+        <li>Type: <code>import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY</code></li>
+        <li>Check if they match the expected values above</li>
+    </ol>
+
+    <h2>Quick Test:</h2>
+    <p>Paste this in the console:</p>
+    <pre>
+fetch('https://sdvbjhtgzhkphkkpwekd.supabase.co/rest/v1/profiles?select=count', {
+  headers: {
+    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdmJqaHRnemhrcGhra3B3ZWtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTA4MTMsImV4cCI6MjA4MDc4NjgxM30.pZ_PcRMOqPjJJevMpgC5vto2iuKpwzwgWKxKXeS7dis'
+  }
+}).then(r => r.json()).then(d => console.log('Users in NEW db:', d))
+    </pre>
+
+    <p>If you see 0 users, the NEW database is working correctly.</p>
+    <p>If "username taken" still appears, clear ALL site data and try again.</p>
+</body>
+</html>
