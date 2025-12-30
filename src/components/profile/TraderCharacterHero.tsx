@@ -31,6 +31,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  character_config: unknown;
 }
 
 interface TraderProfile {
@@ -93,6 +94,8 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   const [loading, setLoading] = useState(true);
   const [statsAnimated, setStatsAnimated] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [characterCustomizerOpen, setCharacterCustomizerOpen] = useState(false);
+  const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
 
   // Get real trading metrics
   const { metrics, loading: loadingMetrics } = useTradingMetrics();
@@ -155,12 +158,16 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         // Fetch profile data
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("display_name, avatar_url, bio")
+          .select("display_name, avatar_url, bio, character_config")
           .eq("user_id", userId)
           .single();
 
         if (profileData) {
           setProfile(profileData);
+          // Parse character config from database
+          if (profileData.character_config) {
+            setCharacterConfig(parseCharacterConfigFromJSON(profileData.character_config));
+          }
         }
 
         // Fetch trader profile data
@@ -207,8 +214,12 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   }, [userId]);
 
   const handleProfileUpdate = (data: { display_name: string; avatar_url: string; bio: string }) => {
-    setProfile(data);
+    setProfile(prev => prev ? { ...prev, ...data } : { ...data, character_config: null });
     onProfileUpdated?.(data);
+  };
+
+  const handleCharacterSave = (newConfig: CharacterConfig) => {
+    setCharacterConfig(newConfig);
   };
 
   if (loading) {
@@ -388,6 +399,17 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           onOpenChange={setEditDialogOpen}
         />
 
+        {/* Character Customizer Modal */}
+        <CharacterCustomizer
+          open={characterCustomizerOpen}
+          onOpenChange={setCharacterCustomizerOpen}
+          userId={userId}
+          avatarUrl={profile?.avatar_url}
+          displayName={profile?.display_name || "Trader"}
+          initialConfig={characterConfig}
+          onSave={handleCharacterSave}
+        />
+
         {/* Character Stats Section */}
         <div className="relative">
           {/* Header */}
@@ -426,57 +448,36 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             {/* Center: Character Display */}
             <div className="md:col-span-4 flex items-center justify-center py-2">
               <div className="relative float-anim group">
-                {/* Glow rings */}
-                <div className="absolute inset-0 blur-3xl bg-cyan-400/20 rounded-full scale-150 glow-pulse" />
-                <div className="absolute inset-0 blur-2xl bg-cyan-400/10 rounded-full scale-125" />
-
                 {/* Character container */}
                 <div className="relative character-glow">
-                  <div className="w-36 h-48 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-cyan-400/30 flex flex-col items-center justify-end overflow-hidden relative pb-3">
-                    {/* Full body character avatar */}
-                    <div className="relative z-10 flex flex-col items-center">
-                      {/* Avatar head - larger for full body look */}
-                      <div className="w-16 h-16 mb-1 relative">
-                        <AvatarDisplay
-                          avatarUrl={profile?.avatar_url}
-                          displayName={profile?.display_name || "Trader"}
-                          size={64}
-                          className="border-2 border-cyan-400/40 shadow-lg"
-                        />
-                      </div>
-
-                      {/* Simple body representation */}
-                      <div className="w-12 h-16 bg-gradient-to-b from-cyan-400/20 to-cyan-400/10 rounded-2xl border border-cyan-400/30 relative">
-                        {/* Arms */}
-                        <div className="absolute -left-3 top-2 w-8 h-1.5 bg-cyan-400/20 rounded-full border border-cyan-400/30 -rotate-45" />
-                        <div className="absolute -right-3 top-2 w-8 h-1.5 bg-cyan-400/20 rounded-full border border-cyan-400/30 rotate-45" />
-                      </div>
-
-                      {/* Legs */}
-                      <div className="flex gap-1 mt-0.5">
-                        <div className="w-4 h-8 bg-cyan-400/15 rounded-lg border border-cyan-400/25" />
-                        <div className="w-4 h-8 bg-cyan-400/15 rounded-lg border border-cyan-400/25" />
-                      </div>
-                    </div>
+                  <div className="w-36 h-52 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-primary/30 flex flex-col items-center justify-center overflow-hidden relative">
+                    {/* Character Renderer */}
+                    <CharacterRenderer
+                      config={characterConfig}
+                      avatarUrl={profile?.avatar_url}
+                      displayName={profile?.display_name || "Trader"}
+                      size="md"
+                      showGlow={false}
+                    />
 
                     {/* Scanline effect */}
-                    <div className="absolute inset-0 opacity-20 scanline" />
+                    <div className="absolute inset-0 opacity-20 scanline pointer-events-none" />
                   </div>
 
                   {/* Edit character button overlay - appears on hover */}
                   <div
                     className="absolute inset-0 rounded-3xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
-                    onClick={() => setEditDialogOpen(true)}
+                    onClick={() => setCharacterCustomizerOpen(true)}
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <Settings className="w-5 h-5 text-cyan-400" />
-                      <span className="text-[10px] text-cyan-400 font-semibold">Edit Character</span>
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      <span className="text-[10px] text-primary font-semibold">Customize</span>
                     </div>
                   </div>
 
                   {/* Level badge */}
-                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
-                    <span className="text-sm font-black text-black">{level}</span>
+                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
+                    <span className="text-sm font-black text-primary-foreground">{level}</span>
                   </div>
                 </div>
               </div>
