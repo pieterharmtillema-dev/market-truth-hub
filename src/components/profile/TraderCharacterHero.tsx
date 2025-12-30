@@ -7,8 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
-import { CharacterRenderer, CharacterCustomizer, CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfigFromJSON } from "./character";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
+import { CharacterRenderer } from "./CharacterRenderer";
+import { CharacterCustomizer } from "./CharacterCustomizer";
+import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
+import { useToast } from "@/hooks/use-toast";
 import {
   Trophy,
   TrendingUp,
@@ -23,7 +26,6 @@ import {
   Users,
   Share2,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +33,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
-  character_config: unknown;
+  character_config: string | null;
 }
 
 interface TraderProfile {
@@ -94,8 +96,9 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   const [loading, setLoading] = useState(true);
   const [statsAnimated, setStatsAnimated] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [characterCustomizerOpen, setCharacterCustomizerOpen] = useState(false);
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const { toast } = useToast();
 
   // Get real trading metrics
   const { metrics, loading: loadingMetrics } = useTradingMetrics();
@@ -164,9 +167,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
 
         if (profileData) {
           setProfile(profileData);
-          // Parse character config from database
+
+          // Parse character config
           if (profileData.character_config) {
-            setCharacterConfig(parseCharacterConfigFromJSON(profileData.character_config));
+            const parsed = parseCharacterConfig(profileData.character_config);
+            if (parsed) {
+              setCharacterConfig(parsed);
+            }
           }
         }
 
@@ -214,12 +221,34 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   }, [userId]);
 
   const handleProfileUpdate = (data: { display_name: string; avatar_url: string; bio: string }) => {
-    setProfile(prev => prev ? { ...prev, ...data } : { ...data, character_config: null });
+    setProfile(prev => prev ? { ...prev, ...data } : null);
     onProfileUpdated?.(data);
   };
 
-  const handleCharacterSave = (newConfig: CharacterConfig) => {
-    setCharacterConfig(newConfig);
+  const handleCharacterSave = async (newConfig: CharacterConfig) => {
+    try {
+      const encoded = stringifyCharacterConfig(newConfig);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ character_config: encoded })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      setCharacterConfig(newConfig);
+      toast({
+        title: "Character saved!",
+        description: "Your character customization has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to save character:", error);
+      toast({
+        title: "Error saving character",
+        description: "There was an error saving your character. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   if (loading) {
@@ -399,17 +428,6 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           onOpenChange={setEditDialogOpen}
         />
 
-        {/* Character Customizer Modal */}
-        <CharacterCustomizer
-          open={characterCustomizerOpen}
-          onOpenChange={setCharacterCustomizerOpen}
-          userId={userId}
-          avatarUrl={profile?.avatar_url}
-          displayName={profile?.display_name || "Trader"}
-          initialConfig={characterConfig}
-          onSave={handleCharacterSave}
-        />
-
         {/* Character Stats Section */}
         <div className="relative">
           {/* Header */}
@@ -448,17 +466,22 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             {/* Center: Character Display */}
             <div className="md:col-span-4 flex items-center justify-center py-2">
               <div className="relative float-anim group">
+                {/* Glow rings */}
+                <div className="absolute inset-0 blur-3xl bg-cyan-400/20 rounded-full scale-150 glow-pulse" />
+                <div className="absolute inset-0 blur-2xl bg-cyan-400/10 rounded-full scale-125" />
+
                 {/* Character container */}
                 <div className="relative character-glow">
-                  <div className="w-36 h-52 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-primary/30 flex flex-col items-center justify-center overflow-hidden relative">
+                  <div className="w-36 h-48 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-cyan-400/30 flex flex-col items-center justify-center overflow-hidden relative">
                     {/* Character Renderer */}
-                    <CharacterRenderer
-                      config={characterConfig}
-                      avatarUrl={profile?.avatar_url}
-                      displayName={profile?.display_name || "Trader"}
-                      size="md"
-                      showGlow={false}
-                    />
+                    <div className="relative z-10 w-full h-full flex items-center justify-center p-2">
+                      <CharacterRenderer
+                        config={characterConfig}
+                        avatarUrl={profile?.avatar_url}
+                        displayName={profile?.display_name}
+                        className="w-full h-full"
+                      />
+                    </div>
 
                     {/* Scanline effect */}
                     <div className="absolute inset-0 opacity-20 scanline pointer-events-none" />
@@ -467,17 +490,17 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   {/* Edit character button overlay - appears on hover */}
                   <div
                     className="absolute inset-0 rounded-3xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
-                    onClick={() => setCharacterCustomizerOpen(true)}
+                    onClick={() => setCustomizerOpen(true)}
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      <span className="text-[10px] text-primary font-semibold">Customize</span>
+                      <Settings className="w-5 h-5 text-cyan-400" />
+                      <span className="text-[10px] text-cyan-400 font-semibold">Customize Character</span>
                     </div>
                   </div>
 
                   {/* Level badge */}
-                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
-                    <span className="text-sm font-black text-primary-foreground">{level}</span>
+                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
+                    <span className="text-sm font-black text-black">{level}</span>
                   </div>
                 </div>
               </div>
@@ -660,6 +683,19 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           </div>
         </div>
       </Card>
+
+      {/* Character Customizer Dialog */}
+      <CharacterCustomizer
+        open={customizerOpen}
+        onOpenChange={setCustomizerOpen}
+        config={characterConfig}
+        onSave={handleCharacterSave}
+        avatarUrl={profile?.avatar_url}
+        displayName={profile?.display_name}
+        totalTrades={totalTrades}
+        winRate={winRate}
+        streak={bestStreak}
+      />
     </>
   );
 }
