@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
+import { CharacterRenderer, CharacterCustomizer, CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfigFromJSON } from "./character";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import {
   Trophy,
@@ -22,6 +23,7 @@ import {
   Users,
   Share2,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
