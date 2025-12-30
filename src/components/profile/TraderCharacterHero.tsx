@@ -446,123 +446,158 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 <div className="flex-1 h-px bg-gray-800" />
               </div>
 
-              {/* Official Rating Unlock Progress */}
-              {totalTrades < 30 && (
-                <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-2 border-amber-500/40 rounded-lg p-3 relative overflow-hidden">
-                  {/* Animated glow background */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/5 to-transparent animate-pulse" />
-
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-amber-300 text-xs font-bold uppercase tracking-wider">
-                          {totalTrades < 2 ? 'Locked' : 'Pre-Rating'}
-                        </span>
-                      </div>
-                      <span className="text-amber-400 font-black text-sm tabular-nums">
-                        {totalTrades}/30
-                      </span>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="relative h-2 bg-black/40 rounded-full overflow-hidden mb-2 border border-amber-900/50">
-                      <div
-                        className="stat-bar-fill h-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 relative"
-                        style={{
-                          width: statsAnimated ? `${Math.min((totalTrades / 30) * 100, 100)}%` : '0%',
-                          boxShadow: '0 0 10px rgba(251, 191, 36, 0.5)'
-                        }}
-                      >
-                        {/* Shine effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-                      </div>
-
-                      {/* Milestone markers */}
-                      <div className="absolute inset-0 flex justify-between px-[1px]">
-                        {[2, 10, 20, 30].map((milestone) => (
-                          <div
-                            key={milestone}
-                            className={cn(
-                              "w-[2px] h-full",
-                              totalTrades >= milestone ? "bg-amber-200/60" : "bg-amber-900/40"
-                            )}
-                            style={{
-                              marginLeft: milestone === 2 ? '0' : undefined,
-                              marginRight: milestone === 30 ? '0' : undefined
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[9px]">
-                      <span className="text-amber-400/80 font-medium">
-                        {30 - totalTrades} more trade{30 - totalTrades !== 1 ? 's' : ''} to unlock
-                      </span>
-                      <span className="text-amber-500 font-bold">
-                        {((totalTrades / 30) * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Win Rate (Most Important - First) - Blurred if less than 2 trades */}
-              <div className="bg-gray-900/40 border border-green-500/50 rounded-lg p-2.5 hover:border-green-500 transition-all ring-1 ring-green-500/20 relative">
-                {totalTrades < 2 ? (
-                  <>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
-                      <span className="text-green-400 font-bold text-sm blur-md select-none">---%</span>
-                    </div>
-                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-1">
-                      <div className="stat-bar-fill h-full bg-green-500 blur-sm" style={{ width: '50%' }} />
-                    </div>
-                    <div className="text-[9px] text-amber-400 font-medium text-center">
-                      Preview unlocks after 2 trades
-                    </div>
-                  </>
-                ) : totalTrades < 30 ? (
-                  <>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
-                        <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[8px] px-1 py-0 h-4">
-                          PREVIEW
-                        </Badge>
-                      </div>
-                      <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
-                      <div
-                        className="stat-bar-fill h-full bg-green-500"
-                        style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
-                        <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-[8px] px-1 py-0 h-4">
-                          OFFICIAL
-                        </Badge>
-                      </div>
-                      <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
-                      <div
-                        className="stat-bar-fill h-full bg-gradient-to-r from-green-500 to-emerald-400"
-                        style={{
-                          width: statsAnimated ? `${winRate}%` : '0%',
-                          boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'
-                        }}
-                      />
-                    </div>
-                  </>
+              {/* Combined Win Rate & Official Rating Progress */}
+              <div className={cn(
+                "rounded-lg p-3 relative overflow-hidden transition-all",
+                totalTrades < 2
+                  ? "bg-gray-900/40 border border-gray-800"
+                  : totalTrades < 30
+                  ? "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-2 border-cyan-500/40"
+                  : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-2 border-green-500/40"
+              )}>
+                {/* Animated glow background - only for unlocked states */}
+                {totalTrades >= 2 && (
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse"
+                  )} />
                 )}
+
+                <div className="relative z-10">
+                  {/* LOCKED STATE - Before 2 trades */}
+                  {totalTrades < 2 ? (
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
+                        </div>
+                        <span className="text-green-400 font-bold text-sm blur-md select-none">---%</span>
+                      </div>
+                      <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-2">
+                        <div className="stat-bar-fill h-full bg-green-500 blur-sm" style={{ width: '50%' }} />
+                      </div>
+                      <div className="text-[9px] text-amber-400 font-medium text-center">
+                        Unlocks after 2 trades
+                      </div>
+                    </>
+                  ) : totalTrades < 30 ? (
+                    /* PREVIEW STATE - 2 to 29 trades */
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                          <span className="text-gray-300 text-xs font-semibold">Win Rate</span>
+                          <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[8px] px-1 py-0 h-4">
+                            PREVIEW
+                          </Badge>
+                        </div>
+                        <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
+                      </div>
+
+                      {/* Win rate bar */}
+                      <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-3">
+                        <div
+                          className="stat-bar-fill h-full bg-green-500"
+                          style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
+                        />
+                      </div>
+
+                      {/* Official Rating Progress */}
+                      <div className="pt-2 border-t border-cyan-500/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
+                            Official Rating Progress
+                          </span>
+                          <span className="text-cyan-400 font-black text-xs tabular-nums">
+                            {totalTrades}/30
+                          </span>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="relative h-2 bg-black/40 rounded-full overflow-hidden mb-2 border border-cyan-900/50">
+                          <div
+                            className="stat-bar-fill h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 relative"
+                            style={{
+                              width: statsAnimated ? `${Math.min((totalTrades / 30) * 100, 100)}%` : '0%',
+                              boxShadow: '0 0 10px rgba(6, 182, 212, 0.5)'
+                            }}
+                          >
+                            {/* Shine effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                          </div>
+
+                          {/* Milestone markers */}
+                          <div className="absolute inset-0 flex justify-between px-[1px]">
+                            {[2, 10, 20, 30].map((milestone) => (
+                              <div
+                                key={milestone}
+                                className={cn(
+                                  "w-[2px] h-full",
+                                  totalTrades >= milestone ? "bg-cyan-200/60" : "bg-cyan-900/40"
+                                )}
+                                style={{
+                                  marginLeft: milestone === 2 ? '0' : undefined,
+                                  marginRight: milestone === 30 ? '0' : undefined
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[9px]">
+                          <span className="text-cyan-400/80 font-medium">
+                            {30 - totalTrades} more trade{30 - totalTrades !== 1 ? 's' : ''} to unlock official
+                          </span>
+                          <span className="text-cyan-500 font-bold">
+                            {((totalTrades / 30) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* OFFICIAL STATE - 30+ trades */
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-gray-300 text-xs font-semibold">Win Rate</span>
+                          <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-[8px] px-1 py-0 h-4">
+                            OFFICIAL
+                          </Badge>
+                        </div>
+                        <span className="text-green-400 font-bold text-lg">{winRate.toFixed(0)}%</span>
+                      </div>
+
+                      {/* Official win rate bar with enhanced glow */}
+                      <div className="h-2 bg-black/50 rounded-full overflow-hidden mb-3">
+                        <div
+                          className="stat-bar-fill h-full bg-gradient-to-r from-green-500 to-emerald-400 relative"
+                          style={{
+                            width: statsAnimated ? `${winRate}%` : '0%',
+                            boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)'
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                        </div>
+                      </div>
+
+                      {/* Official Rating Achievement */}
+                      <div className="pt-2 border-t border-green-500/20">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Trophy className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-green-300 text-[10px] font-bold uppercase tracking-wider">
+                              Official Rating Unlocked
+                            </span>
+                          </div>
+                          <span className="text-green-400 font-black text-xs tabular-nums">
+                            {totalTrades} Trades
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Average R */}
