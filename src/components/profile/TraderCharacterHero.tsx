@@ -446,161 +446,101 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 <div className="flex-1 h-px bg-gray-800" />
               </div>
 
-              {/* Combined Win Rate & Official Rating Progress */}
-              <div className={cn(
-                "rounded-lg p-3 relative overflow-hidden transition-all",
-                totalTrades < 2
-                  ? "bg-gray-900/40 border border-gray-800"
-                  : totalTrades < 30
-                  ? "bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-2 border-cyan-500/40"
-                  : "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-2 border-green-500/40"
-              )}>
-                {/* Animated glow background - only for unlocked states */}
-                {totalTrades >= 2 && (
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse"
-                  )} />
-                )}
-
-                <div className="relative z-10">
-                  {/* LOCKED STATE - Before 2 trades */}
-                  {totalTrades < 2 ? (
-                    <>
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <Trophy className="w-3.5 h-3.5 text-gray-500" />
-                          <span className="text-gray-400 text-xs font-semibold">Win Rate</span>
-                        </div>
-                        <span className="text-green-400 font-bold text-sm blur-md select-none">---%</span>
-                      </div>
-                      <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-2">
-                        <div className="stat-bar-fill h-full bg-green-500 blur-sm" style={{ width: '50%' }} />
-                      </div>
-                      <div className="flex items-center justify-center gap-1.5 bg-gray-800/60 border border-gray-700 rounded-full px-3 py-1.5">
-                        <Shield className="w-3 h-3 text-gray-400" />
-                        <span className="text-[10px] text-gray-300 font-semibold">
-                          Unlocks after 2 trades
-                        </span>
-                      </div>
-                    </>
-                  ) : totalTrades < 30 ? (
-                    /* PREVIEW STATE - 2 to 29 trades */
-                    <>
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <Trophy className="w-3.5 h-3.5 text-cyan-400" />
-                          <span className="text-gray-300 text-xs font-semibold">Win Rate</span>
-                          <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[8px] px-1 py-0 h-4">
-                            PREVIEW
-                          </Badge>
-                        </div>
-                        <span className="text-green-400 font-bold text-sm">{winRate.toFixed(0)}%</span>
-                      </div>
-
-                      {/* Win rate bar */}
-                      <div className="h-1.5 bg-black/50 rounded-full overflow-hidden mb-3">
-                        <div
-                          className="stat-bar-fill h-full bg-green-500"
-                          style={{ width: statsAnimated ? `${winRate}%` : '0%' }}
-                        />
-                      </div>
-
-                      {/* Official Rating Progress */}
-                      <div className="pt-2 border-t border-cyan-500/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
-                            Official Rating Progress
-                          </span>
-                          <span className="text-cyan-400 font-black text-xs tabular-nums">
-                            {totalTrades}/30
-                          </span>
-                        </div>
-
-                        {/* Progress bar */}
-                        <div className="relative h-2 bg-black/40 rounded-full overflow-hidden mb-2 border border-cyan-900/50">
-                          <div
-                            className="stat-bar-fill h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 relative"
-                            style={{
-                              width: statsAnimated ? `${Math.min((totalTrades / 30) * 100, 100)}%` : '0%',
-                              boxShadow: '0 0 10px rgba(6, 182, 212, 0.5)'
-                            }}
-                          >
-                            {/* Shine effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-                          </div>
-
-                          {/* Milestone markers */}
-                          <div className="absolute inset-0 flex justify-between px-[1px]">
-                            {[2, 10, 20, 30].map((milestone) => (
-                              <div
-                                key={milestone}
-                                className={cn(
-                                  "w-[2px] h-full",
-                                  totalTrades >= milestone ? "bg-cyan-200/60" : "bg-cyan-900/40"
-                                )}
-                                style={{
-                                  marginLeft: milestone === 2 ? '0' : undefined,
-                                  marginRight: milestone === 30 ? '0' : undefined
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[9px]">
-                          <span className="text-cyan-400/80 font-medium">
-                            {30 - totalTrades} more trade{30 - totalTrades !== 1 ? 's' : ''} to unlock official
-                          </span>
-                          <span className="text-cyan-500 font-bold">
-                            {((totalTrades / 30) * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    /* OFFICIAL STATE - 30+ trades */
-                    <>
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <Trophy className="w-3.5 h-3.5 text-green-400" />
-                          <span className="text-gray-300 text-xs font-semibold">Win Rate</span>
-                          <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-[8px] px-1 py-0 h-4">
-                            OFFICIAL
-                          </Badge>
-                        </div>
-                        <span className="text-green-400 font-bold text-lg">{winRate.toFixed(0)}%</span>
-                      </div>
-
-                      {/* Official win rate bar with enhanced glow */}
-                      <div className="h-2 bg-black/50 rounded-full overflow-hidden mb-3">
-                        <div
-                          className="stat-bar-fill h-full bg-gradient-to-r from-green-500 to-emerald-400 relative"
-                          style={{
-                            width: statsAnimated ? `${winRate}%` : '0%',
-                            boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)'
-                          }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-                        </div>
-                      </div>
-
-                      {/* Official Rating Achievement */}
-                      <div className="pt-2 border-t border-green-500/20">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <Trophy className="w-3.5 h-3.5 text-green-400" />
-                            <span className="text-green-300 text-[10px] font-bold uppercase tracking-wider">
-                              Official Rating Unlocked
-                            </span>
-                          </div>
-                          <span className="text-green-400 font-black text-xs tabular-nums">
-                            {totalTrades} Trades
-                          </span>
-                        </div>
-                      </div>
-                    </>
+              {/* Win Rate Performance Card */}
+              <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold text-sm mb-0.5">Win Rate Performance</h3>
+                    <p className="text-gray-400 text-[11px]">Based on risk-adjusted returns</p>
+                  </div>
+                  {totalTrades >= 2 && (
+                    <span className="text-gray-500 text-[10px]">
+                      {metrics?.is_verified ? 'Verified' : 'Unverified'}
+                    </span>
                   )}
                 </div>
+
+                {/* LOCKED STATE - Before 2 trades */}
+                {totalTrades < 2 ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-3">
+                      <Shield className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-300 font-medium">
+                        Unlocks after 2 trades
+                      </span>
+                    </div>
+                  </>
+                ) : totalTrades < 30 ? (
+                  /* PRE-RATING STATE - 2 to 29 trades */
+                  <>
+                    {/* Badges Row */}
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] px-2 py-0.5 h-5 font-bold">
+                        PRE-RATING
+                      </Badge>
+                      <span className="text-gray-400 text-[11px]">Qualification Progress</span>
+                      <div className="flex-1" />
+                      <span className="text-gray-400 text-xs font-mono tabular-nums">
+                        {totalTrades}/30 trades
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="relative h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className="stat-bar-fill h-full bg-gradient-to-r from-cyan-500 to-blue-500 relative"
+                        style={{
+                          width: statsAnimated ? `${Math.min((totalTrades / 30) * 100, 100)}%` : '0%',
+                          boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                      </div>
+                    </div>
+
+                    {/* Message */}
+                    <p className="text-gray-400 text-[11px]">
+                      Complete <span className="text-cyan-400 font-semibold">{30 - totalTrades} more trade{30 - totalTrades !== 1 ? 's' : ''}</span> to unlock your official rating
+                    </p>
+                  </>
+                ) : (
+                  /* OFFICIAL RATING STATE - 30+ trades */
+                  <>
+                    {/* Badges Row */}
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] px-2 py-0.5 h-5 font-bold">
+                        OFFICIAL RATING
+                      </Badge>
+                      <div className="flex-1" />
+                      <span className="text-gray-400 text-xs font-mono tabular-nums">
+                        {totalTrades} trades
+                      </span>
+                    </div>
+
+                    {/* Win Rate Display */}
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-green-400" />
+                        <span className="text-gray-300 text-sm font-medium">Win Rate</span>
+                      </div>
+                      <span className="text-green-400 font-bold text-2xl tabular-nums">{winRate.toFixed(0)}%</span>
+                    </div>
+
+                    {/* Win Rate Progress Bar */}
+                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className="stat-bar-fill h-full bg-gradient-to-r from-green-500 to-emerald-400 relative"
+                        style={{
+                          width: statsAnimated ? `${winRate}%` : '0%',
+                          boxShadow: '0 0 10px rgba(34, 197, 94, 0.5)'
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Average R */}
