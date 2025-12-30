@@ -166,10 +166,15 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           .single();
 
         if (profileData) {
-          setProfile(profileData);
+          setProfile({
+            display_name: profileData.display_name,
+            avatar_url: profileData.avatar_url,
+            bio: profileData.bio,
+            character_config: profileData.character_config as string | null,
+          });
 
           // Parse character config
-          if (profileData.character_config) {
+          if (profileData.character_config && typeof profileData.character_config === 'string') {
             const parsed = parseCharacterConfig(profileData.character_config);
             if (parsed) {
               setCharacterConfig(parsed);
