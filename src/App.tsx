@@ -18,6 +18,7 @@ import TraderProfile from "./pages/TraderProfile";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import DebugEnv from "./pages/DebugEnv";
 
 import BetaBadge from "@/components/BetaBadge";
 
@@ -40,6 +41,7 @@ function RouterContent() {
       <Route path="/create-prediction" element={<CreatePrediction />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/debug-env" element={<DebugEnv />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
