@@ -380,6 +380,7 @@ export type Database = {
           api_key: string | null
           avatar_url: string | null
           bio: string | null
+          character_config: Json | null
           created_at: string
           current_streak: number | null
           display_name: string | null
@@ -397,6 +398,7 @@ export type Database = {
           api_key?: string | null
           avatar_url?: string | null
           bio?: string | null
+          character_config?: Json | null
           created_at?: string
           current_streak?: number | null
           display_name?: string | null
@@ -416,6 +418,7 @@ export type Database = {
           api_key?: string | null
           avatar_url?: string | null
           bio?: string | null
+          character_config?: Json | null
           created_at?: string
           current_streak?: number | null
           display_name?: string | null
