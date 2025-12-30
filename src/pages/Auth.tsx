@@ -104,7 +104,7 @@ export default function Auth() {
       setIsCheckingUsername(true);
       try {
         const { data, error } = await supabase
-          .from("public_profiles")
+          .from("profiles")
           .select("display_name")
           .ilike("display_name", trimmedUsername)
           .maybeSingle();
