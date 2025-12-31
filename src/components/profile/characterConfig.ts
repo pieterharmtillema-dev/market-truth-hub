@@ -4,6 +4,14 @@ export interface CharacterConfig {
   bodyType: 'slim' | 'athletic' | 'broad';
   height: number; // 0.85 to 1.15 scale multiplier
 
+  // Face
+  face?: {
+    hairStyle: 'short' | 'medium' | 'long' | 'buzz' | 'bald' | 'mohawk' | 'ponytail' | 'afro';
+    hairColor: string;
+    eyeColor: string;
+    facialHair?: 'none' | 'stubble' | 'beard' | 'goatee' | 'mustache';
+  };
+
   // Clothing
   top: {
     type: 'tshirt' | 'hoodie' | 'business' | 'suit' | 'tank' | 'none';
@@ -74,6 +82,12 @@ export const DEFAULT_CHARACTER_CONFIG: CharacterConfig = {
   skinTone: '#F5D0A9',
   bodyType: 'athletic',
   height: 1.0,
+  face: {
+    hairStyle: 'short',
+    hairColor: '#2D1B0E',
+    eyeColor: '#4A90D9',
+    facialHair: 'none',
+  },
   top: {
     type: 'tshirt',
     color: '#06B6D4',
@@ -110,6 +124,7 @@ export const CHARACTER_PRESETS: Record<string, CharacterConfig> = {
     skinTone: '#F5D0A9',
     bodyType: 'athletic',
     height: 1.0,
+    face: { hairStyle: 'short', hairColor: '#2D1B0E', eyeColor: '#4A90D9', facialHair: 'none' },
     top: { type: 'business', color: '#FFFFFF', style: 'tucked' },
     bottom: { type: 'dress', color: '#1a1a1a', style: 'fitted' },
     shoes: { type: 'dress', color: '#000000' },
@@ -124,6 +139,7 @@ export const CHARACTER_PRESETS: Record<string, CharacterConfig> = {
     skinTone: '#C68642',
     bodyType: 'slim',
     height: 0.95,
+    face: { hairStyle: 'medium', hairColor: '#1a1a1a', eyeColor: '#8B4513', facialHair: 'stubble' },
     top: { type: 'hoodie', color: '#1a1a1a', graphic: 'chart' },
     bottom: { type: 'joggers', color: '#2a2a2a', style: 'fitted' },
     shoes: { type: 'sneakers', color: '#FFFFFF' },
@@ -137,6 +153,7 @@ export const CHARACTER_PRESETS: Record<string, CharacterConfig> = {
     skinTone: '#8D5524',
     bodyType: 'broad',
     height: 1.1,
+    face: { hairStyle: 'buzz', hairColor: '#2D1B0E', eyeColor: '#6B8E23', facialHair: 'beard' },
     top: { type: 'tshirt', color: '#10B981', graphic: 'bull' },
     bottom: { type: 'jeans', color: '#2C5F8D', style: 'loose' },
     shoes: { type: 'boots', color: '#3a2a1a' },
@@ -153,6 +170,7 @@ export const CHARACTER_PRESETS: Record<string, CharacterConfig> = {
     skinTone: '#D1A684',
     bodyType: 'athletic',
     height: 1.0,
+    face: { hairStyle: 'long', hairColor: '#4A3728', eyeColor: '#2F4F4F', facialHair: 'goatee' },
     top: { type: 'hoodie', color: '#7F1D1D', graphic: 'bear' },
     bottom: { type: 'jeans', color: '#1E3A5F', style: 'fitted' },
     shoes: { type: 'sneakers', color: '#1a1a1a' },
@@ -168,6 +186,7 @@ export const CHARACTER_PRESETS: Record<string, CharacterConfig> = {
     skinTone: '#E3B778',
     bodyType: 'slim',
     height: 0.9,
+    face: { hairStyle: 'mohawk', hairColor: '#8B5CF6', eyeColor: '#4B0082', facialHair: 'none' },
     top: { type: 'tshirt', color: '#8B5CF6', graphic: 'moon' },
     bottom: { type: 'shorts', color: '#4B5563', style: 'loose' },
     shoes: { type: 'casual', color: '#EF4444' },

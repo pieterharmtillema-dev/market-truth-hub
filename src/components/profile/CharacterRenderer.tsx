@@ -1,14 +1,23 @@
-import { CharacterConfig } from "./characterConfig";
-import { AvatarDisplay } from "./AvatarDisplay";
+import { CharacterConfig, DEFAULT_CHARACTER_CONFIG } from "./characterConfig";
 
 interface CharacterRendererProps {
   config: CharacterConfig;
-  avatarUrl?: string | null;
-  displayName?: string | null;
   className?: string;
 }
 
-export function CharacterRenderer({ config, avatarUrl, displayName, className = "" }: CharacterRendererProps) {
+export function CharacterRenderer({ config: inputConfig, className = "" }: CharacterRendererProps) {
+  // Merge with defaults to prevent undefined errors
+  const config: CharacterConfig = {
+    ...DEFAULT_CHARACTER_CONFIG,
+    ...inputConfig,
+    top: { ...DEFAULT_CHARACTER_CONFIG.top, ...inputConfig?.top },
+    bottom: { ...DEFAULT_CHARACTER_CONFIG.bottom, ...inputConfig?.bottom },
+    shoes: { ...DEFAULT_CHARACTER_CONFIG.shoes, ...inputConfig?.shoes },
+    accessories: { ...DEFAULT_CHARACTER_CONFIG.accessories, ...inputConfig?.accessories },
+    special: { ...DEFAULT_CHARACTER_CONFIG.special, ...inputConfig?.special },
+    face: { ...DEFAULT_CHARACTER_CONFIG.face, ...inputConfig?.face },
+  };
+
   const scale = config.height;
 
   // Body width adjustments based on body type
@@ -16,7 +25,7 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
     slim: 0.85,
     athletic: 1.0,
     broad: 1.2,
-  }[config.bodyType];
+  }[config.bodyType] || 1.0;
 
   return (
     <div className={`relative ${className}`} style={{ transform: `scale(${scale})`, transformOrigin: 'center bottom' }}>
@@ -51,6 +60,11 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
           50% { opacity: 1; transform: scale(1); }
         }
 
+        @keyframes blink {
+          0%, 45%, 55%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(0.1); }
+        }
+
         .character-body {
           animation: breathe 3s ease-in-out infinite;
           transform-origin: center bottom;
@@ -64,6 +78,11 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
         .character-arm-right {
           animation: arm-sway-right 4s ease-in-out infinite;
           transform-origin: top center;
+        }
+
+        .character-eyes {
+          animation: blink 4s ease-in-out infinite;
+          transform-origin: center;
         }
 
         .denim-texture {
@@ -110,6 +129,11 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
           <linearGradient id="body-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={config.skinTone} stopOpacity="1" />
             <stop offset="100%" stopColor={adjustBrightness(config.skinTone, -20)} stopOpacity="1" />
+          </linearGradient>
+
+          <linearGradient id="head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={adjustBrightness(config.skinTone, 10)} stopOpacity="1" />
+            <stop offset="100%" stopColor={config.skinTone} stopOpacity="1" />
           </linearGradient>
 
           <linearGradient id="clothing-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -170,7 +194,7 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
             x={72 - (3 * bodyWidthMultiplier)}
             y="60"
             width={6 * bodyWidthMultiplier}
-            height="6"
+            height="8"
             rx="3"
             fill="url(#body-gradient)"
             filter="url(#drop-shadow)"
@@ -206,17 +230,8 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
           <BackpackRenderer color={config.accessories.backpack.color} />
         )}
 
-        {/* Head (Avatar) - positioned at correct spot */}
-        <foreignObject x="56" y="28" width="32" height="32">
-          <div className="w-full h-full">
-            <AvatarDisplay
-              avatarUrl={avatarUrl}
-              displayName={displayName || "Trader"}
-              size={32}
-              className="border-2 border-cyan-400/40"
-            />
-          </div>
-        </foreignObject>
+        {/* Head - Unified with body skin tone */}
+        <HeadRenderer config={config} />
 
         {/* Accessories on head/face */}
         <AccessoriesRenderer config={config} />
@@ -226,6 +241,150 @@ export function CharacterRenderer({ config, avatarUrl, displayName, className = 
       </svg>
     </div>
   );
+}
+
+// Helper component for rendering the head with matching skin tone
+function HeadRenderer({ config }: { config: CharacterConfig }) {
+  const hairColor = config.face?.hairColor || '#2D1B0E';
+  const hairStyle = config.face?.hairStyle || 'short';
+  const eyeColor = config.face?.eyeColor || '#4A90D9';
+
+  return (
+    <g>
+      {/* Hair back layer (for styles that go behind head) */}
+      {hairStyle === 'long' && (
+        <ellipse cx="72" cy="52" rx="20" ry="16" fill={hairColor} filter="url(#drop-shadow)" />
+      )}
+
+      {/* Head shape */}
+      <ellipse
+        cx="72"
+        cy="44"
+        rx="16"
+        ry="18"
+        fill="url(#head-gradient)"
+        filter="url(#drop-shadow)"
+      />
+
+      {/* Ears */}
+      <ellipse cx="56" cy="46" rx="3" ry="4" fill={config.skinTone} />
+      <ellipse cx="88" cy="46" rx="3" ry="4" fill={config.skinTone} />
+
+      {/* Hair front layer */}
+      <HairRenderer hairStyle={hairStyle} hairColor={hairColor} />
+
+      {/* Face features */}
+      <g className="character-eyes">
+        {/* Eyes */}
+        <ellipse cx="66" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
+        <ellipse cx="78" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
+        {/* Pupils */}
+        <circle cx="66" cy="44" r="1.5" fill={eyeColor} />
+        <circle cx="78" cy="44" r="1.5" fill={eyeColor} />
+        {/* Eye highlights */}
+        <circle cx="65" cy="43.5" r="0.5" fill="#FFFFFF" />
+        <circle cx="77" cy="43.5" r="0.5" fill="#FFFFFF" />
+      </g>
+
+      {/* Eyebrows */}
+      <path d="M 63 40 Q 66 39 69 40" stroke={adjustBrightness(hairColor, -20)} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M 75 40 Q 78 39 81 40" stroke={adjustBrightness(hairColor, -20)} strokeWidth="1" fill="none" strokeLinecap="round" />
+
+      {/* Nose */}
+      <path d="M 72 46 L 72 50 L 70 51" stroke={adjustBrightness(config.skinTone, -30)} strokeWidth="1" fill="none" strokeLinecap="round" />
+
+      {/* Mouth */}
+      <path d="M 68 54 Q 72 56 76 54" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+
+      {/* Beard/facial hair */}
+      {config.face?.facialHair && config.face.facialHair !== 'none' && (
+        <FacialHairRenderer style={config.face.facialHair} color={hairColor} />
+      )}
+    </g>
+  );
+}
+
+// Helper component for hair styles
+function HairRenderer({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
+  switch (hairStyle) {
+    case 'short':
+      return (
+        <g>
+          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairColor} />
+          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+        </g>
+      );
+    case 'medium':
+      return (
+        <g>
+          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
+          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
+          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
+        </g>
+      );
+    case 'long':
+      return (
+        <g>
+          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
+          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
+          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
+        </g>
+      );
+    case 'buzz':
+      return (
+        <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairColor} opacity="0.8" />
+      );
+    case 'bald':
+      return null;
+    case 'mohawk':
+      return (
+        <g>
+          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairColor} />
+          <path d="M 68 20 L 72 14 L 76 20" fill={hairColor} />
+        </g>
+      );
+    case 'ponytail':
+      return (
+        <g>
+          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairColor} />
+          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairColor} strokeWidth="6" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    case 'afro':
+      return (
+        <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} filter="url(#drop-shadow)" />
+      );
+    default:
+      return (
+        <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+      );
+  }
+}
+
+// Helper component for facial hair
+function FacialHairRenderer({ style, color }: { style: string; color: string }) {
+  switch (style) {
+    case 'stubble':
+      return (
+        <g opacity="0.4">
+          <ellipse cx="72" cy="56" rx="8" ry="4" fill={color} />
+        </g>
+      );
+    case 'beard':
+      return (
+        <path d="M 64 52 Q 64 62 72 64 Q 80 62 80 52" fill={color} filter="url(#drop-shadow)" />
+      );
+    case 'goatee':
+      return (
+        <ellipse cx="72" cy="58" rx="4" ry="5" fill={color} />
+      );
+    case 'mustache':
+      return (
+        <path d="M 66 52 Q 72 54 78 52" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" />
+      );
+    default:
+      return null;
+  }
 }
 
 // Helper component for rendering tops

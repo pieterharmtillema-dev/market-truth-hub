@@ -30,6 +30,16 @@ const SKIN_TONES = [
   '#8D5524', '#6B4423', '#4A2511', '#2D1606'
 ];
 
+const HAIR_COLORS = [
+  '#2D1B0E', '#4A3728', '#8B4513', '#D2691E',
+  '#FFD700', '#FFA500', '#C0C0C0', '#1a1a1a'
+];
+
+const EYE_COLORS = [
+  '#4A90D9', '#2E5A88', '#6B8E23', '#8B4513',
+  '#2F4F4F', '#4B0082', '#808080', '#000000'
+];
+
 const PRESET_COLORS = [
   { name: 'Cyan', value: '#06B6D4' },
   { name: 'Green', value: '#10B981' },
@@ -162,8 +172,6 @@ export function CharacterCustomizer({
                 <div className="w-48 h-64">
                   <CharacterRenderer
                     config={previewConfig}
-                    avatarUrl={avatarUrl}
-                    displayName={displayName}
                   />
                 </div>
               </div>
@@ -182,7 +190,7 @@ export function CharacterCustomizer({
               </TabsList>
 
               {/* Body Tab */}
-              <TabsContent value="body" className="space-y-6">
+              <TabsContent value="body" className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
                 {/* Skin Tone */}
                 <div>
                   <Label className="text-sm font-semibold mb-3 block">Skin Tone</Label>
@@ -207,6 +215,92 @@ export function CharacterCustomizer({
                       className="w-12 h-8 rounded border border-gray-600 cursor-pointer"
                     />
                     <span className="text-xs text-gray-400">Custom hex: {previewConfig.skinTone}</span>
+                  </div>
+                </div>
+
+                {/* Hair Style */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Hair Style</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['short', 'medium', 'long', 'buzz', 'bald', 'mohawk', 'ponytail', 'afro'] as const).map(style => (
+                      <button
+                        key={style}
+                        className={cn(
+                          "p-2 rounded-lg border-2 transition-all text-xs capitalize",
+                          previewConfig.face?.hairStyle === style
+                            ? "border-cyan-400 bg-cyan-400/10"
+                            : "border-gray-700 hover:border-gray-600"
+                        )}
+                        onClick={() => updateConfig({ 
+                          face: { ...previewConfig.face, hairStyle: style } as CharacterConfig['face']
+                        })}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hair Color */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Hair Color</Label>
+                  <div className="grid grid-cols-8 gap-2 mb-3">
+                    {HAIR_COLORS.map(color => (
+                      <button
+                        key={color}
+                        className={cn(
+                          "w-10 h-10 rounded-full border-2 transition-all hover:scale-110",
+                          previewConfig.face?.hairColor === color ? "border-cyan-400 ring-2 ring-cyan-400/50" : "border-gray-600"
+                        )}
+                        style={{ backgroundColor: color }}
+                        onClick={() => updateConfig({ 
+                          face: { ...previewConfig.face, hairColor: color } as CharacterConfig['face']
+                        })}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Eye Color */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Eye Color</Label>
+                  <div className="grid grid-cols-8 gap-2">
+                    {EYE_COLORS.map(color => (
+                      <button
+                        key={color}
+                        className={cn(
+                          "w-10 h-10 rounded-full border-2 transition-all hover:scale-110",
+                          previewConfig.face?.eyeColor === color ? "border-cyan-400 ring-2 ring-cyan-400/50" : "border-gray-600"
+                        )}
+                        style={{ backgroundColor: color }}
+                        onClick={() => updateConfig({ 
+                          face: { ...previewConfig.face, eyeColor: color } as CharacterConfig['face']
+                        })}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Facial Hair */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Facial Hair</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {(['none', 'stubble', 'beard', 'goatee', 'mustache'] as const).map(style => (
+                      <button
+                        key={style}
+                        className={cn(
+                          "p-2 rounded-lg border-2 transition-all text-xs capitalize",
+                          previewConfig.face?.facialHair === style
+                            ? "border-cyan-400 bg-cyan-400/10"
+                            : "border-gray-700 hover:border-gray-600"
+                        )}
+                        onClick={() => updateConfig({ 
+                          face: { ...previewConfig.face, facialHair: style } as CharacterConfig['face']
+                        })}
+                      >
+                        {style}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
