@@ -482,8 +482,6 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     <div className="relative z-10 w-full h-full flex items-center justify-center p-2">
                       <CharacterRenderer
                         config={characterConfig}
-                        avatarUrl={profile?.avatar_url}
-                        displayName={profile?.display_name}
                         className="w-full h-full"
                       />
                     </div>
