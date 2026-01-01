@@ -12,6 +12,7 @@ import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
 import { useToast } from "@/hooks/use-toast";
+import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
 import {
   Trophy,
   TrendingUp,
@@ -468,44 +469,68 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
             </div>
 
-            {/* Center: Character Display */}
-            <div className="md:col-span-4 flex items-center justify-center py-2">
-              <div className="relative float-anim group">
-                {/* Glow rings */}
-                <div className="absolute inset-0 blur-3xl bg-cyan-400/20 rounded-full scale-150 glow-pulse" />
-                <div className="absolute inset-0 blur-2xl bg-cyan-400/10 rounded-full scale-125" />
-
-                {/* Character container */}
-                <div className="relative character-glow">
-                  <div className="w-36 h-48 bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-3xl border-2 border-cyan-400/30 flex flex-col items-center justify-center overflow-hidden relative">
-                    {/* Character Renderer */}
-                    <div className="relative z-10 w-full h-full flex items-center justify-center p-2">
-                      <CharacterRenderer
-                        config={characterConfig}
-                        className="w-full h-full"
-                      />
-                    </div>
-
-                    {/* Scanline effect */}
-                    <div className="absolute inset-0 opacity-20 scanline pointer-events-none" />
-                  </div>
-
-                  {/* Edit character button overlay - appears on hover */}
-                  <div
-                    className="absolute inset-0 rounded-3xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
-                    onClick={() => setCustomizerOpen(true)}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <Settings className="w-5 h-5 text-cyan-400" />
-                      <span className="text-[10px] text-cyan-400 font-semibold">Customize Character</span>
+            {/* Center: Character Display with Environment */}
+            <div className="md:col-span-4 flex items-center justify-center py-4">
+              <div className="relative group">
+                {/* Environment Container - Bigger scene */}
+                <div className="relative w-64 h-80 rounded-3xl overflow-hidden border-2 border-primary/30 shadow-2xl">
+                  {/* Dynamic Environment Background */}
+                  <HeroEnvironment 
+                    unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
+                    theme="night"
+                  />
+                  
+                  {/* Character Container - Centered and larger */}
+                  <div className="absolute inset-0 flex items-end justify-center pb-8">
+                    <div className="relative float-anim character-glow">
+                      {/* Glow effect under character */}
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-primary/40 blur-xl rounded-full" />
+                      
+                      {/* Character Renderer - Much bigger */}
+                      <div className="relative z-10 w-48 h-64">
+                        <CharacterRenderer
+                          config={characterConfig}
+                          className="w-full h-full"
+                        />
+                        {/* Unlockable accessories overlay */}
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
+                          <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
+                        </svg>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Scanline effect */}
+                  <div className="absolute inset-0 opacity-10 scanline pointer-events-none" />
+                  
+                  {/* Vignette effect */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+                </div>
 
-                  {/* Level badge */}
-                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
-                    <span className="text-sm font-black text-black">{level}</span>
+                {/* Edit character button overlay - appears on hover */}
+                <div
+                  className="absolute inset-0 rounded-3xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
+                  onClick={() => setCustomizerOpen(true)}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Settings className="w-6 h-6 text-primary" />
+                    <span className="text-sm text-primary font-semibold">Customize</span>
                   </div>
                 </div>
+
+                {/* Level badge */}
+                <div className="absolute -top-3 -right-3 w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-full border-4 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-lg font-black text-primary-foreground">{level}</span>
+                </div>
+                
+                {/* Unlocks indicator */}
+                {totalTrades > 0 && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm border border-border rounded-full px-3 py-1 z-30">
+                    <span className="text-[10px] text-muted-foreground">
+                      {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
