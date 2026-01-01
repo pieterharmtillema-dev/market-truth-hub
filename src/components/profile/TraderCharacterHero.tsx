@@ -310,107 +310,80 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         }
       `}</style>
 
-      <Card variant="glass" className="overflow-hidden relative bg-card/60 backdrop-blur-xl">
-        {/* Atmospheric background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-transparent to-violet-900/10 pointer-events-none" />
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: 'radial-gradient(ellipse at 50% 30%, rgba(61, 214, 140, 0.1), transparent 70%)'
-        }} />
+      <div className="relative overflow-hidden rounded-2xl">
+        {/* Full-bleed Environment Background */}
+        <div className="absolute inset-0">
+          <HeroEnvironment 
+            unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
+            theme="night"
+          />
+        </div>
+        
+        {/* Gradient overlays for seamless integration */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/90 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background/60 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background/60 to-transparent pointer-events-none" />
 
-        {/* Top Profile Section */}
-        <div className="relative border-b border-border/30">
+        {/* Content Layer */}
+        <div className="relative z-10">
+          {/* Top Profile Bar */}
           <div className="p-6 pb-4">
             <div className="flex items-start justify-between">
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-4">
-                <div className="w-20 h-20 rounded-full border-4 border-cyan-400/50 overflow-hidden flex-shrink-0">
+                <div className="w-16 h-16 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
                   <AvatarDisplay
                     avatarUrl={profile?.avatar_url}
                     displayName={profile?.display_name || "Trader"}
-                    size={80}
+                    size={64}
                     className="border-0"
                   />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold mb-1 text-foreground">
+                  <h1 className="text-xl font-bold mb-1 text-foreground drop-shadow-lg">
                     {profile?.display_name || "Set Your Name"}
                   </h1>
-                  <p className="text-sm text-cyan-400 mb-3">
-                    {traderClass} • {formatHoldingTime(traderProfile?.holding_time) || "Trading"}
+                  <p className="text-sm text-primary drop-shadow-md mb-2">
+                    {traderClass} • Level {level}
                   </p>
-
-                  {/* Trader Profile Badges */}
                   <div className="flex flex-wrap gap-2">
                     {traderProfile?.trader_category && (
-                      <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 hover:bg-violet-500/30">
-                        <Zap className="w-3.5 h-3.5 mr-1.5" />
+                      <Badge className="bg-background/40 backdrop-blur-sm text-primary border-primary/30">
+                        <Zap className="w-3 h-3 mr-1" />
                         {traderProfile.trader_category.replace("_", " ")}
-                      </Badge>
-                    )}
-                    {traderProfile?.holding_time && (
-                      <Badge variant="outline" className="bg-gray-700/50 text-gray-300 border-gray-600">
-                        <Clock className="w-3.5 h-3.5 mr-1.5" />
-                        {formatHoldingTime(traderProfile.holding_time)}
-                      </Badge>
-                    )}
-                    {traderProfile?.risk_per_trade && (
-                      <Badge variant="outline" className="bg-gray-700/50 text-gray-300 border-gray-600">
-                        <Shield className="w-3.5 h-3.5 mr-1.5" />
-                        {formatRisk(traderProfile.risk_per_trade)}
                       </Badge>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Right: Level & Actions */}
-              <div className="text-right">
-                <div className="mb-3">
-                  <div className="text-3xl font-black text-cyan-400 font-rajdhani leading-none">
-                    LVL {level}
-                  </div>
-                  <div className="text-xs text-gray-500">{totalTrades} Trades Complete</div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 justify-end mb-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="relative"
-                    onClick={onSocialClick}
-                  >
-                    <Users className="w-4 h-4" />
-                    {followersCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
-                        {followersCount}
-                      </span>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: `${profile?.display_name || 'Trader'}'s Profile`,
-                          text: `Check out my trading profile on trade-trax.com`,
-                          url: window.location.href,
-                        });
-                      }
-                    }}
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => console.log('Settings clicked')}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </div>
-
+              {/* Right: Actions */}
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+                  onClick={onSocialClick}
+                >
+                  <Users className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: `${profile?.display_name || 'Trader'}'s Profile`,
+                        text: `Check out my trading profile`,
+                        url: window.location.href,
+                      });
+                    }
+                  }}
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
                 <ProfileEditDialog
                   userId={userId}
                   currentName={profile?.display_name}
@@ -421,296 +394,116 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Character Edit Dialog - controlled by character hover */}
-        <ProfileEditDialog
-          userId={userId}
-          currentName={profile?.display_name}
-          currentAvatarUrl={profile?.avatar_url}
-          currentBio={profile?.bio}
-          onProfileUpdated={handleProfileUpdate}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
-
-        {/* Character Stats Section */}
-        <div className="relative">
-          {/* Header */}
-          <div className="px-6 pt-4 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-              <span className="text-xs text-cyan-400 uppercase tracking-widest font-semibold">
-                Character Stats
+          {/* Main Hero Area with Character */}
+          <div className="relative min-h-[320px] flex items-end justify-center pb-6">
+            {/* Character - Integrated into scene */}
+            <div className="relative group">
+              <div className="relative float-anim character-glow">
+                {/* Ground glow effect */}
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/30 blur-2xl rounded-full" />
+                
+                {/* Character Renderer */}
+                <div className="relative z-10 w-56 h-72">
+                  <CharacterRenderer
+                    config={characterConfig}
+                    className="w-full h-full"
+                  />
+                  {/* Unlockable accessories overlay */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
+                    <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
+                  </svg>
+                </div>
+              </div>
+              
+              {/* Edit overlay on hover */}
+              <div
+                className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
+                onClick={() => setCustomizerOpen(true)}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Settings className="w-6 h-6 text-primary" />
+                  <span className="text-sm text-primary font-semibold">Customize</span>
+                </div>
+              </div>
+              
+              {/* Level badge */}
+              <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                <span className="text-sm font-black text-primary-foreground">{level}</span>
+              </div>
+            </div>
+            
+            {/* Left Stats Panel - Floating */}
+            <div className="absolute left-4 bottom-8 space-y-2 hidden md:block">
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20 min-w-[120px]">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Predictions</div>
+                <div className="text-2xl font-black text-foreground">{totalPredictions}</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Best Streak</div>
+                <div className="text-2xl font-black text-amber-400">{bestStreak}</div>
+              </div>
+            </div>
+            
+            {/* Right Stats Panel - Floating */}
+            <div className="absolute right-4 bottom-8 space-y-2 hidden md:block">
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20 min-w-[120px]">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Win Rate</div>
+                <div className={cn(
+                  "text-2xl font-black",
+                  winRate >= 50 ? "text-primary" : "text-destructive"
+                )}>
+                  {winRate.toFixed(0)}%
+                </div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Avg R</div>
+                <div className={cn(
+                  "text-2xl font-black",
+                  (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive"
+                )}>
+                  {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}` : '0'}R
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Bottom Stats Bar - Mobile */}
+          <div className="md:hidden px-4 pb-4">
+            <div className="grid grid-cols-4 gap-2">
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className="text-lg font-black text-foreground">{totalPredictions}</div>
+                <div className="text-muted-foreground text-[8px] uppercase">Trades</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className={cn("text-lg font-black", winRate >= 50 ? "text-primary" : "text-destructive")}>
+                  {winRate.toFixed(0)}%
+                </div>
+                <div className="text-muted-foreground text-[8px] uppercase">Win</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className="text-lg font-black text-amber-400">{bestStreak}</div>
+                <div className="text-muted-foreground text-[8px] uppercase">Streak</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className={cn("text-lg font-black", (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive")}>
+                  {metrics?.average_r?.toFixed(1) || '0'}
+                </div>
+                <div className="text-muted-foreground text-[8px] uppercase">Avg R</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Unlocks indicator */}
+          {totalTrades > 0 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/60 backdrop-blur-sm border border-border/30 rounded-full px-4 py-1.5 z-30">
+              <span className="text-xs text-muted-foreground">
+                🏆 {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
               </span>
             </div>
-          </div>
-
-          {/* Main Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-6 pb-6">
-            {/* Left: Performance Metrics */}
-            <div className="md:col-span-4 space-y-2">
-              <div className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">
-                <div className="w-3 h-px bg-cyan-400" />
-                Performance
-              </div>
-
-              {/* Total Predictions */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-4 hover:border-cyan-400/30 transition-all">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-gray-500 text-xs uppercase tracking-wider mb-1">Total Predictions</div>
-                    <div className="text-3xl font-black text-white font-rajdhani">{totalPredictions}</div>
-                  </div>
-                  <div className="w-12 h-12 bg-cyan-400/10 rounded-xl border border-cyan-400/30 flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-cyan-400" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Center: Character Display with Environment */}
-            <div className="md:col-span-4 flex items-center justify-center py-4">
-              <div className="relative group">
-                {/* Environment Container - Bigger scene */}
-                <div className="relative w-64 h-80 rounded-3xl overflow-hidden border-2 border-primary/30 shadow-2xl">
-                  {/* Dynamic Environment Background */}
-                  <HeroEnvironment 
-                    unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
-                    theme="night"
-                  />
-                  
-                  {/* Character Container - Centered and larger */}
-                  <div className="absolute inset-0 flex items-end justify-center pb-8">
-                    <div className="relative float-anim character-glow">
-                      {/* Glow effect under character */}
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-primary/40 blur-xl rounded-full" />
-                      
-                      {/* Character Renderer - Much bigger */}
-                      <div className="relative z-10 w-48 h-64">
-                        <CharacterRenderer
-                          config={characterConfig}
-                          className="w-full h-full"
-                        />
-                        {/* Unlockable accessories overlay */}
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
-                          <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Scanline effect */}
-                  <div className="absolute inset-0 opacity-10 scanline pointer-events-none" />
-                  
-                  {/* Vignette effect */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
-                </div>
-
-                {/* Edit character button overlay - appears on hover */}
-                <div
-                  className="absolute inset-0 rounded-3xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
-                  onClick={() => setCustomizerOpen(true)}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Settings className="w-6 h-6 text-primary" />
-                    <span className="text-sm text-primary font-semibold">Customize</span>
-                  </div>
-                </div>
-
-                {/* Level badge */}
-                <div className="absolute -top-3 -right-3 w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-full border-4 border-background flex items-center justify-center shadow-lg z-30">
-                  <span className="text-lg font-black text-primary-foreground">{level}</span>
-                </div>
-                
-                {/* Unlocks indicator */}
-                {totalTrades > 0 && (
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm border border-border rounded-full px-3 py-1 z-30">
-                    <span className="text-[10px] text-muted-foreground">
-                      {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Trading Metrics */}
-            <div className="md:col-span-4 space-y-2">
-              <div className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3 flex items-center gap-2">
-                Trading Metrics
-                <div className="flex-1 h-px bg-gray-800" />
-              </div>
-
-              {/* Win Rate Performance Card */}
-              <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-4 space-y-3">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-white font-semibold text-sm mb-0.5">Win Rate Performance</h3>
-                    <p className="text-gray-400 text-[11px]">Based on risk-adjusted returns</p>
-                  </div>
-                  {totalTrades >= 2 && (
-                    <span className="text-gray-500 text-[10px]">
-                      {metrics?.is_verified ? 'Verified' : 'Unverified'}
-                    </span>
-                  )}
-                </div>
-
-                {/* LOCKED STATE - Before 2 trades */}
-                {totalTrades < 2 ? (
-                  <>
-                    <div className="flex items-center justify-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-3">
-                      <Shield className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-300 font-medium">
-                        Unlocks after 2 trades
-                      </span>
-                    </div>
-                  </>
-                ) : totalTrades < 30 ? (
-                  /* PRE-RATING STATE - 2 to 29 trades */
-                  <>
-                    {/* Badges Row */}
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] px-2 py-0.5 h-5 font-bold">
-                        PRE-RATING
-                      </Badge>
-                      <span className="text-gray-400 text-[11px]">Qualification Progress</span>
-                      <div className="flex-1" />
-                      <span className="text-gray-400 text-xs font-mono tabular-nums">
-                        {totalTrades}/30 trades
-                      </span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="relative h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="stat-bar-fill h-full bg-gradient-to-r from-cyan-500 to-blue-500 relative"
-                        style={{
-                          width: statsAnimated ? `${Math.min((totalTrades / 30) * 100, 100)}%` : '0%',
-                          boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-                      </div>
-                    </div>
-
-                    {/* Message */}
-                    <p className="text-gray-400 text-[11px]">
-                      Complete <span className="text-cyan-400 font-semibold">{30 - totalTrades} more trade{30 - totalTrades !== 1 ? 's' : ''}</span> to unlock your official rating
-                    </p>
-                  </>
-                ) : (
-                  /* OFFICIAL RATING STATE - 30+ trades */
-                  <>
-                    {/* Badges Row */}
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] px-2 py-0.5 h-5 font-bold">
-                        OFFICIAL RATING
-                      </Badge>
-                      <div className="flex-1" />
-                      <span className="text-gray-400 text-xs font-mono tabular-nums">
-                        {totalTrades} trades
-                      </span>
-                    </div>
-
-                    {/* Win Rate Display */}
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-green-400" />
-                        <span className="text-gray-300 text-sm font-medium">Win Rate</span>
-                      </div>
-                      <span className="text-green-400 font-bold text-2xl tabular-nums">{winRate.toFixed(0)}%</span>
-                    </div>
-
-                    {/* Win Rate Progress Bar */}
-                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="stat-bar-fill h-full bg-gradient-to-r from-green-500 to-emerald-400 relative"
-                        style={{
-                          width: statsAnimated ? `${winRate}%` : '0%',
-                          boxShadow: '0 0 10px rgba(34, 197, 94, 0.5)'
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Average R */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-400/30 transition-all">
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-gray-400 text-xs">Average R</span>
-                  <span className={cn(
-                    "font-bold text-sm",
-                    metrics?.average_r && metrics.average_r >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(2)}R` : '0R'}
-                  </span>
-                </div>
-                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                      "stat-bar-fill h-full",
-                      metrics?.average_r && metrics.average_r >= 0 ? "bg-green-400" : "bg-red-400"
-                    )}
-                    style={{ width: statsAnimated ? `${Math.min(Math.abs(metrics?.average_r || 0) * 50, 100)}%` : '0%' }}
-                  />
-                </div>
-              </div>
-
-              {/* Avg Return */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-cyan-500/30 transition-all">
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-gray-400 text-xs">Avg Return</span>
-                  <span className={cn(
-                    "font-bold text-sm",
-                    avgReturn >= 0 ? "text-green-400" : "text-red-400"
-                  )}>
-                    {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                      "stat-bar-fill h-full",
-                      avgReturn >= 0 ? "bg-green-400" : "bg-red-400"
-                    )}
-                    style={{ width: statsAnimated ? `${Math.min(Math.abs(avgReturn) * 5, 100)}%` : '0%' }}
-                  />
-                </div>
-              </div>
-
-              {/* Best Streak */}
-              <div className="bg-gray-900/40 border border-gray-800 rounded-lg p-2.5 hover:border-amber-500/30 transition-all">
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-gray-400 text-xs">Best Streak</span>
-                  <span className="text-amber-400 font-bold text-sm">{bestStreak}</span>
-                </div>
-                <div className="h-1 bg-black/50 rounded-full overflow-hidden">
-                  <div
-                    className="stat-bar-fill h-full bg-amber-500"
-                    style={{ width: statsAnimated ? `${Math.min(bestStreak * 7, 100)}%` : '0%' }}
-                  />
-                </div>
-              </div>
-
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 text-center">
-                  <div className="text-xl font-black text-cyan-400 font-rajdhani">{totalTrades}</div>
-                  <div className="text-gray-500 text-[9px] uppercase tracking-wider">Trades</div>
-                </div>
-                <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-2.5 text-center">
-                  <div className="text-xl font-black text-green-400 font-rajdhani">{winRate.toFixed(0)}%</div>
-                  <div className="text-gray-500 text-[9px] uppercase tracking-wider">Win</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-      </Card>
+      </div>
 
       {/* Character Customizer Dialog */}
       <CharacterCustomizer
