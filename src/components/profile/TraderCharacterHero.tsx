@@ -402,9 +402,9 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             <div className="flex items-start justify-between">
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-4">
-                <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
-                  {/* Character head, shoulders, and upper torso - head centered */}
-                  <svg viewBox="28 12 88 88" className="w-full h-full" style={{ transform: 'scale(1.05) translateY(-4px)' }}>
+                <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
+                  {/* Character upper body portrait - head, shoulders, and arms */}
+                  <svg viewBox="20 8 104 104" className="w-full h-full" style={{ transform: 'scale(1.0)' }}>
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
@@ -416,15 +416,24 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                       </linearGradient>
                     </defs>
 
+                    {/* Left Arm */}
+                    <rect x="48" y="70" width="6" height="30" rx="3"
+                      fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
+
+                    {/* Right Arm */}
+                    <rect x="90" y="70" width="6" height="30" rx="3"
+                      fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
+
                     {/* Neck */}
                     <rect x="69" y="60" width="6" height="8" rx="3" fill="url(#avatar-body-gradient)" />
 
-                    {/* Shoulders and Torso - showing more body */}
+                    {/* Torso - wider to connect with arms */}
                     {characterConfig.top.type !== 'none' ? (
-                      <rect x="62" y="66" width="20" height="24" rx="6" fill={characterConfig.top.color} />
+                      <rect x="56" y="66" width="32" height="34" rx="6" fill={characterConfig.top.color} />
                     ) : (
-                      <rect x="62" y="66" width="20" height="24" rx="6" fill="url(#avatar-body-gradient)" />
+                      <rect x="56" y="66" width="32" height="34" rx="6" fill="url(#avatar-body-gradient)" />
                     )}
+
                     {/* Hair back layer */}
                     {characterConfig.face?.hairStyle === 'long' && (
                       <ellipse cx="72" cy="52" rx="20" ry="16" fill={characterConfig.face?.hairColor || '#2D1B0E'} />
