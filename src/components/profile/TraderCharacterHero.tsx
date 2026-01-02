@@ -482,50 +482,25 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           <div className="relative flex items-center justify-center gap-6 px-6 pb-6 pt-4">
             {/* Left: PnL & Period Streak */}
             <div className="flex-1 max-w-[200px] space-y-2.5">
-              {/* Time Frame Filter - Stylish Pill Buttons */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2">
-                <div className="flex flex-col gap-1.5">
-                  {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => {
-                    const labels = {
-                      daily: { short: '1D', full: 'Day' },
-                      weekly: { short: '1W', full: 'Week' },
-                      monthly: { short: '1M', full: 'Month' },
-                      yearly: { short: '1Y', full: 'Year' }
-                    };
-                    return (
-                      <button
-                        key={tf}
-                        onClick={() => setTimeFrame(tf)}
-                        className={cn(
-                          "flex items-center justify-between px-2.5 py-1.5 rounded-md transition-all duration-200 group",
-                          timeFrame === tf
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                        )}
-                      >
-                        <span className="text-[10px] font-medium tracking-wide">
-                          {labels[tf].full}
-                        </span>
-                        <span className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded",
-                          timeFrame === tf
-                            ? "bg-primary-foreground/20"
-                            : "bg-background/40 group-hover:bg-background/60"
-                        )}>
-                          {labels[tf].short}
-                        </span>
-                      </button>
-                    );
-                  })}
+              {/* Section Header with Time Frame Filter */}
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
+                <div className="flex gap-0.5 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
+                  {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => setTimeFrame(tf)}
+                      className={cn(
+                        "px-1.5 py-0.5 text-[9px] font-medium rounded transition-all uppercase tracking-wider",
+                        timeFrame === tf
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {tf.charAt(0)}
+                    </button>
+                  ))}
                 </div>
-              </div>
-
-              {/* Section Label */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  <Clock className="w-3 h-3 inline mr-1" />
-                  Period Stats
-                </span>
               </div>
 
               {/* PnL Summary Card */}
