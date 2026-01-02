@@ -323,6 +323,14 @@ const Profile = () => {
           </Card>
         )}
 
+        {/* Trading Metrics Card */}
+        <TradingMetricsCard
+          metrics={metrics}
+          loading={loadingMetrics}
+          calculating={calculating}
+          onRecalculate={recalculate}
+        />
+
         {/* Trader Status & Exchange Connections - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Trader Status */}
