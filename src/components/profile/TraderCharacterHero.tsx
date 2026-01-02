@@ -50,6 +50,7 @@ interface TraderCharacterHeroProps {
   onProfileUpdated?: (data: { display_name: string; avatar_url: string; bio: string }) => void;
   onSocialClick?: () => void;
   followersCount?: number;
+  followingCount?: number;
 }
 
 // Map holding_time to trading class
@@ -90,7 +91,7 @@ const formatRisk = (risk: string | null): string => {
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, followersCount = 0 }: TraderCharacterHeroProps) {
+export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, followersCount = 0, followingCount = 0 }: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
   const [totalTrades, setTotalTrades] = useState(0);
@@ -428,17 +429,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                         {traderProfile.trader_category.replace("_", " ")}
                       </Badge>
                     )}
-                    <Badge className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30">
-                      <BarChart3 className="w-3 h-3 mr-1" />
-                      {totalTrades} trade{totalTrades !== 1 ? 's' : ''}
-                    </Badge>
-                    {followersCount > 0 && (
+                    {(followersCount > 0 || followingCount > 0) && (
                       <Badge
                         className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30 cursor-pointer hover:bg-background/60"
                         onClick={onSocialClick}
                       >
                         <Users className="w-3 h-3 mr-1" />
-                        {followersCount} follower{followersCount !== 1 ? 's' : ''}
+                        {followersCount} follower{followersCount !== 1 ? 's' : ''} • {followingCount} following
                       </Badge>
                     )}
                     {traderProfile?.holding_time && (
@@ -624,6 +621,22 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
 
               {/* All-Time Stats */}
               <div className="space-y-2">
+                  {/* Total Trades */}
+                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total Trades</span>
+                      <span className="text-base font-bold text-foreground">
+                        {totalTrades}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(totalTrades * 2, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
                   {/* Average R */}
                   <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
                     <div className="flex items-center justify-between">
