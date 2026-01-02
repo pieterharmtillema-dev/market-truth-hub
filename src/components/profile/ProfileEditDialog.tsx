@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit2, User, Upload, Image, Loader2, Sparkles } from "lucide-react";
+import { Edit2, User, Upload, Image, Loader2, Sparkles, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -202,9 +202,12 @@ export function ProfileEditDialog({
       {/* Only show trigger button if dialog is not externally controlled */}
       {externalOpen === undefined && (
         <DialogTrigger asChild>
-          <Button className="flex-1 gap-2">
-            <Edit2 className="w-4 h-4" />
-            Edit Profile
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+          >
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </DialogTrigger>
       )}
