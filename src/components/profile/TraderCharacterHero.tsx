@@ -479,7 +479,63 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
           </div>
 
           {/* Main Hero Area with Character and Trading Metrics */}
-          <div className="relative flex items-center justify-center gap-8 px-6 pb-6 pt-4">
+          <div className="relative flex items-center justify-center gap-6 px-6 pb-6 pt-4">
+            {/* Left: PnL & Period Streak */}
+            <div className="flex-1 max-w-[200px] space-y-2.5">
+              {/* Section Header with Time Frame Filter */}
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
+                <div className="flex gap-0.5 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
+                  {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => setTimeFrame(tf)}
+                      className={cn(
+                        "px-1.5 py-0.5 text-[9px] font-medium rounded transition-all uppercase tracking-wider",
+                        timeFrame === tf
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {tf.charAt(0)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* PnL Summary Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+                <div className="text-center">
+                  <span className={cn(
+                    "text-2xl font-bold block",
+                    timeFilteredMetrics.totalPnl >= 0 ? "text-primary" : "text-destructive"
+                  )}>
+                    {timeFilteredMetrics.totalPnl >= 0 ? '+' : ''}${timeFilteredMetrics.totalPnl.toFixed(2)}
+                  </span>
+                  <p className="text-[10px] text-muted-foreground mt-1">P&L</p>
+                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">{timeFilteredMetrics.totalTrades} trades</p>
+                </div>
+              </div>
+
+              {/* Best Streak Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Best Streak</span>
+                  <span className="text-base font-bold text-amber-400">
+                    {timeFilteredMetrics.totalTrades === 0 ? '--' : timeFilteredMetrics.bestStreak}
+                  </span>
+                </div>
+                {timeFilteredMetrics.totalTrades > 0 && (
+                  <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(timeFilteredMetrics.bestStreak * 10, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Center: Character */}
             <div className="relative flex items-end justify-center">
               {/* Character - Integrated into scene */}
@@ -519,49 +575,11 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
             </div>
 
-            {/* Right: Trading Metrics */}
-            <div className="flex-1 max-w-md space-y-2.5">
-              {/* Section Header with Time Frame Filter */}
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Trading Metrics</span>
-                  <div className="flex-1 h-px bg-border/50" />
-                </div>
-                <div className="flex gap-1 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
-                  {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => (
-                    <button
-                      key={tf}
-                      onClick={() => setTimeFrame(tf)}
-                      className={cn(
-                        "px-2 py-0.5 text-[10px] font-medium rounded transition-all uppercase tracking-wider",
-                        timeFrame === tf
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {tf.charAt(0)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* PnL Summary Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)} Performance
-                  </h4>
-                  <span className="text-[10px] text-muted-foreground">{timeFilteredMetrics.totalTrades} trades</span>
-                </div>
-                <div className="text-center py-2">
-                  <span className={cn(
-                    "text-3xl font-bold",
-                    timeFilteredMetrics.totalPnl >= 0 ? "text-primary" : "text-destructive"
-                  )}>
-                    {timeFilteredMetrics.totalPnl >= 0 ? '+' : ''}${timeFilteredMetrics.totalPnl.toFixed(2)}
-                  </span>
-                  <p className="text-[10px] text-muted-foreground mt-1">Total P&L</p>
-                </div>
+            {/* Right: Win Rate & All-Time Stats */}
+            <div className="flex-1 max-w-[200px] space-y-2.5">
+              {/* Section Header */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
               </div>
 
               {/* Win Rate Card */}
@@ -570,46 +588,26 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   <span className="text-xs text-muted-foreground">Win Rate</span>
                   <span className={cn(
                     "text-base font-bold",
-                    timeFilteredMetrics.winRate >= 50 ? "text-primary" : "text-destructive"
+                    winRate >= 50 ? "text-primary" : "text-destructive"
                   )}>
-                    {timeFilteredMetrics.totalTrades === 0 ? '--' : `${timeFilteredMetrics.winRate.toFixed(1)}%`}
+                    {totalTrades === 0 ? '--' : `${winRate.toFixed(1)}%`}
                   </span>
                 </div>
-                {timeFilteredMetrics.totalTrades > 0 && (
+                {totalTrades > 0 && (
                   <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        timeFilteredMetrics.winRate >= 50 ? "bg-primary" : "bg-destructive"
+                        winRate >= 50 ? "bg-primary" : "bg-destructive"
                       )}
-                      style={{ width: `${timeFilteredMetrics.winRate}%` }}
+                      style={{ width: `${winRate}%` }}
                     />
                   </div>
                 )}
               </div>
 
-              {/* Best Streak Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Best Streak</span>
-                  <span className="text-base font-bold text-amber-400">
-                    {timeFilteredMetrics.totalTrades === 0 ? '--' : timeFilteredMetrics.bestStreak}
-                  </span>
-                </div>
-                {timeFilteredMetrics.totalTrades > 0 && (
-                  <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(timeFilteredMetrics.bestStreak * 10, 100)}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* All-Time Metrics Section */}
-              <div className="pt-2 border-t border-border/30">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">All-Time Stats</p>
-                <div className="space-y-2">
+              {/* All-Time Stats */}
+              <div className="space-y-2">
                   {/* Average R */}
                   <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
                     <div className="flex items-center justify-between">
@@ -654,35 +652,17 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     </div>
                   </div>
 
-                  {/* All-Time Best Streak */}
-                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Best Streak</span>
-                      <span className="text-base font-bold text-amber-400">{bestStreak}</span>
-                    </div>
-                    <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
-                      />
-                    </div>
+                {/* All-Time Best Streak */}
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Best Streak</span>
+                    <span className="text-base font-bold text-amber-400">{bestStreak}</span>
                   </div>
-
-                  {/* Bottom Stats */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 text-center">
-                      <div className="text-xl font-bold text-primary">{totalTrades}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Trades</div>
-                    </div>
-                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 text-center">
-                      <div className={cn(
-                        "text-xl font-bold",
-                        winRate >= 50 ? "text-primary" : winRate > 0 ? "text-destructive" : "text-muted-foreground"
-                      )}>
-                        {winRate.toFixed(0)}%
-                      </div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Win</div>
-                    </div>
+                  <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
+                    />
                   </div>
                 </div>
               </div>
