@@ -52,20 +52,26 @@ const CreatePrediction = () => {
 
     setPriceLoading(true);
     try {
+      console.log("Fetching price for:", selectedAssetData.symbol, selectedAssetData.market);
       const priceData = await getCurrentPrice(selectedAssetData.symbol, selectedAssetData.market);
+      console.log("Price data received:", priceData);
+
       if (priceData) {
         setLivePrice(priceData.price);
         setPriceChange(priceData.changePercent);
         // Auto-fill entry price with live price
         setEntryPrice(priceData.price.toString());
       } else {
+        console.warn("No price data returned for", selectedAssetData.symbol);
         setLivePrice(null);
         setPriceChange(null);
+        toast.error(`Unable to fetch current price for ${selectedAssetData.symbol}. Please enter manually.`);
       }
     } catch (error) {
       console.error("Failed to fetch price:", error);
       setLivePrice(null);
       setPriceChange(null);
+      toast.error(`Error fetching price for ${selectedAssetData.symbol}. Please enter manually.`);
     } finally {
       setPriceLoading(false);
     }

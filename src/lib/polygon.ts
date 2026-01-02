@@ -183,33 +183,42 @@ export async function getLastTrade(ticker: string): Promise<{ price: number; tim
 
 // Get current price using previous close (most reliable for free tier)
 export async function getCurrentPrice(
-  symbol: string, 
+  symbol: string,
   market: "stocks" | "crypto" | "forex" = "stocks"
 ): Promise<{ price: number; change: number; changePercent: number } | null> {
   const cacheKey = `current-${symbol}-${market}`;
   const cached = apiCache.get(cacheKey);
-  
+
   if (cached && Date.now() - cached.timestamp < 30000) { // 30 second cache
+    console.log(`[getCurrentPrice] Using cached price for ${symbol}:`, cached.data);
     return cached.data;
   }
 
   try {
     const ticker = formatPolygonTicker(symbol, market);
+    console.log(`[getCurrentPrice] Fetching price for ${symbol} (ticker: ${ticker}, market: ${market})`);
     const prevData = await getPreviousClose(ticker);
-    
-    if (!prevData.results?.[0]) return null;
-    
+
+    console.log(`[getCurrentPrice] Previous close data:`, prevData);
+
+    if (!prevData.results?.[0]) {
+      console.error(`[getCurrentPrice] No results found for ${symbol}. Response:`, prevData);
+      return null;
+    }
+
     const bar = prevData.results[0];
     const price = bar.c;
     const prevClose = bar.o;
     const change = price - prevClose;
     const changePercent = (change / prevClose) * 100;
-    
+
     const result = { price, change, changePercent };
+    console.log(`[getCurrentPrice] Successfully fetched price for ${symbol}:`, result);
     apiCache.set(cacheKey, { data: result, timestamp: Date.now() });
-    
+
     return result;
-  } catch {
+  } catch (error) {
+    console.error(`[getCurrentPrice] Error fetching price for ${symbol}:`, error);
     return null;
   }
 }
