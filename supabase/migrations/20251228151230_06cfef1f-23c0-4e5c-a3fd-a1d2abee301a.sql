@@ -1,6 +1,16 @@
 -- Add trader_category to trader_profiles as well (since code expects it there)
-ALTER TABLE public.trader_profiles
-ADD COLUMN trader_category public.trader_category DEFAULT NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'trader_profiles'
+    AND column_name = 'trader_category'
+  ) THEN
+    ALTER TABLE public.trader_profiles
+    ADD COLUMN trader_category public.trader_category DEFAULT NULL;
+  END IF;
+END $$;
 
 -- Create the derive_trader_category function
 CREATE OR REPLACE FUNCTION public.derive_trader_category(
