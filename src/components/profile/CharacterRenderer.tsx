@@ -60,9 +60,9 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
           50% { opacity: 1; transform: scale(1); }
         }
 
-        @keyframes blink {
-          0%, 45%, 55%, 100% { transform: scaleY(1); }
-          50% { transform: scaleY(0.1); }
+        @keyframes blink-eyelid {
+          0%, 45%, 55%, 100% { transform: scaleY(0); }
+          50% { transform: scaleY(1); }
         }
 
         .character-body {
@@ -80,9 +80,14 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
           transform-origin: top center;
         }
 
-        .character-eyes {
-          animation: blink 4s ease-in-out infinite;
-          transform-origin: 72px 44px;
+        .eyelid-left {
+          animation: blink-eyelid 4s ease-in-out infinite;
+          transform-origin: 66px 44px;
+        }
+
+        .eyelid-right {
+          animation: blink-eyelid 4s ease-in-out infinite;
+          transform-origin: 78px 44px;
         }
 
         .denim-texture {
@@ -274,7 +279,7 @@ function HeadRenderer({ config }: { config: CharacterConfig }) {
       <HairRenderer hairStyle={hairStyle} hairColor={hairColor} />
 
       {/* Face features */}
-      <g className="character-eyes">
+      <g>
         {/* Eyes */}
         <ellipse cx="66" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
         <ellipse cx="78" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
@@ -284,6 +289,10 @@ function HeadRenderer({ config }: { config: CharacterConfig }) {
         {/* Eye highlights */}
         <circle cx="65" cy="43.5" r="0.5" fill="#FFFFFF" />
         <circle cx="77" cy="43.5" r="0.5" fill="#FFFFFF" />
+
+        {/* Eyelids - animated to close over eyes */}
+        <ellipse className="eyelid-left" cx="66" cy="44" rx="3.5" ry="3" fill={config.skinTone} />
+        <ellipse className="eyelid-right" cx="78" cy="44" rx="3.5" ry="3" fill={config.skinTone} />
       </g>
 
       {/* Eyebrows */}
