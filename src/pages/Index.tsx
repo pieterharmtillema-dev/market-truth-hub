@@ -26,6 +26,8 @@ const Index = () => {
   const { predictions: followingPredictions, loading: loadingFollowing } = useFollowingPredictions(currentUserId || null, following);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [assetFilter, setAssetFilter] = useState<string>("all");
+  const [specificAssetFilter, setSpecificAssetFilter] = useState<string>("all");
+
   useEffect(() => {
     const checkUserAndOnboarding = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -49,11 +51,43 @@ const Index = () => {
     checkUserAndOnboarding();
   }, [navigate]);
 
-  // Filter predictions by asset type
-  const filterByAsset = (preds: typeof tradePredictions) => {
-    if (assetFilter === "all") return preds;
-    return preds.filter(p => p.asset_type === assetFilter);
+  // Get available specific assets based on selected category
+  const getAvailableAssets = (predictions: typeof tradePredictions) => {
+    if (assetFilter === "all") {
+      // Return all unique assets across all categories
+      return Array.from(new Set(predictions.map(p => p.asset))).sort();
+    }
+    // Return unique assets for the selected category
+    return Array.from(
+      new Set(
+        predictions
+          .filter(p => p.asset_type === assetFilter)
+          .map(p => p.asset)
+      )
+    ).sort();
   };
+
+  // Filter predictions by asset type and specific asset
+  const filterByAsset = (preds: typeof tradePredictions) => {
+    let filtered = preds;
+
+    // First filter by category
+    if (assetFilter !== "all") {
+      filtered = filtered.filter(p => p.asset_type === assetFilter);
+    }
+
+    // Then filter by specific asset if selected
+    if (specificAssetFilter !== "all") {
+      filtered = filtered.filter(p => p.asset === specificAssetFilter);
+    }
+
+    return filtered;
+  };
+
+  // Reset specific asset filter when category changes
+  useEffect(() => {
+    setSpecificAssetFilter("all");
+  }, [assetFilter]);
 
   // Sort trade predictions for different views
   const hotPredictions = filterByAsset([...tradePredictions]).sort((a, b) => {
@@ -111,7 +145,8 @@ const Index = () => {
             </TabsList>
 
             {/* Asset Filter Pills */}
-            <Card variant="glass" className="p-3">
+            <Card variant="glass" className="p-3 space-y-3">
+              {/* Asset Category Filter */}
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex flex-wrap gap-1.5 flex-1">
@@ -138,6 +173,47 @@ const Index = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Specific Asset Filter - Show when category is selected */}
+              {(() => {
+                const availableAssets = getAvailableAssets(tradePredictions);
+                if (availableAssets.length === 0) return null;
+
+                return (
+                  <div className="flex items-start gap-2 pl-6 border-l-2 border-primary/20">
+                    <div className="flex flex-wrap gap-1.5 flex-1">
+                      <button
+                        onClick={() => setSpecificAssetFilter("all")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
+                          specificAssetFilter === "all"
+                            ? 'bg-primary/20 text-primary border border-primary/30'
+                            : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/30'
+                        }`}
+                      >
+                        All {assetFilter === 'all' ? 'Assets' : assetFilter === 'crypto' ? 'Coins' : assetFilter === 'forex' ? 'Pairs' : assetFilter === 'stock' ? 'Stocks' : assetFilter === 'commodity' ? 'Commodities' : 'Contracts'}
+                      </button>
+                      {availableAssets.slice(0, 12).map((asset) => (
+                        <button
+                          key={asset}
+                          onClick={() => setSpecificAssetFilter(asset)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-200 ${
+                            specificAssetFilter === asset
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/30'
+                          }`}
+                        >
+                          {asset}
+                        </button>
+                      ))}
+                      {availableAssets.length > 12 && (
+                        <span className="px-2.5 py-1 text-[11px] text-muted-foreground">
+                          +{availableAssets.length - 12} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </Card>
           </div>
 
