@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { UserSearch } from "@/components/social/UserSearch";
 import { FollowingList } from "@/components/social/FollowingList";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -85,8 +84,8 @@ const Index = () => {
 
         {/* Feed Tabs */}
         <Tabs defaultValue="hot" className="w-full">
-          <div className="flex items-center gap-2 mb-2">
-            <TabsList className="flex-1 bg-card border border-border flex-wrap h-auto gap-1 p-1">
+          <div className="space-y-3 mb-4">
+            <TabsList className="w-full bg-card border border-border flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="hot" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                 <Flame className="w-4 h-4" />
                 Hot
@@ -110,20 +109,36 @@ const Index = () => {
                 Winners
               </TabsTrigger>
             </TabsList>
-            <Select value={assetFilter} onValueChange={setAssetFilter}>
-              <SelectTrigger className="w-[120px] bg-card border-border">
-                <Filter className="w-4 h-4 mr-1" />
-                <SelectValue placeholder="Asset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Assets</SelectItem>
-                <SelectItem value="crypto">Crypto</SelectItem>
-                <SelectItem value="forex">Forex</SelectItem>
-                <SelectItem value="stock">Stocks</SelectItem>
-                <SelectItem value="commodity">Commodities</SelectItem>
-                <SelectItem value="options">Options</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Asset Filter Pills */}
+            <Card variant="glass" className="p-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex flex-wrap gap-1.5 flex-1">
+                  {[
+                    { value: 'all', label: 'All', emoji: '🌐' },
+                    { value: 'crypto', label: 'Crypto', emoji: '₿' },
+                    { value: 'forex', label: 'Forex', emoji: '💱' },
+                    { value: 'stock', label: 'Stocks', emoji: '📈' },
+                    { value: 'commodity', label: 'Commodities', emoji: '🛢️' },
+                    { value: 'options', label: 'Options', emoji: '📊' },
+                  ].map((asset) => (
+                    <button
+                      key={asset.value}
+                      onClick={() => setAssetFilter(asset.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                        assetFilter === asset.value
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'bg-card/50 text-muted-foreground hover:text-foreground hover:bg-card border border-border/50'
+                      }`}
+                    >
+                      <span className="mr-1.5">{asset.emoji}</span>
+                      {asset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Card>
           </div>
 
           <TabsContent value="hot" className="mt-4 space-y-4">
