@@ -71,10 +71,12 @@ export function CharacterCustomizer({
 
   const unlocks = checkUnlocks(totalTrades, winRate, streak);
 
-  // Sync preview config when the config prop changes
+  // Sync preview config when the dialog opens
   useEffect(() => {
-    setPreviewConfig(config);
-  }, [config]);
+    if (open) {
+      setPreviewConfig(config);
+    }
+  }, [open, config]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -174,10 +176,12 @@ export function CharacterCustomizer({
                 ref={characterPreviewRef}
                 className="bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-2xl border-2 border-cyan-400/30 p-8 flex items-center justify-center min-h-[400px]"
               >
-                <div className="w-48 h-64">
-                  <CharacterRenderer
-                    config={previewConfig}
-                  />
+                <div className="w-48 h-80 flex items-start justify-center overflow-hidden">
+                  <div className="w-full" style={{ transform: 'scale(1.4) translateY(-10px)' }}>
+                    <CharacterRenderer
+                      config={previewConfig}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
