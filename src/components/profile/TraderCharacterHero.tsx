@@ -404,7 +404,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               <div className="flex items-start gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
                   {/* Character upper body portrait - head, shoulders, and arms */}
-                  <svg viewBox="20 8 104 104" className="w-full h-full" style={{ transform: 'scale(1.0)' }}>
+                  <svg viewBox="30 16 84 84" className="w-full h-full" style={{ transform: 'scale(1.0)' }}>
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
@@ -462,6 +462,58 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
 
                     {/* Mouth */}
                     <path d="M 68 54 Q 72 56 76 54" stroke={adjustBrightness(characterConfig.skinTone, -40)} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+
+                    {/* Accessories */}
+                    {/* Sunglasses */}
+                    {characterConfig.accessories.sunglasses?.enabled && (
+                      <g>
+                        {characterConfig.accessories.sunglasses.style === 'aviator' ? (
+                          <>
+                            <ellipse cx="64" cy="45" rx="6" ry="5" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <ellipse cx="80" cy="45" rx="6" ry="5" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <path d="M 58 44 L 52 42" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 70 44 L 74 44" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 86 44 L 92 42" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                          </>
+                        ) : characterConfig.accessories.sunglasses.style === 'round' ? (
+                          <>
+                            <circle cx="64" cy="45" r="5" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <circle cx="80" cy="45" r="5" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <path d="M 59 45 L 52 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 69 45 L 75 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 85 45 L 92 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                          </>
+                        ) : (
+                          <>
+                            <rect x="58" y="42" width="12" height="6" rx="1" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <rect x="74" y="42" width="12" height="6" rx="1" fill={characterConfig.accessories.sunglasses.color} opacity="0.8" />
+                            <path d="M 58 45 L 52 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 70 45 L 74 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                            <path d="M 86 45 L 92 45" stroke={characterConfig.accessories.sunglasses.color} strokeWidth="1" />
+                          </>
+                        )}
+                      </g>
+                    )}
+
+                    {/* Necklace */}
+                    {characterConfig.accessories.necklace?.enabled && (
+                      <g>
+                        <path d="M 62 64 Q 72 68 82 64" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                        <circle cx="65" cy="65" r="1" fill="none" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="0.7" />
+                        <circle cx="68" cy="66" r="1" fill="none" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="0.7" />
+                        <circle cx="72" cy="66.5" r="1" fill="none" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="0.7" />
+                        <circle cx="76" cy="66" r="1" fill="none" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="0.7" />
+                        <circle cx="79" cy="65" r="1" fill="none" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="0.7" />
+                        <path d="M 63 63 Q 72 67 81 63" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+                        {characterConfig.accessories.necklace.type === 'pendant' && (
+                          <>
+                            <circle cx="72" cy="72" r="3.5" fill={characterConfig.accessories.necklace.color || '#FFD700'} />
+                            <circle cx="72" cy="72" r="2.5" fill={adjustBrightness(characterConfig.accessories.necklace.color || '#FFD700', -20)} />
+                            <circle cx="71" cy="71" r="0.8" fill="rgba(255,255,255,0.7)" />
+                          </>
+                        )}
+                      </g>
+                    )}
                   </svg>
                 </div>
                 <div className="max-w-md">
