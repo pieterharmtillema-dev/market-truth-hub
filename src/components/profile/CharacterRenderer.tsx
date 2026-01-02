@@ -82,7 +82,7 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
 
         .character-eyes {
           animation: blink 4s ease-in-out infinite;
-          transform-origin: center;
+          transform-origin: 72px 44px;
         }
 
         .denim-texture {
@@ -1022,23 +1022,23 @@ function AccessoriesRenderer({ config }: { config: CharacterConfig }) {
             const chainColor = config.accessories.necklace.color || '#FFD700';
             return (
               <>
-                {/* Chain wrapping around neck naturally */}
+                {/* Chain wrapping around neck naturally - lower on neck */}
                 <path
-                  d="M 64 58 Q 72 62 80 58"
+                  d="M 62 64 Q 72 68 82 64"
                   stroke={chainColor}
                   strokeWidth="2.5"
                   fill="none"
                   strokeLinecap="round"
                 />
                 {/* Chain detail - individual links */}
-                <circle cx="66" cy="59" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
-                <circle cx="69" cy="60" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
-                <circle cx="72" cy="60.5" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
-                <circle cx="75" cy="60" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
-                <circle cx="78" cy="59" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="65" cy="65" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="68" cy="66" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="72" cy="66.5" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="76" cy="66" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="79" cy="65" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
                 {/* Chain highlight for metallic shine */}
                 <path
-                  d="M 65 57.5 Q 72 61 79 57.5"
+                  d="M 63 63 Q 72 67 81 63"
                   stroke="rgba(255,255,255,0.5)"
                   strokeWidth="0.8"
                   fill="none"
@@ -1046,9 +1046,9 @@ function AccessoriesRenderer({ config }: { config: CharacterConfig }) {
                 />
                 {config.accessories.necklace.type === 'pendant' && (
                   <>
-                    <circle cx="72" cy="66" r="3.5" fill={chainColor} filter="url(#drop-shadow)" />
-                    <circle cx="72" cy="66" r="2.5" fill={adjustBrightness(chainColor, -20)} />
-                    <circle cx="71" cy="65" r="0.8" fill="rgba(255,255,255,0.7)" />
+                    <circle cx="72" cy="72" r="3.5" fill={chainColor} filter="url(#drop-shadow)" />
+                    <circle cx="72" cy="72" r="2.5" fill={adjustBrightness(chainColor, -20)} />
+                    <circle cx="71" cy="71" r="0.8" fill="rgba(255,255,255,0.7)" />
                   </>
                 )}
               </>
@@ -1066,43 +1066,46 @@ function BackpackRenderer({ color }: { color: string }) {
     <g>
       {/* Left strap - from behind character over left shoulder */}
       <path
-        d="M 66 68 Q 62 70 60 76"
+        d="M 64 70 Q 61 73 59 80"
         stroke={adjustBrightness(color, -30)}
-        strokeWidth="3"
+        strokeWidth="3.5"
         strokeLinecap="round"
         fill="none"
         filter="url(#drop-shadow)"
       />
       {/* Left strap highlight */}
       <path
-        d="M 66.5 68 Q 62.5 70 60.5 75"
+        d="M 64.5 70 Q 61.5 73 59.5 79"
         stroke="rgba(255,255,255,0.15)"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
         fill="none"
       />
 
       {/* Right strap - from behind character over right shoulder */}
       <path
-        d="M 78 68 Q 82 70 84 76"
+        d="M 80 70 Q 83 73 85 80"
         stroke={adjustBrightness(color, -30)}
-        strokeWidth="3"
+        strokeWidth="3.5"
         strokeLinecap="round"
         fill="none"
         filter="url(#drop-shadow)"
       />
       {/* Right strap highlight */}
       <path
-        d="M 77.5 68 Q 81.5 70 83.5 75"
+        d="M 79.5 70 Q 82.5 73 84.5 79"
         stroke="rgba(255,255,255,0.15)"
-        strokeWidth="1"
+        strokeWidth="1.2"
         strokeLinecap="round"
         fill="none"
       />
 
       {/* Strap buckles/clips on chest */}
-      <rect x="59" y="76" width="2.5" height="2" rx="0.5" fill={color} filter="url(#drop-shadow)" />
-      <rect x="82.5" y="76" width="2.5" height="2" rx="0.5" fill={color} filter="url(#drop-shadow)" />
+      <rect x="57.5" y="80" width="3" height="2.5" rx="0.5" fill={color} filter="url(#drop-shadow)" />
+      <circle cx="59" cy="81.2" r="0.4" fill="rgba(255,255,255,0.3)" />
+
+      <rect x="83.5" y="80" width="3" height="2.5" rx="0.5" fill={color} filter="url(#drop-shadow)" />
+      <circle cx="85" cy="81.2" r="0.4" fill="rgba(255,255,255,0.3)" />
     </g>
   );
 }

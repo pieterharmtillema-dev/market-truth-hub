@@ -403,12 +403,47 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
-                  <AvatarDisplay
-                    avatarUrl={profile?.avatar_url}
-                    displayName={profile?.display_name || "Trader"}
-                    size={64}
-                    className="border-0"
-                  />
+                  {/* Character head as avatar */}
+                  <svg viewBox="20 10 104 80" className="w-full h-full scale-110" style={{ transform: 'scale(1.1)' }}>
+                    <defs>
+                      <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
+                        <stop offset="100%" stopColor={characterConfig.skinTone} stopOpacity="1" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Background */}
+                    <rect x="20" y="10" width="104" height="80" fill="rgba(0,0,0,0.1)" />
+
+                    {/* Hair back layer */}
+                    {characterConfig.face?.hairStyle === 'long' && (
+                      <ellipse cx="72" cy="52" rx="20" ry="16" fill={characterConfig.face?.hairColor || '#2D1B0E'} />
+                    )}
+
+                    {/* Head */}
+                    <ellipse cx="72" cy="44" rx="16" ry="18" fill="url(#avatar-head-gradient)" />
+
+                    {/* Ears */}
+                    <ellipse cx="56" cy="46" rx="3" ry="4" fill={characterConfig.skinTone} />
+                    <ellipse cx="88" cy="46" rx="3" ry="4" fill={characterConfig.skinTone} />
+
+                    {/* Hair - using HeadRenderer logic inline */}
+                    <HairSVG hairStyle={characterConfig.face?.hairStyle || 'short'} hairColor={characterConfig.face?.hairColor || '#2D1B0E'} />
+
+                    {/* Eyes */}
+                    <ellipse cx="66" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
+                    <ellipse cx="78" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
+                    <circle cx="66" cy="44" r="1.5" fill={characterConfig.face?.eyeColor || '#4A90D9'} />
+                    <circle cx="78" cy="44" r="1.5" fill={characterConfig.face?.eyeColor || '#4A90D9'} />
+                    <circle cx="65" cy="43.5" r="0.5" fill="#FFFFFF" />
+                    <circle cx="77" cy="43.5" r="0.5" fill="#FFFFFF" />
+
+                    {/* Nose */}
+                    <path d="M 72 46 L 72 50 L 70 51" stroke={adjustBrightness(characterConfig.skinTone, -30)} strokeWidth="1" fill="none" strokeLinecap="round" />
+
+                    {/* Mouth */}
+                    <path d="M 68 54 Q 72 56 76 54" stroke={adjustBrightness(characterConfig.skinTone, -40)} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  </svg>
                 </div>
                 <div className="max-w-md">
                   <h1 className="text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
@@ -728,4 +763,64 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
       />
     </>
   );
+}
+
+// Helper function to adjust brightness for colors
+function adjustBrightness(color: string, amount: number): string {
+  const hex = color.replace('#', '');
+  const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) + amount));
+  const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
+  const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Helper component for hair in avatar
+function HairSVG({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
+  switch (hairStyle) {
+    case 'short':
+      return (
+        <g>
+          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairColor} />
+          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+        </g>
+      );
+    case 'medium':
+      return (
+        <g>
+          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
+          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
+          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
+        </g>
+      );
+    case 'long':
+      return (
+        <g>
+          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
+          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
+          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
+        </g>
+      );
+    case 'buzz':
+      return <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairColor} opacity="0.8" />;
+    case 'bald':
+      return null;
+    case 'mohawk':
+      return (
+        <g>
+          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairColor} />
+          <path d="M 68 20 L 72 14 L 76 20" fill={hairColor} />
+        </g>
+      );
+    case 'ponytail':
+      return (
+        <g>
+          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairColor} />
+          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairColor} strokeWidth="6" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    case 'afro':
+      return <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} />;
+    default:
+      return <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />;
+  }
 }
