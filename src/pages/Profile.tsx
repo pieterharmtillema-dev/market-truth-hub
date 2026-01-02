@@ -88,6 +88,12 @@ const Profile = () => {
   const [showSocialDialog, setShowSocialDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [traderCategory, setTraderCategory] = useState<TraderCategory | null>(null);
+  const [traderProfileData, setTraderProfileData] = useState<{
+    holding_time: string | null;
+    risk_per_trade: string | null;
+    decision_style: string | null;
+    experience_level: string | null;
+  } | null>(null);
 
   const { predictions: tradePredictions, loading: loadingTradePredictions } = useUserTradePredictions(userId);
   const { predictions: longTermPredictions, loading: loadingLongTermPredictions } = useUserLongTermPredictions(userId);
@@ -167,15 +173,23 @@ const Profile = () => {
           setProfile(profileData);
         }
 
-        // Fetch trader category
+        // Fetch trader category and profile
         const { data: traderProfileData } = await supabase
           .from("trader_profiles")
-          .select("trader_category")
+          .select("trader_category, holding_time, risk_per_trade, decision_style, experience_level")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (traderProfileData?.trader_category) {
-          setTraderCategory(traderProfileData.trader_category as TraderCategory);
+        if (traderProfileData) {
+          if (traderProfileData.trader_category) {
+            setTraderCategory(traderProfileData.trader_category as TraderCategory);
+          }
+          setTraderProfileData({
+            holding_time: traderProfileData.holding_time,
+            risk_per_trade: traderProfileData.risk_per_trade,
+            decision_style: traderProfileData.decision_style,
+            experience_level: traderProfileData.experience_level,
+          });
         }
 
         setLoadingProfile(false);
@@ -261,6 +275,113 @@ const Profile = () => {
             followersCount={followers.length}
           />
         )}
+
+        {/* Profile Stats Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Social & Trading Stats */}
+          <Card variant="glass" className="p-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Trading Stats
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Followers */}
+              <button
+                onClick={() => setShowSocialDialog(true)}
+                className="flex flex-col items-center p-3 rounded-lg bg-background/40 hover:bg-background/60 transition-colors cursor-pointer border border-border/30"
+              >
+                <Users className="w-5 h-5 text-primary mb-2" />
+                <span className="text-2xl font-bold text-foreground">{followers.length}</span>
+                <span className="text-xs text-muted-foreground">Follower{followers.length !== 1 ? 's' : ''}</span>
+              </button>
+
+              {/* Following */}
+              <button
+                onClick={() => setShowSocialDialog(true)}
+                className="flex flex-col items-center p-3 rounded-lg bg-background/40 hover:bg-background/60 transition-colors cursor-pointer border border-border/30"
+              >
+                <Users className="w-5 h-5 text-primary mb-2" />
+                <span className="text-2xl font-bold text-foreground">{following.length}</span>
+                <span className="text-xs text-muted-foreground">Following</span>
+              </button>
+
+              {/* Total Trades */}
+              <div className="flex flex-col items-center p-3 rounded-lg bg-background/40 border border-border/30">
+                <BarChart3 className="w-5 h-5 text-primary mb-2" />
+                <span className="text-2xl font-bold text-foreground">{positions.length}</span>
+                <span className="text-xs text-muted-foreground">Total Trade{positions.length !== 1 ? 's' : ''}</span>
+              </div>
+
+              {/* Win Rate */}
+              <div className="flex flex-col items-center p-3 rounded-lg bg-background/40 border border-border/30">
+                <Target className="w-5 h-5 text-primary mb-2" />
+                <span className="text-2xl font-bold text-foreground">
+                  {positions.filter(p => !p.open && p.pnl !== null).length > 0
+                    ? `${((positions.filter(p => !p.open && (p.pnl || 0) > 0).length / positions.filter(p => !p.open && p.pnl !== null).length) * 100).toFixed(0)}%`
+                    : '0%'}
+                </span>
+                <span className="text-xs text-muted-foreground">Win Rate</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Trader Profile */}
+          {traderProfileData && (
+            <Card variant="glass" className="p-4">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Trader Profile
+              </h3>
+              <div className="space-y-3">
+                {traderCategory && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
+                    <span className="text-xs text-muted-foreground">Category</span>
+                    <Badge className="bg-primary/20 text-primary border-primary/30">
+                      {traderCategory.replace("_", " ")}
+                    </Badge>
+                  </div>
+                )}
+                {traderProfileData.holding_time && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
+                    <span className="text-xs text-muted-foreground">Holding Time</span>
+                    <span className="text-sm font-medium">
+                      {traderProfileData.holding_time.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                    </span>
+                  </div>
+                )}
+                {traderProfileData.risk_per_trade && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
+                    <span className="text-xs text-muted-foreground">Risk Per Trade</span>
+                    <span className="text-sm font-medium">
+                      {traderProfileData.risk_per_trade === "less_than_1" ? "< 1%" :
+                       traderProfileData.risk_per_trade === "1_to_2" ? "1-2%" :
+                       traderProfileData.risk_per_trade === "2_to_5" ? "2-5%" :
+                       traderProfileData.risk_per_trade === "5_to_10" ? "5-10%" :
+                       traderProfileData.risk_per_trade === "more_than_10" ? "> 10%" :
+                       traderProfileData.risk_per_trade}
+                    </span>
+                  </div>
+                )}
+                {traderProfileData.decision_style && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
+                    <span className="text-xs text-muted-foreground">Decision Style</span>
+                    <span className="text-sm font-medium">
+                      {traderProfileData.decision_style.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                    </span>
+                  </div>
+                )}
+                {traderProfileData.experience_level && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background/40 border border-border/30">
+                    <span className="text-xs text-muted-foreground">Experience Level</span>
+                    <span className="text-sm font-medium">
+                      {traderProfileData.experience_level.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
 
         {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
