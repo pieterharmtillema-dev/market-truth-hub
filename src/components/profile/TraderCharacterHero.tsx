@@ -450,8 +450,16 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             {/* Left Stats Panel - Floating */}
             <div className="absolute left-4 bottom-8 space-y-2 hidden md:block">
               <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20 min-w-[120px]">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Predictions</div>
-                <div className="text-2xl font-black text-foreground">{totalPredictions}</div>
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Total Trades</div>
+                <div className="text-2xl font-black text-foreground">{totalTrades}</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Record</div>
+                <div className="text-xl font-black">
+                  <span className="text-primary">{metrics?.total_wins || 0}W</span>
+                  <span className="text-muted-foreground mx-1">/</span>
+                  <span className="text-destructive">{metrics?.total_losses || 0}L</span>
+                </div>
               </div>
               <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
                 <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Best Streak</div>
@@ -479,6 +487,15 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}` : '0'}R
                 </div>
               </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
+                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">+R Rate</div>
+                <div className={cn(
+                  "text-2xl font-black",
+                  (metrics?.positive_r_percentage || 0) > 50 ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {metrics?.positive_r_percentage ? `${metrics.positive_r_percentage.toFixed(0)}%` : '--'}
+                </div>
+              </div>
             </div>
           </div>
           
@@ -501,9 +518,26 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
               <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
                 <div className={cn("text-lg font-black", (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive")}>
-                  {metrics?.average_r?.toFixed(1) || '0'}
+                  {metrics?.average_r?.toFixed(1) || '0'}R
                 </div>
                 <div className="text-muted-foreground text-[8px] uppercase">Avg R</div>
+              </div>
+            </div>
+            {/* Second row for mobile */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className="text-base font-black">
+                  <span className="text-primary">{metrics?.total_wins || 0}</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-destructive">{metrics?.total_losses || 0}</span>
+                </div>
+                <div className="text-muted-foreground text-[8px] uppercase">W/L</div>
+              </div>
+              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
+                <div className={cn("text-lg font-black", (metrics?.positive_r_percentage || 0) > 50 ? "text-primary" : "text-muted-foreground")}>
+                  {metrics?.positive_r_percentage ? `${metrics.positive_r_percentage.toFixed(0)}%` : '--'}
+                </div>
+                <div className="text-muted-foreground text-[8px] uppercase">+R Rate</div>
               </div>
             </div>
           </div>
