@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,11 @@ export function CharacterCustomizer({
   const { toast } = useToast();
 
   const unlocks = checkUnlocks(totalTrades, winRate, streak);
+
+  // Sync preview config when the config prop changes
+  useEffect(() => {
+    setPreviewConfig(config);
+  }, [config]);
 
   const handleSave = async () => {
     setSaving(true);

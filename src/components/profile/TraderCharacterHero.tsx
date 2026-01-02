@@ -402,18 +402,15 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             <div className="flex items-start justify-between">
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
-                  {/* Character head as avatar */}
-                  <svg viewBox="20 10 104 80" className="w-full h-full scale-110" style={{ transform: 'scale(1.1)' }}>
+                <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
+                  {/* Character head as avatar - larger view */}
+                  <svg viewBox="40 20 64 50" className="w-full h-full" style={{ transform: 'scale(1.3) translateY(-8px)' }}>
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
                         <stop offset="100%" stopColor={characterConfig.skinTone} stopOpacity="1" />
                       </linearGradient>
                     </defs>
-
-                    {/* Background */}
-                    <rect x="20" y="10" width="104" height="80" fill="rgba(0,0,0,0.1)" />
 
                     {/* Hair back layer */}
                     {characterConfig.face?.hairStyle === 'long' && (

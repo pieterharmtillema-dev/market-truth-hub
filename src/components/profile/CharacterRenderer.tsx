@@ -10,6 +10,7 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
   const config: CharacterConfig = {
     ...DEFAULT_CHARACTER_CONFIG,
     ...inputConfig,
+    // Ensure nested objects are properly merged AFTER spreading inputConfig
     top: { ...DEFAULT_CHARACTER_CONFIG.top, ...inputConfig?.top },
     bottom: { ...DEFAULT_CHARACTER_CONFIG.bottom, ...inputConfig?.bottom },
     shoes: { ...DEFAULT_CHARACTER_CONFIG.shoes, ...inputConfig?.shoes },
