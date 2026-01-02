@@ -111,9 +111,20 @@ export function stringifyCharacterConfig(config: CharacterConfig): string {
 }
 
 export function parseCharacterConfig(encoded: string): CharacterConfig | null {
-  if (!encoded?.startsWith('character:')) return null;
+  // Support both 'character:' and 'char:' prefixes for backwards compatibility
+  if (!encoded) return null;
+
+  let base64Data: string;
+  if (encoded.startsWith('character:')) {
+    base64Data = encoded.slice(10);
+  } else if (encoded.startsWith('char:')) {
+    base64Data = encoded.slice(5);
+  } else {
+    return null;
+  }
+
   try {
-    return JSON.parse(atob(encoded.slice(10)));
+    return JSON.parse(atob(base64Data));
   } catch {
     return null;
   }

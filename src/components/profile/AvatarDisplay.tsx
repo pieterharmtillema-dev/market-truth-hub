@@ -28,8 +28,8 @@ export function AvatarDisplay({ avatarUrl, displayName, size = 40, className }: 
     }
   }
 
-  // Handle character config
-  if (avatarUrl?.startsWith('char:')) {
+  // Handle character config (supports both 'char:' and 'character:' prefixes)
+  if (avatarUrl?.startsWith('char:') || avatarUrl?.startsWith('character:')) {
     const config = parseCharacterConfig(avatarUrl);
     if (config) {
       return <CharacterAvatar config={config} size={size} className={className} />;
