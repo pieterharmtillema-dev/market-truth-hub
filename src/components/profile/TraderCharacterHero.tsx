@@ -403,8 +403,8 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
-                  {/* Character upper body portrait - head focused with proper proportions */}
-                  <svg viewBox="36 22 72 72" className="w-full h-full" style={{ transform: 'scale(1.0)' }}>
+                  {/* Character upper body portrait - head prominently focused */}
+                  <svg viewBox="42 28 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
@@ -416,22 +416,22 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                       </linearGradient>
                     </defs>
 
-                    {/* Left Arm - smaller and positioned lower */}
-                    <rect x="52" y="74" width="4" height="18" rx="2"
+                    {/* Left Arm */}
+                    <rect x="54" y="72" width="4" height="16" rx="2"
                       fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
 
-                    {/* Right Arm - smaller and positioned lower */}
-                    <rect x="88" y="74" width="4" height="18" rx="2"
+                    {/* Right Arm */}
+                    <rect x="86" y="72" width="4" height="16" rx="2"
                       fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
 
-                    {/* Neck - smaller */}
-                    <rect x="69" y="60" width="6" height="6" rx="3" fill="url(#avatar-body-gradient)" />
+                    {/* Neck */}
+                    <rect x="69" y="60" width="6" height="8" rx="3" fill="url(#avatar-body-gradient)" />
 
-                    {/* Torso - smaller, more compact */}
+                    {/* Torso - matching hero card style */}
                     {characterConfig.top.type !== 'none' ? (
-                      <rect x="60" y="65" width="24" height="22" rx="5" fill={characterConfig.top.color} />
+                      <rect x="62" y="66" width="20" height="18" rx="6" fill={characterConfig.top.color} />
                     ) : (
-                      <rect x="60" y="65" width="24" height="22" rx="5" fill="url(#avatar-body-gradient)" />
+                      <rect x="62" y="66" width="20" height="18" rx="6" fill="url(#avatar-body-gradient)" />
                     )}
 
                     {/* Hair back layer */}
