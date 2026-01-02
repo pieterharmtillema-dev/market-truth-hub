@@ -398,13 +398,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         {/* Content Layer */}
         <div className="relative z-10">
           {/* Top Profile Bar */}
-          <div className="p-6 pb-4">
-            <div className="flex items-start justify-between">
+          <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-0">
               {/* Left: Avatar + Name */}
-              <div className="flex items-start gap-4">
-                <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
+              <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
                   {/* Character upper body portrait - head prominently focused */}
-                  <svg viewBox="42 24 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
+                  <svg viewBox="42 24 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice" style={{ transform: 'scale(1.1)' }}>
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
@@ -516,11 +516,11 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     )}
                   </svg>
                 </div>
-                <div className="max-w-md">
-                  <h1 className="text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
+                <div className="max-w-md flex-1">
+                  <h1 className="text-xl sm:text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
                     {profile?.display_name || "Set Your Name"}
                   </h1>
-                  <p className="text-sm text-primary drop-shadow-md mb-2">
+                  <p className="text-xs sm:text-sm text-primary drop-shadow-md mb-2">
                     {traderClass} • Level {level}
                   </p>
                   {profile?.bio && (
@@ -564,19 +564,19 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
 
               {/* Right: Actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-start sm:self-auto">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={onSocialClick}
                 >
-                  <Users className="w-4 h-4" />
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => {
                     if (navigator.share) {
                       navigator.share({
@@ -587,33 +587,35 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     }
                   }}
                 >
-                  <Share2 className="w-4 h-4" />
+                  <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
-                <ProfileEditDialog
-                  userId={userId}
-                  currentName={profile?.display_name}
-                  currentAvatarUrl={profile?.avatar_url}
-                  currentBio={profile?.bio}
-                  onProfileUpdated={handleProfileUpdate}
-                />
+                <div className="[&_button]:h-8 [&_button]:w-8 sm:[&_button]:h-10 sm:[&_button]:w-10">
+                  <ProfileEditDialog
+                    userId={userId}
+                    currentName={profile?.display_name}
+                    currentAvatarUrl={profile?.avatar_url}
+                    currentBio={profile?.bio}
+                    onProfileUpdated={handleProfileUpdate}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Main Hero Area with Character and Trading Metrics */}
-          <div className="relative flex items-center justify-center gap-6 px-6 pb-6 pt-4">
+          <div className="relative flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-6 px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
             {/* Left: PnL & Period Streak */}
-            <div className="flex-1 max-w-[200px] space-y-2.5">
+            <div className="w-full lg:flex-1 lg:max-w-[200px] space-y-2.5 order-1 lg:order-none">
               {/* Section Header with Time Frame Filter */}
               <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
                 <div className="flex gap-0.5 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
                   {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeFrame(tf)}
                       className={cn(
-                        "px-1.5 py-0.5 text-[9px] font-medium rounded transition-all uppercase tracking-wider",
+                        "px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-medium rounded transition-all uppercase tracking-wider",
                         timeFrame === tf
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-foreground"
@@ -626,7 +628,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
 
               {/* PnL Summary Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 sm:p-3">
                 <div className="text-center">
                   <span className={cn(
                     "text-2xl font-bold block",
@@ -659,15 +661,15 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             </div>
 
             {/* Center: Character */}
-            <div className="relative flex items-end justify-center">
+            <div className="relative flex items-end justify-center order-2 lg:order-none">
               {/* Character - Integrated into scene */}
               <div className="relative group">
                 <div className="relative float-anim character-glow">
                   {/* Ground glow effect */}
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/30 blur-2xl rounded-full" />
+                  <div className="absolute -bottom-2 sm:-bottom-4 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-6 sm:h-8 bg-primary/30 blur-2xl rounded-full" />
 
                   {/* Character Renderer */}
-                  <div className="relative z-10 w-48 h-64">
+                  <div className="relative z-10 w-32 h-44 sm:w-40 sm:h-56 lg:w-48 lg:h-64">
                     <CharacterRenderer
                       config={characterConfig}
                       className="w-full h-full"
@@ -684,28 +686,28 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
                   onClick={() => setCustomizerOpen(true)}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Settings className="w-6 h-6 text-primary" />
-                    <span className="text-sm text-primary font-semibold">Customize</span>
+                  <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+                    <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                    <span className="text-xs sm:text-sm text-primary font-semibold">Customize</span>
                   </div>
                 </div>
 
                 {/* Level badge */}
-                <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
-                  <span className="text-sm font-black text-primary-foreground">{level}</span>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-xs sm:text-sm font-black text-primary-foreground">{level}</span>
                 </div>
               </div>
             </div>
 
             {/* Right: Win Rate & All-Time Stats */}
-            <div className="flex-1 max-w-[200px] space-y-2.5">
+            <div className="w-full lg:flex-1 lg:max-w-[200px] space-y-2.5 order-3 lg:order-none">
               {/* Section Header */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
               </div>
 
               {/* Win Rate Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Win Rate</span>
                   <span className={cn(
@@ -729,9 +731,9 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               </div>
 
               {/* All-Time Stats */}
-              <div className="space-y-2">
+              <div className="space-y-2 grid grid-cols-2 lg:grid-cols-1 gap-2">
                   {/* Total Trades */}
-                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Total Trades</span>
                       <span className="text-base font-bold text-foreground">
@@ -747,7 +749,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   </div>
 
                   {/* Average R */}
-                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Average R</span>
                       <span className={cn(
@@ -769,7 +771,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   </div>
 
                   {/* Avg Return */}
-                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                  <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Avg Return</span>
                       <span className={cn(
@@ -791,7 +793,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   </div>
 
                 {/* All-Time Best Streak */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5 col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Best Streak</span>
                     <span className="text-base font-bold text-amber-400">{bestStreak}</span>

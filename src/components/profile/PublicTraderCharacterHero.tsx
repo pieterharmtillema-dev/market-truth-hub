@@ -412,11 +412,11 @@ export function PublicTraderCharacterHero({
         {/* Content Layer */}
         <div className="relative z-10">
           {/* Top Profile Bar */}
-          <div className="p-6 pb-4">
-            <div className="flex items-start justify-between">
+          <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-0">
               {/* Left: Avatar + Name */}
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
+              <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0 backdrop-blur-sm bg-background/30">
                   <AvatarDisplay
                     avatarUrl={profile?.avatar_url}
                     displayName={profile?.display_name || "Trader"}
@@ -424,11 +424,11 @@ export function PublicTraderCharacterHero({
                     className="border-0"
                   />
                 </div>
-                <div className="max-w-md">
-                  <h1 className="text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
+                <div className="max-w-md flex-1">
+                  <h1 className="text-xl sm:text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
                     {profile?.display_name || "Trader"}
                   </h1>
-                  <p className="text-sm text-primary drop-shadow-md mb-2">
+                  <p className="text-xs sm:text-sm text-primary drop-shadow-md mb-2">
                     {traderClass} • Level {level}
                   </p>
                   {profile?.bio && (
@@ -454,22 +454,22 @@ export function PublicTraderCharacterHero({
               </div>
 
               {/* Right: Actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-start sm:self-auto">
                 {showFollowButton && onFollowClick && (
                   <Button
                     variant={isFollowing ? "outline" : "default"}
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9"
                     onClick={onFollowClick}
                   >
-                    <Users className="w-4 h-4" />
+                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     {isFollowing ? "Following" : "Follow"}
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50"
+                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => {
                     if (navigator.share) {
                       navigator.share({
@@ -480,23 +480,23 @@ export function PublicTraderCharacterHero({
                     }
                   }}
                 >
-                  <Share2 className="w-4 h-4" />
+                  <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Main Hero Area with Character and Trading Metrics */}
-          <div className="relative flex items-center justify-center gap-6 px-6 pb-6 pt-4">
+          <div className="relative flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-6 px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
             {/* Left: Win Rate & Stats */}
-            <div className="flex-1 max-w-[200px] space-y-2.5">
+            <div className="w-full lg:flex-1 lg:max-w-[200px] space-y-2.5 order-1 lg:order-none">
               {/* Section Header */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Performance</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Performance</span>
               </div>
 
               {/* Win Rate Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 sm:p-3">
                 <div className="text-center">
                   <span className={cn(
                     "text-2xl font-bold block",
@@ -520,7 +520,7 @@ export function PublicTraderCharacterHero({
               </div>
 
               {/* Best Streak Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Best Streak</span>
                   <span className="text-base font-bold text-amber-400">
@@ -539,15 +539,15 @@ export function PublicTraderCharacterHero({
             </div>
 
             {/* Center: Character */}
-            <div className="relative flex items-end justify-center">
+            <div className="relative flex items-end justify-center order-2 lg:order-none">
               {/* Character - Integrated into scene */}
               <div className="relative">
                 <div className="relative float-anim character-glow">
                   {/* Ground glow effect */}
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/30 blur-2xl rounded-full" />
+                  <div className="absolute -bottom-2 sm:-bottom-4 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-6 sm:h-8 bg-primary/30 blur-2xl rounded-full" />
 
                   {/* Character Renderer */}
-                  <div className="relative z-10 w-48 h-64">
+                  <div className="relative z-10 w-32 h-44 sm:w-40 sm:h-56 lg:w-48 lg:h-64">
                     <CharacterRenderer
                       config={characterConfig}
                       className="w-full h-full"
@@ -560,21 +560,23 @@ export function PublicTraderCharacterHero({
                 </div>
 
                 {/* Level badge */}
-                <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
-                  <span className="text-sm font-black text-primary-foreground">{level}</span>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-xs sm:text-sm font-black text-primary-foreground">{level}</span>
                 </div>
               </div>
             </div>
 
             {/* Right: Trading Stats */}
-            <div className="flex-1 max-w-[200px] space-y-2.5">
+            <div className="w-full lg:flex-1 lg:max-w-[200px] space-y-2.5 order-3 lg:order-none">
               {/* Section Header */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Statistics</span>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Statistics</span>
               </div>
 
+              {/* All-Time Stats - Grid on mobile */}
+              <div className="space-y-2 grid grid-cols-2 lg:grid-cols-1 gap-2">
               {/* Total Trades Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Total Trades</span>
                   <span className="text-base font-bold text-foreground">
@@ -590,7 +592,7 @@ export function PublicTraderCharacterHero({
               </div>
 
               {/* Average R */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Average R</span>
                   <span className={cn(
@@ -612,7 +614,7 @@ export function PublicTraderCharacterHero({
               </div>
 
               {/* Avg Return */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5 col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Avg Return</span>
                   <span className={cn(
@@ -631,6 +633,7 @@ export function PublicTraderCharacterHero({
                     style={{ width: `${Math.min(Math.abs(avgReturn) * 5, 100)}%` }}
                   />
                 </div>
+              </div>
               </div>
             </div>
           </div>
