@@ -204,11 +204,10 @@ export function ProfileEditDialog({
         <DialogTrigger asChild>
           <Button
             variant="ghost"
-            size="sm"
-            className="bg-background/30 backdrop-blur-sm hover:bg-background/50 gap-2"
+            size="icon"
+            className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
           >
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            Edit Profile
           </Button>
         </DialogTrigger>
       )}

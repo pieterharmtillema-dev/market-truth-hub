@@ -589,15 +589,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 >
                   <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </Button>
-                <div className="[&_button]:h-8 [&_button]:w-8 sm:[&_button]:h-10 sm:[&_button]:w-10">
-                  <ProfileEditDialog
-                    userId={userId}
-                    currentName={profile?.display_name}
-                    currentAvatarUrl={profile?.avatar_url}
-                    currentBio={profile?.bio}
-                    onProfileUpdated={handleProfileUpdate}
-                  />
-                </div>
+                <ProfileEditDialog
+                  userId={userId}
+                  currentName={profile?.display_name}
+                  currentAvatarUrl={profile?.avatar_url}
+                  currentBio={profile?.bio}
+                  onProfileUpdated={handleProfileUpdate}
+                />
               </div>
             </div>
           </div>
