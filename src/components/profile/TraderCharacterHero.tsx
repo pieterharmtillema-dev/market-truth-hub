@@ -409,254 +409,163 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             </div>
           </div>
 
-          {/* Main Hero Area with Character */}
-          <div className="relative min-h-[320px] flex items-end justify-center pb-6">
-            {/* Character - Integrated into scene */}
-            <div className="relative group">
-              <div className="relative float-anim character-glow">
-                {/* Ground glow effect */}
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/30 blur-2xl rounded-full" />
-                
-                {/* Character Renderer */}
-                <div className="relative z-10 w-56 h-72">
-                  <CharacterRenderer
-                    config={characterConfig}
-                    className="w-full h-full"
-                  />
-                  {/* Unlockable accessories overlay */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
-                    <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
-                  </svg>
+          {/* Main Hero Area with Character and Trading Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 pb-6">
+            {/* Left: Character */}
+            <div className="relative min-h-[320px] flex items-end justify-center">
+              {/* Character - Integrated into scene */}
+              <div className="relative group">
+                <div className="relative float-anim character-glow">
+                  {/* Ground glow effect */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-primary/30 blur-2xl rounded-full" />
+
+                  {/* Character Renderer */}
+                  <div className="relative z-10 w-56 h-72">
+                    <CharacterRenderer
+                      config={characterConfig}
+                      className="w-full h-full"
+                    />
+                    {/* Unlockable accessories overlay */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
+                      <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Edit overlay on hover */}
+                <div
+                  className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
+                  onClick={() => setCustomizerOpen(true)}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Settings className="w-6 h-6 text-primary" />
+                    <span className="text-sm text-primary font-semibold">Customize</span>
+                  </div>
+                </div>
+
+                {/* Level badge */}
+                <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-sm font-black text-primary-foreground">{level}</span>
                 </div>
               </div>
-              
-              {/* Edit overlay on hover */}
-              <div
-                className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
-                onClick={() => setCustomizerOpen(true)}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <Settings className="w-6 h-6 text-primary" />
-                  <span className="text-sm text-primary font-semibold">Customize</span>
+
+              {/* Unlocks indicator */}
+              {totalTrades > 0 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/60 backdrop-blur-sm border border-border/30 rounded-full px-4 py-1.5 z-30">
+                  <span className="text-xs text-muted-foreground">
+                    🏆 {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Trading Metrics */}
+            <div className="space-y-3">
+              {/* Section Header */}
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Trading Metrics</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+
+              {/* Win Rate Performance Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4">
+                <h4 className="text-base font-semibold text-foreground mb-1">Win Rate Performance</h4>
+                <p className="text-xs text-muted-foreground mb-3">Based on risk-adjusted returns</p>
+
+                {totalTrades < 2 ? (
+                  <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-border/30 bg-background/30">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Unlocks after 2 trades</span>
+                  </div>
+                ) : (
+                  <div className="text-center py-2">
+                    <span className={cn(
+                      "text-4xl font-bold",
+                      winRate >= 50 ? "text-primary" : "text-destructive"
+                    )}>
+                      {winRate.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Metrics Rows */}
+              <div className="space-y-2">
+                {/* Average R */}
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Average R</span>
+                    <span className={cn(
+                      "text-lg font-bold",
+                      (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive"
+                    )}>
+                      {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}R` : '0R'}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        (metrics?.average_r || 0) >= 0 ? "bg-primary" : "bg-destructive"
+                      )}
+                      style={{ width: `${Math.min(Math.abs(metrics?.average_r || 0) * 20, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Avg Return */}
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Avg Return</span>
+                    <span className={cn(
+                      "text-lg font-bold",
+                      avgReturn > 0 ? "text-primary" : avgReturn < 0 ? "text-destructive" : "text-muted-foreground"
+                    )}>
+                      {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        avgReturn >= 0 ? "bg-primary" : "bg-destructive"
+                      )}
+                      style={{ width: `${Math.min(Math.abs(avgReturn) * 5, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Best Streak */}
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Best Streak</span>
+                    <span className="text-lg font-bold text-amber-400">{bestStreak}</span>
+                  </div>
+                  <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-              
-              {/* Level badge */}
-              <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
-                <span className="text-sm font-black text-primary-foreground">{level}</span>
-              </div>
-            </div>
-            
-            {/* Left Stats Panel - Floating */}
-            <div className="absolute left-4 bottom-8 space-y-2 hidden md:block">
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20 min-w-[120px]">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Total Trades</div>
-                <div className="text-2xl font-black text-foreground">{totalTrades}</div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Record</div>
-                <div className="text-xl font-black">
-                  <span className="text-primary">{metrics?.total_wins || 0}W</span>
-                  <span className="text-muted-foreground mx-1">/</span>
-                  <span className="text-destructive">{metrics?.total_losses || 0}L</span>
+
+              {/* Bottom Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-primary">{totalTrades}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Trades</div>
+                </div>
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 text-center">
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    winRate >= 50 ? "text-primary" : winRate > 0 ? "text-destructive" : "text-muted-foreground"
+                  )}>
+                    {winRate.toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Win</div>
                 </div>
               </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Best Streak</div>
-                <div className="text-2xl font-black text-amber-400">{bestStreak}</div>
-              </div>
-            </div>
-            
-            {/* Right Stats Panel - Floating */}
-            <div className="absolute right-4 bottom-8 space-y-2 hidden md:block">
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20 min-w-[120px]">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Win Rate</div>
-                <div className={cn(
-                  "text-2xl font-black",
-                  winRate >= 50 ? "text-primary" : "text-destructive"
-                )}>
-                  {winRate.toFixed(0)}%
-                </div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">Avg R</div>
-                <div className={cn(
-                  "text-2xl font-black",
-                  (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive"
-                )}>
-                  {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}` : '0'}R
-                </div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-xl p-3 border border-border/20">
-                <div className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">+R Rate</div>
-                <div className={cn(
-                  "text-2xl font-black",
-                  (metrics?.positive_r_percentage || 0) > 50 ? "text-primary" : "text-muted-foreground"
-                )}>
-                  {metrics?.positive_r_percentage ? `${metrics.positive_r_percentage.toFixed(0)}%` : '--'}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Bottom Stats Bar - Mobile */}
-          <div className="md:hidden px-4 pb-4">
-            <div className="grid grid-cols-4 gap-2">
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className="text-lg font-black text-foreground">{totalPredictions}</div>
-                <div className="text-muted-foreground text-[8px] uppercase">Trades</div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className={cn("text-lg font-black", winRate >= 50 ? "text-primary" : "text-destructive")}>
-                  {winRate.toFixed(0)}%
-                </div>
-                <div className="text-muted-foreground text-[8px] uppercase">Win</div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className="text-lg font-black text-amber-400">{bestStreak}</div>
-                <div className="text-muted-foreground text-[8px] uppercase">Streak</div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className={cn("text-lg font-black", (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive")}>
-                  {metrics?.average_r?.toFixed(1) || '0'}R
-                </div>
-                <div className="text-muted-foreground text-[8px] uppercase">Avg R</div>
-              </div>
-            </div>
-            {/* Second row for mobile */}
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className="text-base font-black">
-                  <span className="text-primary">{metrics?.total_wins || 0}</span>
-                  <span className="text-muted-foreground">/</span>
-                  <span className="text-destructive">{metrics?.total_losses || 0}</span>
-                </div>
-                <div className="text-muted-foreground text-[8px] uppercase">W/L</div>
-              </div>
-              <div className="backdrop-blur-md bg-background/40 rounded-lg p-2 text-center border border-border/20">
-                <div className={cn("text-lg font-black", (metrics?.positive_r_percentage || 0) > 50 ? "text-primary" : "text-muted-foreground")}>
-                  {metrics?.positive_r_percentage ? `${metrics.positive_r_percentage.toFixed(0)}%` : '--'}
-                </div>
-                <div className="text-muted-foreground text-[8px] uppercase">+R Rate</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Unlocks indicator */}
-          {totalTrades > 0 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/60 backdrop-blur-sm border border-border/30 rounded-full px-4 py-1.5 z-30">
-              <span className="text-xs text-muted-foreground">
-                🏆 {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
-              </span>
-            </div>
-          )}
-        </div>
-        
-        {/* Trading Metrics Section */}
-        <div className="px-6 pb-6 pt-2">
-          {/* Section Header */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Trading Metrics</span>
-            <div className="flex-1 h-px bg-border/50" />
-          </div>
-          
-          {/* Win Rate Performance Card */}
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 mb-4">
-            <h4 className="text-base font-semibold text-foreground mb-1">Win Rate Performance</h4>
-            <p className="text-xs text-muted-foreground mb-4">Based on risk-adjusted returns</p>
-            
-            {totalTrades < 2 ? (
-              <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-border/30 bg-background/30">
-                <Shield className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Unlocks after 2 trades</span>
-              </div>
-            ) : (
-              <div className="text-center py-2">
-                <span className={cn(
-                  "text-4xl font-bold",
-                  winRate >= 50 ? "text-primary" : "text-destructive"
-                )}>
-                  {winRate.toFixed(1)}%
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {/* Metrics Rows */}
-          <div className="space-y-3">
-            {/* Average R */}
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Average R</span>
-                <span className={cn(
-                  "text-lg font-bold",
-                  (metrics?.average_r || 0) > 0 ? "text-destructive" : (metrics?.average_r || 0) < 0 ? "text-destructive" : "text-muted-foreground"
-                )}>
-                  {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}R` : '0R'}
-                </span>
-              </div>
-              <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    (metrics?.average_r || 0) >= 0 ? "bg-primary" : "bg-destructive"
-                  )}
-                  style={{ width: `${Math.min(Math.abs(metrics?.average_r || 0) * 20, 100)}%` }}
-                />
-              </div>
-            </div>
-            
-            {/* Avg Return */}
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Avg Return</span>
-                <span className={cn(
-                  "text-lg font-bold",
-                  avgReturn > 0 ? "text-primary" : avgReturn < 0 ? "text-destructive" : "text-muted-foreground"
-                )}>
-                  {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
-                </span>
-              </div>
-              <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    avgReturn >= 0 ? "bg-primary" : "bg-destructive"
-                  )}
-                  style={{ width: `${Math.min(Math.abs(avgReturn) * 5, 100)}%` }}
-                />
-              </div>
-            </div>
-            
-            {/* Best Streak */}
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Best Streak</span>
-                <span className="text-lg font-bold text-amber-400">{bestStreak}</span>
-              </div>
-              <div className="mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Bottom Stats */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{totalTrades}</div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Trades</div>
-            </div>
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center">
-              <div className={cn(
-                "text-2xl font-bold",
-                winRate >= 50 ? "text-primary" : winRate > 0 ? "text-destructive" : "text-muted-foreground"
-              )}>
-                {winRate.toFixed(0)}%
-              </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Win</div>
             </div>
           </div>
         </div>
