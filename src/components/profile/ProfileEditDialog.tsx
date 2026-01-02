@@ -204,10 +204,9 @@ export function ProfileEditDialog({
         <DialogTrigger asChild>
           <Button
             variant="default"
-            size="lg"
-            className="gap-2 bg-primary hover:bg-primary/90"
+            className="gap-1.5 sm:gap-2 bg-primary hover:bg-primary/90 h-8 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
             Edit Profile
           </Button>
         </DialogTrigger>
