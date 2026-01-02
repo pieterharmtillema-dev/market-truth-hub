@@ -340,18 +340,32 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     className="border-0"
                   />
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold mb-1 text-foreground drop-shadow-lg">
+                <div className="max-w-md">
+                  <h1 className="text-2xl font-bold mb-1 text-foreground drop-shadow-lg">
                     {profile?.display_name || "Set Your Name"}
                   </h1>
                   <p className="text-sm text-primary drop-shadow-md mb-2">
                     {traderClass} • Level {level}
                   </p>
+                  {profile?.bio && (
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2 drop-shadow-sm">
+                      {profile.bio}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {traderProfile?.trader_category && (
                       <Badge className="bg-background/40 backdrop-blur-sm text-primary border-primary/30">
                         <Zap className="w-3 h-3 mr-1" />
                         {traderProfile.trader_category.replace("_", " ")}
+                      </Badge>
+                    )}
+                    {followersCount > 0 && (
+                      <Badge 
+                        className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30 cursor-pointer hover:bg-background/60"
+                        onClick={onSocialClick}
+                      >
+                        <Users className="w-3 h-3 mr-1" />
+                        {followersCount} follower{followersCount !== 1 ? 's' : ''}
                       </Badge>
                     )}
                   </div>
