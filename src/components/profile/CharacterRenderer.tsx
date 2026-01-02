@@ -82,7 +82,7 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
 
         .character-eyes {
           animation: blink 4s ease-in-out infinite;
-          transform-origin: center;
+          transform-origin: 72px 44px;
         }
 
         .denim-texture {
@@ -252,8 +252,8 @@ function HeadRenderer({ config }: { config: CharacterConfig }) {
   return (
     <g>
       {/* Hair back layer (for styles that go behind head) */}
-      {hairStyle === 'long' && (
-        <ellipse cx="72" cy="52" rx="20" ry="16" fill={hairColor} filter="url(#drop-shadow)" />
+      {(hairStyle === 'long' || hairStyle === 'medium' || hairStyle === 'afro') && (
+        <HairBackLayer hairStyle={hairStyle} hairColor={hairColor} />
       )}
 
       {/* Head shape */}
@@ -304,7 +304,27 @@ function HeadRenderer({ config }: { config: CharacterConfig }) {
   );
 }
 
-// Helper component for hair styles
+// Helper component for hair back layer (rendered behind head)
+function HairBackLayer({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
+  switch (hairStyle) {
+    case 'long':
+      return (
+        <ellipse cx="72" cy="52" rx="20" ry="16" fill={hairColor} filter="url(#drop-shadow)" />
+      );
+    case 'medium':
+      return (
+        <ellipse cx="72" cy="48" rx="17" ry="14" fill={hairColor} filter="url(#drop-shadow)" />
+      );
+    case 'afro':
+      return (
+        <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} filter="url(#drop-shadow)" />
+      );
+    default:
+      return null;
+  }
+}
+
+// Helper component for hair styles (front layer rendered over head)
 function HairRenderer({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
   switch (hairStyle) {
     case 'short':
@@ -317,17 +337,21 @@ function HairRenderer({ hairStyle, hairColor }: { hairStyle: string; hairColor: 
     case 'medium':
       return (
         <g>
+          {/* Top front of hair */}
           <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
-          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
-          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
+          {/* Side locks in front */}
+          <path d="M 56 40 L 56 50" stroke={hairColor} strokeWidth="4" strokeLinecap="round" />
+          <path d="M 88 40 L 88 50" stroke={hairColor} strokeWidth="4" strokeLinecap="round" />
         </g>
       );
     case 'long':
       return (
         <g>
+          {/* Top front of hair */}
           <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
-          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
-          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
+          {/* Front side locks */}
+          <path d="M 54 40 L 54 60" stroke={hairColor} strokeWidth="5" strokeLinecap="round" />
+          <path d="M 90 40 L 90 60" stroke={hairColor} strokeWidth="5" strokeLinecap="round" />
         </g>
       );
     case 'buzz':
@@ -351,9 +375,8 @@ function HairRenderer({ hairStyle, hairColor }: { hairStyle: string; hairColor: 
         </g>
       );
     case 'afro':
-      return (
-        <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} filter="url(#drop-shadow)" />
-      );
+      // For afro, everything is in the back layer
+      return null;
     default:
       return (
         <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
