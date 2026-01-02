@@ -174,8 +174,8 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Specific Asset Filter - Show when category is selected */}
-              {(() => {
+              {/* Specific Asset Filter - Show only when a specific category is selected (not "all") */}
+              {assetFilter !== "all" && (() => {
                 const availableAssets = getAvailableAssets(tradePredictions);
                 if (availableAssets.length === 0) return null;
 
@@ -190,7 +190,7 @@ const Index = () => {
                             : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/30'
                         }`}
                       >
-                        All {assetFilter === 'all' ? 'Assets' : assetFilter === 'crypto' ? 'Coins' : assetFilter === 'forex' ? 'Pairs' : assetFilter === 'stock' ? 'Stocks' : assetFilter === 'commodity' ? 'Commodities' : 'Contracts'}
+                        All {assetFilter === 'crypto' ? 'Coins' : assetFilter === 'forex' ? 'Pairs' : assetFilter === 'stock' ? 'Stocks' : assetFilter === 'commodity' ? 'Commodities' : 'Contracts'}
                       </button>
                       {availableAssets.slice(0, 12).map((asset) => (
                         <button
