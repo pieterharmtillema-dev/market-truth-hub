@@ -568,13 +568,14 @@ export function CharacterCustomizer({
                       ...previewConfig.accessories,
                       necklace: enabled ? {
                         enabled: true,
-                        type: previewConfig.accessories.necklace?.type || 'chain'
+                        type: previewConfig.accessories.necklace?.type || 'chain',
+                        color: previewConfig.accessories.necklace?.color || '#FFD700'
                       } : undefined
                     }
                   })}
                 >
                   {previewConfig.accessories.necklace?.enabled && (
-                    <div className="mt-3">
+                    <div className="space-y-3 mt-3">
                       <Select
                         value={previewConfig.accessories.necklace.type}
                         onValueChange={(value: any) => updateConfig({
@@ -592,6 +593,16 @@ export function CharacterCustomizer({
                           <SelectItem value="pendant">Pendant</SelectItem>
                         </SelectContent>
                       </Select>
+                      <ColorPicker
+                        value={previewConfig.accessories.necklace.color || '#FFD700'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            necklace: { ...previewConfig.accessories.necklace!, color }
+                          }
+                        })}
+                        compact
+                      />
                     </div>
                   )}
                 </AccessoryCard>

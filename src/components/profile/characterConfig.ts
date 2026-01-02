@@ -47,6 +47,7 @@ export interface CharacterConfig {
     necklace?: {
       enabled: boolean;
       type: 'chain' | 'pendant';
+      color?: string;
     };
     backpack?: {
       enabled: boolean;

@@ -797,7 +797,7 @@ function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterC
         filter="url(#drop-shadow)"
       />
 
-      {/* Forearm */}
+      {/* Forearm - show skin for tank tops and none */}
       <rect
         x={x - armWidth/2}
         y="88"
@@ -829,15 +829,131 @@ function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterC
 
       {/* Watch on left wrist */}
       {side === 'left' && config.accessories.watch?.enabled && (
-        <rect
-          x={x - armWidth/2 - 1}
-          y="102"
-          width={armWidth + 2}
-          height="4"
-          rx="1"
-          fill={config.accessories.watch.color}
-          filter="url(#drop-shadow)"
-        />
+        <g>
+          {config.accessories.watch.style === 'digital' ? (
+            // Digital Watch
+            <>
+              {/* Watch band */}
+              <rect
+                x={x - armWidth/2 - 0.5}
+                y="100"
+                width={armWidth + 1}
+                height="6"
+                rx="1"
+                fill={adjustBrightness(config.accessories.watch.color, -30)}
+                filter="url(#drop-shadow)"
+              />
+              {/* Watch face - rectangular digital */}
+              <rect
+                x={x - 4}
+                y="100.5"
+                width="8"
+                height="5"
+                rx="0.5"
+                fill={config.accessories.watch.color}
+                filter="url(#drop-shadow)"
+              />
+              {/* Digital screen */}
+              <rect
+                x={x - 3.5}
+                y="101"
+                width="7"
+                height="4"
+                rx="0.3"
+                fill="#1a1a1a"
+                opacity="0.9"
+              />
+              {/* Digital display numbers */}
+              <text x={x} y="104" fontSize="2" fill="#00FF00" textAnchor="middle" fontFamily="monospace">12:30</text>
+            </>
+          ) : config.accessories.watch.style === 'smart' ? (
+            // Smart Watch
+            <>
+              {/* Watch band - sporty */}
+              <rect
+                x={x - armWidth/2 - 0.5}
+                y="100"
+                width={armWidth + 1}
+                height="6"
+                rx="1.5"
+                fill={adjustBrightness(config.accessories.watch.color, -20)}
+                filter="url(#drop-shadow)"
+              />
+              {/* Watch face - rounded square */}
+              <rect
+                x={x - 3.5}
+                y="100.5"
+                width="7"
+                height="5"
+                rx="1.5"
+                fill={config.accessories.watch.color}
+                filter="url(#drop-shadow)"
+              />
+              {/* Smart screen */}
+              <rect
+                x={x - 3}
+                y="101"
+                width="6"
+                height="4"
+                rx="1"
+                fill="#1a1a1a"
+                opacity="0.9"
+              />
+              {/* Screen glow */}
+              <rect
+                x={x - 2.5}
+                y="101.5"
+                width="5"
+                height="3"
+                rx="0.8"
+                fill="rgba(59, 130, 246, 0.3)"
+              />
+              {/* Digital elements */}
+              <circle cx={x - 1} cy="102.5" r="0.3" fill="#3B82F6" />
+              <circle cx={x + 1} cy="102.5" r="0.3" fill="#10B981" />
+            </>
+          ) : (
+            // Analog Watch
+            <>
+              {/* Watch band */}
+              <rect
+                x={x - armWidth/2 - 0.5}
+                y="100"
+                width={armWidth + 1}
+                height="6"
+                rx="1"
+                fill={adjustBrightness(config.accessories.watch.color, -20)}
+                filter="url(#drop-shadow)"
+              />
+              {/* Watch bezel */}
+              <circle
+                cx={x}
+                cy="103"
+                r="3.5"
+                fill={config.accessories.watch.color}
+                filter="url(#drop-shadow)"
+              />
+              {/* Watch face */}
+              <circle
+                cx={x}
+                cy="103"
+                r="2.8"
+                fill="#F5F5F5"
+              />
+              {/* Hour markers */}
+              <circle cx={x} cy="100.5" r="0.3" fill="#1a1a1a" />
+              <circle cx={x + 2.3} cy="103" r="0.3" fill="#1a1a1a" />
+              <circle cx={x} cy="105.5" r="0.3" fill="#1a1a1a" />
+              <circle cx={x - 2.3} cy="103" r="0.3" fill="#1a1a1a" />
+              {/* Hour hand */}
+              <line x1={x} y1="103" x2={x + 0.8} y2="101.5" stroke="#1a1a1a" strokeWidth="0.4" strokeLinecap="round" />
+              {/* Minute hand */}
+              <line x1={x} y1="103" x2={x + 1.5} y2="104" stroke="#1a1a1a" strokeWidth="0.3" strokeLinecap="round" />
+              {/* Center dot */}
+              <circle cx={x} cy="103" r="0.4" fill="#C0C0C0" />
+            </>
+          )}
+        </g>
       )}
     </g>
   );
@@ -901,27 +1017,92 @@ function AccessoriesRenderer({ config }: { config: CharacterConfig }) {
       {/* Necklace */}
       {config.accessories.necklace?.enabled && (
         <g>
-          <path d="M 66 62 Q 72 64 78 62" stroke="#FFD700" strokeWidth="1.5" fill="none" />
-          {config.accessories.necklace.type === 'pendant' && (
-            <circle cx="72" cy="66" r="2" fill="#FFD700" />
-          )}
+          {/* Get chain color - default to gold if not specified */}
+          {(() => {
+            const chainColor = config.accessories.necklace.color || '#FFD700';
+            return (
+              <>
+                {/* Chain wrapping around neck naturally */}
+                <path
+                  d="M 64 58 Q 72 62 80 58"
+                  stroke={chainColor}
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                {/* Chain detail - individual links */}
+                <circle cx="66" cy="59" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="69" cy="60" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="72" cy="60.5" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="75" cy="60" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                <circle cx="78" cy="59" r="1" fill="none" stroke={chainColor} strokeWidth="0.7" />
+                {/* Chain highlight for metallic shine */}
+                <path
+                  d="M 65 57.5 Q 72 61 79 57.5"
+                  stroke="rgba(255,255,255,0.5)"
+                  strokeWidth="0.8"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                {config.accessories.necklace.type === 'pendant' && (
+                  <>
+                    <circle cx="72" cy="66" r="3.5" fill={chainColor} filter="url(#drop-shadow)" />
+                    <circle cx="72" cy="66" r="2.5" fill={adjustBrightness(chainColor, -20)} />
+                    <circle cx="71" cy="65" r="0.8" fill="rgba(255,255,255,0.7)" />
+                  </>
+                )}
+              </>
+            );
+          })()}
         </g>
       )}
     </g>
   );
 }
 
-// Helper component for backpack
+// Helper component for backpack - only shows straps, body is behind character
 function BackpackRenderer({ color }: { color: string }) {
   return (
     <g>
-      <rect x="66" y="70" width="12" height="18" rx="2" fill={color} filter="url(#drop-shadow)" />
-      <rect x="68" y="74" width="8" height="6" rx="1" fill={adjustBrightness(color, -20)} />
-      <line x1="68" y1="70" x2="68" y2="86" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-      <line x1="76" y1="70" x2="76" y2="86" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-      {/* Straps */}
-      <path d="M 66 72 L 60 78" stroke={adjustBrightness(color, -30)} strokeWidth="2" />
-      <path d="M 78 72 L 84 78" stroke={adjustBrightness(color, -30)} strokeWidth="2" />
+      {/* Left strap - from behind character over left shoulder */}
+      <path
+        d="M 66 68 Q 62 70 60 76"
+        stroke={adjustBrightness(color, -30)}
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+        filter="url(#drop-shadow)"
+      />
+      {/* Left strap highlight */}
+      <path
+        d="M 66.5 68 Q 62.5 70 60.5 75"
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="1"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Right strap - from behind character over right shoulder */}
+      <path
+        d="M 78 68 Q 82 70 84 76"
+        stroke={adjustBrightness(color, -30)}
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+        filter="url(#drop-shadow)"
+      />
+      {/* Right strap highlight */}
+      <path
+        d="M 77.5 68 Q 81.5 70 83.5 75"
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="1"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Strap buckles/clips on chest */}
+      <rect x="59" y="76" width="2.5" height="2" rx="0.5" fill={color} filter="url(#drop-shadow)" />
+      <rect x="82.5" y="76" width="2.5" height="2" rx="0.5" fill={color} filter="url(#drop-shadow)" />
     </g>
   );
 }
