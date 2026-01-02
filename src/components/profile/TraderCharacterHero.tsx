@@ -431,7 +431,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     )}
                     {(followersCount > 0 || followingCount > 0) && (
                       <Badge
-                        className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30 cursor-pointer hover:bg-background/60"
+                        className="bg-primary/10 backdrop-blur-sm text-primary border-primary/40 cursor-pointer hover:bg-primary/20 transition-colors"
                         onClick={onSocialClick}
                       >
                         <Users className="w-3 h-3 mr-1" />
