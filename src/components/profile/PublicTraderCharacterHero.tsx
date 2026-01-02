@@ -10,7 +10,6 @@ import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig } from "./characterConfig";
 import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
 import { FAKE_PROFILES, FAKE_TRADER_META } from "@/lib/fakeProfiles";
-import { parsePremiumConfig, PremiumAvatarConfig } from "./avatar";
 import {
   Trophy,
   TrendingUp,
@@ -26,70 +25,6 @@ import {
   Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Convert PremiumAvatarConfig to CharacterConfig
-const premiumToCharacterConfig = (premium: PremiumAvatarConfig): CharacterConfig => {
-  // Map outfit types
-  const outfitMap: Record<string, 'tshirt' | 'hoodie' | 'business' | 'suit'> = {
-    'tee': 'tshirt',
-    'hoodie': 'hoodie',
-    'blazer': 'business',
-    'jacket': 'suit',
-    'sweater': 'hoodie',
-    'polo': 'tshirt',
-  };
-
-  // Map hair styles
-  const hairMap: Record<string, 'short' | 'medium' | 'long' | 'buzz' | 'bald'> = {
-    'none': 'bald',
-    'short': 'short',
-    'fade': 'short',
-    'undercut': 'short',
-    'waves': 'medium',
-    'bun': 'medium',
-    'ponytail': 'long',
-    'curls': 'medium',
-    'buzz': 'buzz',
-    'slick': 'short',
-  };
-
-  return {
-    skinTone: premium.skinTone,
-    bodyType: 'athletic',
-    height: 1.0,
-    face: {
-      hairStyle: hairMap[premium.hairStyle] || 'short',
-      hairColor: premium.hairColor,
-      eyeColor: premium.irisColor,
-      facialHair: premium.facialHair,
-    },
-    top: {
-      type: outfitMap[premium.outfit] || 'hoodie',
-      color: premium.outfitColor,
-      graphic: 'none',
-    },
-    bottom: {
-      type: 'jeans',
-      color: '#1A1A1A',
-    },
-    shoes: {
-      type: 'sneakers',
-      color: '#1C1C1C',
-    },
-    accessories: {
-      sunglasses: premium.glasses !== 'none' ? {
-        enabled: true,
-        style: premium.glasses === 'dark' ? 'aviator' : 'round',
-        color: premium.glasses === 'dark' ? '#1A1A1A' : '#E0E0E0',
-      } : undefined,
-      watch: premium.watch ? {
-        enabled: true,
-        style: 'smart',
-        color: '#1C1C1C',
-      } : undefined,
-    },
-  };
-};
 
 interface Profile {
   display_name: string | null;
@@ -228,14 +163,14 @@ export function PublicTraderCharacterHero({
             display_name: fakeProfile.display_name,
             avatar_url: fakeProfile.avatar_url,
             bio: fakeProfile.bio,
-            character_config: null,
+            character_config: fakeProfile.avatar_url, // Store the character config here
           });
 
-          // Parse avatar_url to get character config
-          if (fakeProfile.avatar_url?.startsWith('avatar:')) {
-            const premiumConfig = parsePremiumConfig(fakeProfile.avatar_url);
-            if (premiumConfig) {
-              setCharacterConfig(premiumToCharacterConfig(premiumConfig));
+          // Parse avatar_url as character config (it's now a serialized CharacterConfig)
+          if (fakeProfile.avatar_url) {
+            const parsed = parseCharacterConfig(fakeProfile.avatar_url);
+            if (parsed) {
+              setCharacterConfig(parsed);
             }
           }
 
@@ -270,14 +205,6 @@ export function PublicTraderCharacterHero({
             bio: profileData.bio,
             character_config: null, // Not exposed in public view
           });
-
-          // Try to parse avatar_url as premium config and convert to character config
-          if (profileData.avatar_url?.startsWith('avatar:')) {
-            const premiumConfig = parsePremiumConfig(profileData.avatar_url);
-            if (premiumConfig) {
-              setCharacterConfig(premiumToCharacterConfig(premiumConfig));
-            }
-          }
         }
 
         // Fetch additional profile info for character config (if they have one set explicitly)
