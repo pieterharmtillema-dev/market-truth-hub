@@ -59,7 +59,7 @@ export function calculateUnlocks(
 
 interface HeroEnvironmentProps {
   unlocks: EnvironmentUnlocks;
-  theme?: 'day' | 'night' | 'sunset';
+  theme?: 'day' | 'night' | 'sunset' | 'asian' | 'london' | 'newyork';
   className?: string;
 }
 
@@ -75,6 +75,24 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
         return {
           sky: 'from-orange-500 via-pink-400 to-purple-600',
           ground: 'from-orange-900 to-purple-900',
+        };
+      case 'asian':
+        // Tokyo sunrise - pink, orange, purple
+        return {
+          sky: 'from-pink-300 via-orange-300 to-purple-400',
+          ground: 'from-red-900 to-purple-900',
+        };
+      case 'london':
+        // London grey/blue foggy morning
+        return {
+          sky: 'from-slate-400 via-blue-300 to-slate-200',
+          ground: 'from-slate-700 to-slate-800',
+        };
+      case 'newyork':
+        // NYC golden hour / Wall Street golden tones
+        return {
+          sky: 'from-amber-400 via-yellow-300 to-orange-400',
+          ground: 'from-amber-900 to-orange-900',
         };
       default: // night
         return {
