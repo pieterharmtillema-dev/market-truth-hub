@@ -428,13 +428,29 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                         {traderProfile.trader_category.replace("_", " ")}
                       </Badge>
                     )}
+                    <Badge className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30">
+                      <BarChart3 className="w-3 h-3 mr-1" />
+                      {totalTrades} trade{totalTrades !== 1 ? 's' : ''}
+                    </Badge>
                     {followersCount > 0 && (
-                      <Badge 
+                      <Badge
                         className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30 cursor-pointer hover:bg-background/60"
                         onClick={onSocialClick}
                       >
                         <Users className="w-3 h-3 mr-1" />
                         {followersCount} follower{followersCount !== 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                    {traderProfile?.holding_time && (
+                      <Badge className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {formatHoldingTime(traderProfile.holding_time)}
+                      </Badge>
+                    )}
+                    {traderProfile?.risk_per_trade && (
+                      <Badge className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30">
+                        <Shield className="w-3 h-3 mr-1" />
+                        {formatRisk(traderProfile.risk_per_trade)}
                       </Badge>
                     )}
                   </div>
