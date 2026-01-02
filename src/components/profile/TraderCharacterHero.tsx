@@ -404,7 +404,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
               <div className="flex items-start gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
                   {/* Character upper body portrait - head prominently focused */}
-                  <svg viewBox="42 28 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
+                  <svg viewBox="42 24 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" stopColor={adjustBrightness(characterConfig.skinTone, 10)} stopOpacity="1" />
