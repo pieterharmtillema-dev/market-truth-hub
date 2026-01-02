@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG } from "./characterConfig";
 
 interface CharacterRendererProps {
@@ -20,6 +21,11 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
   };
 
   const scale = config.height;
+
+  // Generate unique IDs for gradients based on skinTone to ensure reactivity when color changes
+  const gradientId = useMemo(() => {
+    return config.skinTone.replace('#', '');
+  }, [config.skinTone]);
 
   // Body width adjustments based on body type
   const bodyWidthMultiplier = {
@@ -132,12 +138,12 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
       >
         <defs>
           {/* Gradients for depth */}
-          <linearGradient id="body-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={`body-gradient-${gradientId}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={config.skinTone} stopOpacity="1" />
             <stop offset="100%" stopColor={adjustBrightness(config.skinTone, -20)} stopOpacity="1" />
           </linearGradient>
 
-          <linearGradient id="head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id={`head-gradient-${gradientId}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={adjustBrightness(config.skinTone, 10)} stopOpacity="1" />
             <stop offset="100%" stopColor={config.skinTone} stopOpacity="1" />
           </linearGradient>
@@ -188,10 +194,10 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
         )}
 
         {/* Legs */}
-        <BottomRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} />
+        <BottomRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} gradientId={gradientId} />
 
         {/* Shoes */}
-        <ShoesRenderer config={config} />
+        <ShoesRenderer config={config} gradientId={gradientId} />
 
         {/* Body/Torso */}
         <g className="character-body">
@@ -202,12 +208,12 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
             width={6 * bodyWidthMultiplier}
             height="8"
             rx="3"
-            fill="url(#body-gradient)"
+            fill={`url(#body-gradient-${gradientId})`}
             filter="url(#drop-shadow)"
           />
 
           {/* Torso */}
-          <TopRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} />
+          <TopRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} gradientId={gradientId} />
 
           {/* Belt */}
           {config.accessories.belt?.enabled && (
@@ -225,10 +231,10 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
 
         {/* Arms */}
         <g className="character-arm-left" style={{ transformOrigin: '56px 70px' }}>
-          <ArmRenderer config={config} side="left" bodyWidthMultiplier={bodyWidthMultiplier} />
+          <ArmRenderer config={config} side="left" bodyWidthMultiplier={bodyWidthMultiplier} gradientId={gradientId} />
         </g>
         <g className="character-arm-right" style={{ transformOrigin: '88px 70px' }}>
-          <ArmRenderer config={config} side="right" bodyWidthMultiplier={bodyWidthMultiplier} />
+          <ArmRenderer config={config} side="right" bodyWidthMultiplier={bodyWidthMultiplier} gradientId={gradientId} />
         </g>
 
         {/* Backpack (behind character but above body) */}
@@ -237,7 +243,7 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
         )}
 
         {/* Head - Unified with body skin tone */}
-        <HeadRenderer config={config} />
+        <HeadRenderer config={config} gradientId={gradientId} />
 
         {/* Accessories on head/face */}
         <AccessoriesRenderer config={config} />
@@ -250,7 +256,7 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
 }
 
 // Helper component for rendering the head with matching skin tone
-function HeadRenderer({ config }: { config: CharacterConfig }) {
+function HeadRenderer({ config, gradientId }: { config: CharacterConfig; gradientId: string }) {
   const hairColor = config.face?.hairColor || '#2D1B0E';
   const hairStyle = config.face?.hairStyle || 'short';
   const eyeColor = config.face?.eyeColor || '#4A90D9';
@@ -268,7 +274,7 @@ function HeadRenderer({ config }: { config: CharacterConfig }) {
         cy="44"
         rx="16"
         ry="18"
-        fill="url(#head-gradient)"
+        fill={`url(#head-gradient-${gradientId})`}
         filter="url(#drop-shadow)"
       />
 
@@ -398,7 +404,7 @@ function FacialHairRenderer({ style, color }: { style: string; color: string }) 
 }
 
 // Helper component for rendering tops
-function TopRenderer({ config, bodyWidthMultiplier }: { config: CharacterConfig; bodyWidthMultiplier: number }) {
+function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: CharacterConfig; bodyWidthMultiplier: number; gradientId: string }) {
   const baseX = 72 - (10 * bodyWidthMultiplier);
   const width = 20 * bodyWidthMultiplier;
   const color = config.top.color;
@@ -547,7 +553,7 @@ function TopRenderer({ config, bodyWidthMultiplier }: { config: CharacterConfig;
           width={width}
           height="32"
           rx="6"
-          fill="url(#body-gradient)"
+          fill={`url(#body-gradient-${gradientId})`}
           filter="url(#drop-shadow)"
         />
       );
@@ -555,7 +561,7 @@ function TopRenderer({ config, bodyWidthMultiplier }: { config: CharacterConfig;
 }
 
 // Helper component for rendering bottoms
-function BottomRenderer({ config, bodyWidthMultiplier }: { config: CharacterConfig; bodyWidthMultiplier: number }) {
+function BottomRenderer({ config, bodyWidthMultiplier, gradientId }: { config: CharacterConfig; bodyWidthMultiplier: number; gradientId: string }) {
   const color = config.bottom.color;
   const leftX = 72 - (8 * bodyWidthMultiplier);
   const rightX = 72 + (1 * bodyWidthMultiplier);
@@ -664,8 +670,8 @@ function BottomRenderer({ config, bodyWidthMultiplier }: { config: CharacterConf
           <line x1={rightX} y1="123" x2={rightX + legWidth} y2="123" stroke={adjustBrightness(color, -10)} strokeWidth="1" />
 
           {/* Bare legs below shorts */}
-          <rect x={leftX} y="124" width={legWidth} height="44" rx="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
-          <rect x={rightX} y="124" width={legWidth} height="44" rx="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
+          <rect x={leftX} y="124" width={legWidth} height="44" rx="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
+          <rect x={rightX} y="124" width={legWidth} height="44" rx="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
         </g>
       );
 
@@ -698,15 +704,15 @@ function BottomRenderer({ config, bodyWidthMultiplier }: { config: CharacterConf
       // None - bare legs
       return (
         <g>
-          <rect x={leftX} y="100" width={legWidth} height="68" rx="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
-          <rect x={rightX} y="100" width={legWidth} height="68" rx="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
+          <rect x={leftX} y="100" width={legWidth} height="68" rx="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
+          <rect x={rightX} y="100" width={legWidth} height="68" rx="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
         </g>
       );
   }
 }
 
 // Helper component for rendering shoes
-function ShoesRenderer({ config }: { config: CharacterConfig }) {
+function ShoesRenderer({ config, gradientId }: { config: CharacterConfig; gradientId: string }) {
   const color = config.shoes.color;
 
   switch (config.shoes.type) {
@@ -776,15 +782,15 @@ function ShoesRenderer({ config }: { config: CharacterConfig }) {
       // None - bare feet
       return (
         <g>
-          <ellipse cx="65" cy="173" rx="6" ry="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
-          <ellipse cx="79" cy="173" rx="6" ry="3" fill="url(#body-gradient)" filter="url(#drop-shadow)" />
+          <ellipse cx="65" cy="173" rx="6" ry="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
+          <ellipse cx="79" cy="173" rx="6" ry="3" fill={`url(#body-gradient-${gradientId})`} filter="url(#drop-shadow)" />
         </g>
       );
   }
 }
 
 // Helper component for rendering arms
-function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterConfig; side: 'left' | 'right'; bodyWidthMultiplier: number }) {
+function ArmRenderer({ config, side, bodyWidthMultiplier, gradientId }: { config: CharacterConfig; side: 'left' | 'right'; bodyWidthMultiplier: number; gradientId: string }) {
   const x = side === 'left' ? 56 : 88;
   const armWidth = 6 * bodyWidthMultiplier;
 
@@ -802,7 +808,7 @@ function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterC
         width={armWidth}
         height="20"
         rx="3"
-        fill={sleeveColor || 'url(#body-gradient)'}
+        fill={sleeveColor || `url(#body-gradient-${gradientId})`}
         className={sleeveColor ? 'cotton-fabric' : ''}
         filter="url(#drop-shadow)"
       />
@@ -814,7 +820,7 @@ function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterC
         width={armWidth}
         height="16"
         rx="3"
-        fill={config.top.type === 'business' || config.top.type === 'suit' ? sleeveColor : 'url(#body-gradient)'}
+        fill={config.top.type === 'business' || config.top.type === 'suit' ? sleeveColor : `url(#body-gradient-${gradientId})`}
         filter="url(#drop-shadow)"
       />
 
@@ -824,7 +830,7 @@ function ArmRenderer({ config, side, bodyWidthMultiplier }: { config: CharacterC
         cy="106"
         rx={armWidth * 0.7}
         ry="4"
-        fill={config.special?.diamondHands ? '#60A5FA' : 'url(#body-gradient)'}
+        fill={config.special?.diamondHands ? '#60A5FA' : `url(#body-gradient-${gradientId})`}
         filter="url(#drop-shadow)"
       />
 
