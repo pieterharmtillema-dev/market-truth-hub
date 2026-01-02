@@ -277,63 +277,6 @@ const Profile = () => {
           />
         )}
 
-        {/* Trader Profile Details */}
-        {traderProfileData && (
-          <Card variant="glass" className="p-4">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Trader Profile
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {traderCategory && (
-                <div className="flex flex-col p-3 rounded-lg bg-background/40 border border-border/30">
-                  <span className="text-xs text-muted-foreground mb-2">Category</span>
-                  <Badge className="bg-primary/20 text-primary border-primary/30 w-fit">
-                    {traderCategory.replace("_", " ")}
-                  </Badge>
-                </div>
-              )}
-              {traderProfileData.holding_time && (
-                <div className="flex flex-col p-3 rounded-lg bg-background/40 border border-border/30">
-                  <span className="text-xs text-muted-foreground mb-2">Holding Time</span>
-                  <span className="text-sm font-medium">
-                    {traderProfileData.holding_time.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
-                  </span>
-                </div>
-              )}
-              {traderProfileData.risk_per_trade && (
-                <div className="flex flex-col p-3 rounded-lg bg-background/40 border border-border/30">
-                  <span className="text-xs text-muted-foreground mb-2">Risk Per Trade</span>
-                  <span className="text-sm font-medium">
-                    {traderProfileData.risk_per_trade === "less_than_1" ? "< 1%" :
-                     traderProfileData.risk_per_trade === "1_to_2" ? "1-2%" :
-                     traderProfileData.risk_per_trade === "2_to_5" ? "2-5%" :
-                     traderProfileData.risk_per_trade === "5_to_10" ? "5-10%" :
-                     traderProfileData.risk_per_trade === "more_than_10" ? "> 10%" :
-                     traderProfileData.risk_per_trade}
-                  </span>
-                </div>
-              )}
-              {traderProfileData.decision_style && (
-                <div className="flex flex-col p-3 rounded-lg bg-background/40 border border-border/30">
-                  <span className="text-xs text-muted-foreground mb-2">Decision Style</span>
-                  <span className="text-sm font-medium">
-                    {traderProfileData.decision_style.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
-                  </span>
-                </div>
-              )}
-              {traderProfileData.experience_level && (
-                <div className="flex flex-col p-3 rounded-lg bg-background/40 border border-border/30">
-                  <span className="text-xs text-muted-foreground mb-2">Experience Level</span>
-                  <span className="text-sm font-medium">
-                    {traderProfileData.experience_level.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
-
         {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">

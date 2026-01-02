@@ -431,11 +431,14 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                     )}
                     {(followersCount > 0 || followingCount > 0) && (
                       <Badge
-                        className="bg-primary/10 backdrop-blur-sm text-primary border-primary/40 cursor-pointer hover:bg-primary/20 transition-colors"
+                        className="bg-gradient-to-r from-primary/20 to-primary/10 backdrop-blur-sm text-primary border-primary/50 cursor-pointer hover:from-primary/30 hover:to-primary/20 transition-all shadow-sm"
                         onClick={onSocialClick}
                       >
-                        <Users className="w-3 h-3 mr-1" />
-                        {followersCount} follower{followersCount !== 1 ? 's' : ''} • {followingCount} following
+                        <Users className="w-3.5 h-3.5 mr-1.5" />
+                        <span className="font-semibold">{followersCount}</span>
+                        <span className="mx-1 opacity-60">•</span>
+                        <span className="font-semibold">{followingCount}</span>
+                        <span className="ml-1 text-[10px] opacity-80">following</span>
                       </Badge>
                     )}
                     {traderProfile?.holding_time && (
