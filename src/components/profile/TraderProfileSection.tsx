@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Edit3, Loader2, Check, Clock, TrendingUp, Brain, Heart, Award } from "lucide-react";
+import { Edit3, Loader2, Check, Clock, TrendingUp, Brain, Heart, Award, Globe } from "lucide-react";
 import { onboardingQuestions, TraderProfileAnswers } from "@/data/onboardingQuestions";
 import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 
@@ -26,6 +26,7 @@ const dimensionIcons: Record<string, React.ReactNode> = {
   decision_style: <Brain className="w-4 h-4" />,
   loss_response: <Heart className="w-4 h-4" />,
   experience_level: <Award className="w-4 h-4" />,
+  trading_session: <Globe className="w-4 h-4" />,
 };
 
 const getAnswerLabel = (questionId: string, value: string): string => {
@@ -60,6 +61,7 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
           decision_style: data.decision_style,
           loss_response: data.loss_response,
           experience_level: data.experience_level,
+          trading_session: data.trading_session,
         });
       }
       setLoading(false);
@@ -146,7 +148,8 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
     profile.trade_frequency ||
     profile.decision_style ||
     profile.loss_response ||
-    profile.experience_level
+    profile.experience_level ||
+    profile.trading_session
   );
 
   if (loading) {
@@ -277,6 +280,12 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
               <Badge variant="secondary" className="gap-1.5 py-1">
                 {dimensionIcons.experience_level}
                 {getAnswerLabel("experience_level", profile.experience_level)}
+              </Badge>
+            )}
+            {profile.trading_session && (
+              <Badge variant="secondary" className="gap-1.5 py-1">
+                {dimensionIcons.trading_session}
+                {getAnswerLabel("trading_session", profile.trading_session)}
               </Badge>
             )}
           </div>

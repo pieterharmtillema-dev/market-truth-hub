@@ -71,6 +71,7 @@ export interface PublicProfile {
   created_at: string | null;
   is_verified?: boolean;
   trader_category?: TraderCategory;
+  trading_session?: string | null;
 }
 
 export interface FakeTraderMeta {
@@ -79,6 +80,7 @@ export interface FakeTraderMeta {
   experience_level: string;
   holding_time: string;
   trade_frequency: string;
+  trading_session?: string;
   win_rate: number;
   average_r: number;
   total_trades: number;

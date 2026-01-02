@@ -36,7 +36,8 @@ import {
   CheckCircle2,
   Shield,
   TrendingDown,
-  Percent
+  Percent,
+  Globe
 } from "lucide-react";
 
 function getTimeAgo(dateString: string): string {
@@ -272,6 +273,13 @@ const TraderProfile = () => {
                   <span className="text-muted-foreground">Platform:</span>
                   <span className="font-medium">{traderMeta.platform}</span>
                 </div>
+                {traderMeta.trading_session && (
+                  <div className="flex items-center gap-2 text-sm col-span-2">
+                    <Globe className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Session:</span>
+                    <span className="font-medium capitalize">{traderMeta.trading_session.replace(/_/g, ' ')}</span>
+                  </div>
+                )}
                 {traderMeta.asset_focus && traderMeta.asset_focus.length > 0 && (
                   <div className="flex items-center gap-2 text-sm col-span-2">
                     <Target className="w-4 h-4 text-muted-foreground" />

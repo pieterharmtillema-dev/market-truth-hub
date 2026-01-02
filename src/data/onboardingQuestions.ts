@@ -204,6 +204,44 @@ export const onboardingQuestions: OnboardingQuestion[] = [
       },
     ],
   },
+  {
+    id: "trading_session",
+    question: "What session do you primarily trade?",
+    description: "Understanding when you trade helps tailor market alerts and insights.",
+    dimension: "Trading Session",
+    options: [
+      {
+        value: "asian",
+        label: "Asian Session",
+        description: "Tokyo, Hong Kong, Singapore (00:00-09:00 GMT)",
+        tags: ["session_asian", "timezone_asia"],
+      },
+      {
+        value: "london",
+        label: "London Session",
+        description: "European markets (08:00-17:00 GMT)",
+        tags: ["session_london", "timezone_europe"],
+      },
+      {
+        value: "new_york",
+        label: "New York Session",
+        description: "US markets (13:00-22:00 GMT)",
+        tags: ["session_new_york", "timezone_us"],
+      },
+      {
+        value: "overlap",
+        label: "Session Overlap",
+        description: "Trade during London/NY overlap",
+        tags: ["session_overlap", "high_volatility"],
+      },
+      {
+        value: "all_sessions",
+        label: "All Sessions",
+        description: "Trade across multiple time zones",
+        tags: ["session_all", "flexible_schedule"],
+      },
+    ],
+  },
 ];
 
 export type TraderProfileAnswers = {
@@ -213,4 +251,5 @@ export type TraderProfileAnswers = {
   decision_style?: string;
   loss_response?: string;
   experience_level?: string;
+  trading_session?: string;
 };
