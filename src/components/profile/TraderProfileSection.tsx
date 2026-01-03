@@ -91,31 +91,55 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
         // Continue without category if derivation fails
       }
 
-      // Build update object with only defined values
+      // Build update object with all fields (null for undefined)
       const updateData: any = {
         user_id: userId,
+        holding_time: editAnswers.holding_time || null,
+        risk_per_trade: editAnswers.risk_per_trade || null,
+        trade_frequency: editAnswers.trade_frequency || null,
+        decision_style: editAnswers.decision_style || null,
+        loss_response: editAnswers.loss_response || null,
+        experience_level: editAnswers.experience_level || null,
+        trading_session: editAnswers.trading_session || null,
+        trader_category: traderCategory,
         onboarding_completed: true,
         onboarding_skipped: false,
       };
 
-      // Add each field from editAnswers if it has a value
-      if (editAnswers.holding_time) updateData.holding_time = editAnswers.holding_time;
-      if (editAnswers.risk_per_trade) updateData.risk_per_trade = editAnswers.risk_per_trade;
-      if (editAnswers.trade_frequency) updateData.trade_frequency = editAnswers.trade_frequency;
-      if (editAnswers.decision_style) updateData.decision_style = editAnswers.decision_style;
-      if (editAnswers.loss_response) updateData.loss_response = editAnswers.loss_response;
-      if (editAnswers.experience_level) updateData.experience_level = editAnswers.experience_level;
-      if (editAnswers.trading_session) updateData.trading_session = editAnswers.trading_session;
-      if (traderCategory) updateData.trader_category = traderCategory;
+      console.log("Saving trader profile with data:", updateData);
 
-      // Use upsert to handle both insert and update cases
-      const { error } = await supabase
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
         .from("trader_profiles")
-        .upsert(updateData, {
-          onConflict: 'user_id'
-        });
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (error) throw error;
+      let result;
+      if (existingProfile) {
+        // Update existing profile
+        result = await supabase
+          .from("trader_profiles")
+          .update(updateData)
+          .eq("user_id", userId)
+          .select();
+      } else {
+        // Insert new profile
+        result = await supabase
+          .from("trader_profiles")
+          .insert(updateData)
+          .select();
+      }
+
+      const { error, data } = result;
+
+      if (error) {
+        console.error("Save error details:", error);
+        console.error("Update data being sent:", updateData);
+        throw error;
+      }
+
+      console.log("Profile saved successfully:", data);
 
       setProfile(prev => prev ? { ...prev, ...editAnswers, trader_category: traderCategory as any, onboarding_completed: true } : null);
       setEditOpen(false);
