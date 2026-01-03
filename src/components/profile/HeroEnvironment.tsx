@@ -64,6 +64,19 @@ interface HeroEnvironmentProps {
 }
 
 export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: HeroEnvironmentProps) {
+  const backgroundImage = useMemo(() => {
+    switch (theme) {
+      case 'asian':
+        return '/images/trading-sessions/asian-session.jpg';
+      case 'london':
+        return '/images/trading-sessions/london-session.jpg';
+      case 'newyork':
+        return '/images/trading-sessions/newyork-session.jpg';
+      default:
+        return null;
+    }
+  }, [theme]);
+
   const gradients = useMemo(() => {
     switch (theme) {
       case 'day':
@@ -104,8 +117,19 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
 
   return (
     <div className={`absolute inset-0 overflow-hidden ${className}`}>
-      {/* Sky gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-b ${gradients.sky}`} />
+      {/* Background Image or Sky gradient */}
+      {backgroundImage ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+          />
+          {/* Subtle overlay to blend with UI */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/50" />
+        </>
+      ) : (
+        <div className={`absolute inset-0 bg-gradient-to-b ${gradients.sky}`} />
+      )}
       
       {/* Stars (night only) */}
       {theme === 'night' && (
