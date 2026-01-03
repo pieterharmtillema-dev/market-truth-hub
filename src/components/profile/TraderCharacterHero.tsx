@@ -310,6 +310,32 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
     };
 
     fetchData();
+
+    // Subscribe to trader profile changes for real-time updates
+    const channel = supabase
+      .channel('trader_profile_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'trader_profiles',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('Trader profile updated:', payload);
+          // Update trader profile state with new data
+          if (payload.new) {
+            setTraderProfile(payload.new as TraderProfile);
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const handleProfileUpdate = (data: { display_name: string; avatar_url: string; bio: string }) => {
