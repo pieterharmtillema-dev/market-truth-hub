@@ -39,7 +39,6 @@ interface TraderProfile {
   decision_style: string | null;
   experience_level: string | null;
   trader_category: TraderCategory | null;
-  trading_session: string | null;
 }
 
 interface PublicTraderCharacterHeroProps {
@@ -196,7 +195,6 @@ export function PublicTraderCharacterHero({
             decision_style: null,
             experience_level: fakeMeta.experience_level,
             trader_category: fakeProfile.trader_category || null,
-            trading_session: fakeMeta.trading_session || null,
           });
 
           setTotalTrades(fakeMeta.total_trades);
@@ -241,7 +239,7 @@ export function PublicTraderCharacterHero({
         // Fetch trader profile data (publicly readable fields)
         const { data: traderData } = await supabase
           .from("trader_profiles")
-          .select("holding_time, risk_per_trade, decision_style, experience_level, trader_category, trading_session")
+          .select("holding_time, risk_per_trade, decision_style, experience_level, trader_category")
           .eq("user_id", userId)
           .maybeSingle();
 
@@ -297,7 +295,7 @@ export function PublicTraderCharacterHero({
   }
 
   const traderClass = getTradeClass(traderProfile?.holding_time);
-  const environmentTheme = getSessionTheme(traderProfile?.trading_session);
+  const environmentTheme = getSessionTheme(null);
 
   return (
     <>

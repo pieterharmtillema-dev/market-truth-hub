@@ -61,7 +61,6 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
           decision_style: data.decision_style,
           loss_response: data.loss_response,
           experience_level: data.experience_level,
-          trading_session: data.trading_session,
         });
       }
       setLoading(false);
@@ -100,7 +99,6 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
         decision_style: editAnswers.decision_style || null,
         loss_response: editAnswers.loss_response || null,
         experience_level: editAnswers.experience_level || null,
-        trading_session: editAnswers.trading_session || null,
         trader_category: traderCategory,
         onboarding_completed: true,
         onboarding_skipped: false,
