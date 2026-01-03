@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { FollowButton } from "./FollowButton";
 import { toast } from "sonner";
+import { FAKE_PROFILES } from "@/hooks/fakeTraderData";
 
 interface UserSearchResult {
   user_id: string;
@@ -28,6 +29,18 @@ export function UserSearch({ currentUserId, isFollowing, onFollow, onUnfollow }:
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  const fakeTraderEntries = Object.entries(FAKE_PROFILES).map(([userId, profile]) => ({
+    user_id: userId,
+    display_name: profile.display_name,
+    avatar_url: profile.avatar_url,
+    total_predictions: profile.total_predictions,
+    total_hits: profile.total_hits,
+  }));
+
+  const filteredFakeTraders = fakeTraderEntries.filter((trader) =>
+    trader.display_name?.toLowerCase().includes(query.trim().toLowerCase()) || query.trim() === ""
+  );
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -74,7 +87,7 @@ export function UserSearch({ currentUserId, isFollowing, onFollow, onUnfollow }:
         </Button>
       </div>
 
-      {searched && results.length === 0 && !loading && (
+      {searched && results.length === 0 && filteredFakeTraders.length === 0 && !loading && (
         <p className="text-sm text-muted-foreground text-center py-4">
           No users found for "{query}"
         </p>
@@ -126,6 +139,48 @@ export function UserSearch({ currentUserId, isFollowing, onFollow, onUnfollow }:
           })}
         </div>
       )}
+
+      <div className="mt-4 space-y-2">
+        <p className="text-xs uppercase text-muted-foreground tracking-wide">Featured fake traders</p>
+        {filteredFakeTraders.length === 0 && query.trim() !== "" ? (
+          <p className="text-sm text-muted-foreground">No featured traders match your search.</p>
+        ) : (
+          filteredFakeTraders.map((user) => {
+            const accuracy = user.total_predictions && user.total_predictions > 0
+              ? Math.round((user.total_hits || 0) / user.total_predictions * 100)
+              : null;
+
+            return (
+              <Card key={user.user_id} variant="glass" className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border border-border">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/20 text-primary">
+                        {(user.display_name || "U").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{user.display_name || "Trader"}</p>
+                      {accuracy !== null && (
+                        <p className="text-xs text-muted-foreground">
+                          {accuracy}% accuracy • {user.total_predictions} trades
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <FollowButton
+                    targetUserId={user.user_id}
+                    isFollowing={isFollowing(user.user_id)}
+                    onFollow={onFollow}
+                    onUnfollow={onUnfollow}
+                  />
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isFakeTrader } from "@/hooks/usePublicPredictions";
+import { FAKE_PROFILES } from "@/hooks/fakeTraderData";
 
 interface FollowerUser {
   user_id: string;
@@ -20,6 +22,7 @@ interface FollowersListProps {
 export function FollowersList({ followerIds }: FollowersListProps) {
   const [users, setUsers] = useState<FollowerUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (followerIds.length === 0) {
@@ -31,13 +34,42 @@ export function FollowersList({ followerIds }: FollowersListProps) {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("public_profiles")
-          .select("user_id, display_name, avatar_url, total_predictions, total_hits")
-          .in("user_id", followerIds);
+        const realIds = followerIds.filter((id) => !isFakeTrader(id));
+        const fakeIds = followerIds.filter((id) => isFakeTrader(id));
 
-        if (error) throw error;
-        setUsers(data || []);
+        let realUsers: FollowerUser[] = [];
+        if (realIds.length > 0) {
+          const { data, error } = await supabase
+            .from("public_profiles")
+            .select("user_id, display_name, avatar_url, total_predictions, total_hits")
+            .in("user_id", realIds);
+
+          if (error) throw error;
+          realUsers = data || [];
+        }
+
+        const fakeUsers: FollowerUser[] = fakeIds
+          .map((id) => {
+            const profile = FAKE_PROFILES[id];
+            if (!profile) return null;
+            return {
+              user_id: id,
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              total_predictions: profile.total_predictions,
+              total_hits: profile.total_hits,
+            } as FollowerUser;
+          })
+          .filter((user): user is FollowerUser => Boolean(user));
+
+        const lookup = new Map<string, FollowerUser>();
+        [...realUsers, ...fakeUsers].forEach((user) => lookup.set(user.user_id, user));
+
+        const orderedUsers = followerIds
+          .map((id) => lookup.get(id))
+          .filter((user): user is FollowerUser => Boolean(user));
+
+        setUsers(orderedUsers);
       } catch (err) {
         console.error("Error fetching followers:", err);
       } finally {
@@ -75,8 +107,13 @@ export function FollowersList({ followerIds }: FollowersListProps) {
           : null;
 
         return (
-          <div key={user.user_id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
-            <Avatar className="w-9 h-9 border border-border">
+          <button
+            type="button"
+            key={user.user_id}
+            onClick={() => navigate(`/trader/${user.user_id}`)}
+            className="w-full flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-left transition hover:border-primary/60 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <Avatar className="w-9 h-9 border border-border/60">
               {user.avatar_url && user.avatar_url.length <= 4 ? (
                 <div className="w-full h-full flex items-center justify-center text-base bg-muted">
                   {user.avatar_url}
@@ -92,13 +129,9 @@ export function FollowersList({ followerIds }: FollowersListProps) {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{user.display_name || "Trader"}</p>
-              {accuracy !== null && (
-                <p className="text-xs text-muted-foreground">
-                  {accuracy}% accuracy
-                </p>
-              )}
+              {accuracy !== null && <p className="text-xs text-muted-foreground">{accuracy}% accuracy</p>}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

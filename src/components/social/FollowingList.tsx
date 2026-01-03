@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { FollowButton } from "./FollowButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isFakeTrader } from "@/hooks/usePublicPredictions";
+import { FAKE_PROFILES } from "@/hooks/fakeTraderData";
 
 interface FollowingUser {
   user_id: string;
@@ -23,6 +26,7 @@ interface FollowingListProps {
 export function FollowingList({ followingIds, onFollow, onUnfollow }: FollowingListProps) {
   const [users, setUsers] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (followingIds.length === 0) {
@@ -34,13 +38,42 @@ export function FollowingList({ followingIds, onFollow, onUnfollow }: FollowingL
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("public_profiles")
-          .select("user_id, display_name, avatar_url, total_predictions, total_hits")
-          .in("user_id", followingIds);
+        const realIds = followingIds.filter((id) => !isFakeTrader(id));
+        const fakeIds = followingIds.filter((id) => isFakeTrader(id));
 
-        if (error) throw error;
-        setUsers(data || []);
+        let realUsers: FollowingUser[] = [];
+        if (realIds.length > 0) {
+          const { data, error } = await supabase
+            .from("public_profiles")
+            .select("user_id, display_name, avatar_url, total_predictions, total_hits")
+            .in("user_id", realIds);
+
+          if (error) throw error;
+          realUsers = data || [];
+        }
+
+        const fakeUsers: FollowingUser[] = fakeIds
+          .map((id) => {
+            const profile = FAKE_PROFILES[id];
+            if (!profile) return null;
+            return {
+              user_id: id,
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              total_predictions: profile.total_predictions,
+              total_hits: profile.total_hits,
+            } as FollowingUser;
+          })
+          .filter((user): user is FollowingUser => Boolean(user));
+
+        const lookup = new Map<string, FollowingUser>();
+        [...realUsers, ...fakeUsers].forEach((user) => lookup.set(user.user_id, user));
+
+        const orderedUsers = followingIds
+          .map((id) => lookup.get(id))
+          .filter((user): user is FollowingUser => Boolean(user));
+
+        setUsers(orderedUsers);
       } catch (err) {
         console.error("Error fetching following users:", err);
       } finally {
@@ -79,8 +112,13 @@ export function FollowingList({ followingIds, onFollow, onUnfollow }: FollowingL
           : null;
 
         return (
-          <Card key={user.user_id} variant="glass" className="p-3">
-            <div className="flex items-center justify-between">
+          <Card
+            key={user.user_id}
+            variant="glass"
+            className="p-3 transition hover:border-primary/60 cursor-pointer"
+            onClick={() => navigate(`/trader/${user.user_id}`)}
+          >
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10 border border-border">
                   {user.avatar_url && user.avatar_url.length <= 4 ? (
@@ -105,12 +143,14 @@ export function FollowingList({ followingIds, onFollow, onUnfollow }: FollowingL
                   )}
                 </div>
               </div>
-              <FollowButton
-                targetUserId={user.user_id}
-                isFollowing={true}
-                onFollow={onFollow}
-                onUnfollow={onUnfollow}
-              />
+              <div onClick={(e) => e.stopPropagation()}>
+                <FollowButton
+                  targetUserId={user.user_id}
+                  isFollowing={true}
+                  onFollow={onFollow}
+                  onUnfollow={onUnfollow}
+                />
+              </div>
             </div>
           </Card>
         );
