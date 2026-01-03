@@ -91,16 +91,27 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
         // Continue without category if derivation fails
       }
 
+      // Build update object with only defined values
+      const updateData: any = {
+        user_id: userId,
+        onboarding_completed: true,
+        onboarding_skipped: false,
+      };
+
+      // Add each field from editAnswers if it has a value
+      if (editAnswers.holding_time) updateData.holding_time = editAnswers.holding_time;
+      if (editAnswers.risk_per_trade) updateData.risk_per_trade = editAnswers.risk_per_trade;
+      if (editAnswers.trade_frequency) updateData.trade_frequency = editAnswers.trade_frequency;
+      if (editAnswers.decision_style) updateData.decision_style = editAnswers.decision_style;
+      if (editAnswers.loss_response) updateData.loss_response = editAnswers.loss_response;
+      if (editAnswers.experience_level) updateData.experience_level = editAnswers.experience_level;
+      if (editAnswers.trading_session) updateData.trading_session = editAnswers.trading_session;
+      if (traderCategory) updateData.trader_category = traderCategory;
+
       // Use upsert to handle both insert and update cases
       const { error } = await supabase
         .from("trader_profiles")
-        .upsert({
-          user_id: userId,
-          ...editAnswers,
-          trader_category: traderCategory as any,
-          onboarding_completed: true,
-          onboarding_skipped: false,
-        }, {
+        .upsert(updateData, {
           onConflict: 'user_id'
         });
 
