@@ -1,11 +1,8 @@
--- Create public_profiles view with trading session info
--- This view provides a public-facing view of user profiles
-
+-- Drop existing view first
 DROP VIEW IF EXISTS public.public_profiles;
 
-CREATE VIEW public.public_profiles 
-WITH (security_invoker = on)
-AS
+-- Recreate public_profiles view with trading_session from trader_profiles
+CREATE VIEW public.public_profiles AS
 SELECT
   p.user_id,
   p.display_name,
@@ -21,7 +18,7 @@ FROM profiles p
 LEFT JOIN trader_profiles tp ON p.user_id = tp.user_id;
 
 -- Grant access to authenticated and anon users
-GRANT SELECT ON public_profiles TO authenticated, anon;
+GRANT SELECT ON public.public_profiles TO authenticated, anon;
 
 -- Add comment
-COMMENT ON VIEW public_profiles IS 'Public view of user profiles with trading session info';
+COMMENT ON VIEW public.public_profiles IS 'Public view of user profiles with trading session info';

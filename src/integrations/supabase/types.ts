@@ -562,6 +562,7 @@ export type Database = {
           risk_per_trade: string | null
           trade_frequency: string | null
           trader_category: Database["public"]["Enums"]["trader_category"] | null
+          trading_session: string | null
           updated_at: string
           user_id: string
         }
@@ -579,6 +580,7 @@ export type Database = {
           trader_category?:
             | Database["public"]["Enums"]["trader_category"]
             | null
+          trading_session?: string | null
           updated_at?: string
           user_id: string
         }
@@ -596,6 +598,7 @@ export type Database = {
           trader_category?:
             | Database["public"]["Enums"]["trader_category"]
             | null
+          trading_session?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -721,29 +724,8 @@ export type Database = {
           streak_type: string | null
           total_hits: number | null
           total_predictions: number | null
+          trading_session: string | null
           user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          current_streak?: number | null
-          display_name?: string | null
-          streak_type?: string | null
-          total_hits?: number | null
-          total_predictions?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          current_streak?: number | null
-          display_name?: string | null
-          streak_type?: string | null
-          total_hits?: number | null
-          total_predictions?: number | null
-          user_id?: string | null
         }
         Relationships: []
       }
