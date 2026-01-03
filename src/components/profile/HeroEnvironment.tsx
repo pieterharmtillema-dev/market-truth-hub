@@ -121,11 +121,18 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
       {backgroundImage ? (
         <>
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
           />
-          {/* Subtle overlay to blend with UI */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/50" />
+          {/* Multi-layer gradient overlay for smooth fade */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/5 to-background/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/50 via-transparent to-background/50" />
         </>
       ) : (
         <div className={`absolute inset-0 bg-gradient-to-b ${gradients.sky}`} />
