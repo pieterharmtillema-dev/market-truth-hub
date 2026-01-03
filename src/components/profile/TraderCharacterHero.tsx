@@ -720,7 +720,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   <div className="absolute -bottom-2 sm:-bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 w-16 sm:w-20 md:w-24 h-4 sm:h-5 md:h-6 bg-primary/30 blur-2xl rounded-full" />
 
                   {/* Character Renderer */}
-                  <div className="relative z-10 w-24 h-36 sm:w-32 sm:h-44 md:w-40 md:h-56">
+                  <div className="relative z-10 w-32 h-48 sm:w-40 sm:h-56 md:w-48 md:h-64">
                     <CharacterRenderer
                       config={characterConfig}
                       className="w-full h-full"
@@ -744,8 +744,8 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 </div>
 
                 {/* Level badge */}
-                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
-                  <span className="text-[10px] sm:text-xs md:text-sm font-black text-primary-foreground">{level}</span>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-primary-foreground">{level}</span>
                 </div>
               </div>
             </div>
