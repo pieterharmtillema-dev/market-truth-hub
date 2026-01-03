@@ -617,20 +617,20 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
             </div>
           </div>
 
-          {/* Main Hero Area with Character and Trading Metrics - Centered Card Layout */}
-          <div className="relative flex flex-col items-center justify-center gap-3 sm:gap-4 px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4 max-w-md mx-auto">
-            {/* Period Stats Section - Above Character */}
-            <div className="w-full space-y-2">
+          {/* Main Hero Area with Character and Trading Metrics */}
+          <div className="relative flex flex-row items-center justify-center gap-2 sm:gap-4 md:gap-6 px-2 sm:px-4 md:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
+            {/* Left: PnL & Period Streak */}
+            <div className="flex-1 max-w-[140px] sm:max-w-[180px] md:max-w-[200px] space-y-1.5 sm:space-y-2">
               {/* Section Header with Time Frame Filter */}
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
+              <div className="flex flex-col items-center gap-1 mb-1">
+                <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
                 <div className="flex gap-0.5 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
                   {(['daily', 'weekly', 'monthly', 'yearly'] as TimeFrame[]).map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeFrame(tf)}
                       className={cn(
-                        "px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-medium rounded transition-all uppercase tracking-wider",
+                        "px-1 sm:px-1.5 py-0.5 text-[7px] sm:text-[8px] md:text-[9px] font-medium rounded transition-all uppercase tracking-wider",
                         timeFrame === tf
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-foreground"
@@ -642,51 +642,49 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 </div>
               </div>
 
-              <div className="flex gap-2 sm:gap-3 justify-center">
-                {/* PnL Summary Card */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5 flex-1 max-w-[180px]">
-                  <div className="text-center">
-                    <span className={cn(
-                      "text-xl sm:text-2xl font-bold block",
-                      timeFilteredMetrics.totalPnl >= 0 ? "text-primary" : "text-destructive"
-                    )}>
-                      {timeFilteredMetrics.totalPnl >= 0 ? '+' : ''}${timeFilteredMetrics.totalPnl.toFixed(2)}
-                    </span>
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">P&L</p>
-                    <p className="text-[8px] sm:text-[9px] text-muted-foreground/60">{timeFilteredMetrics.totalTrades} trades</p>
-                  </div>
+              {/* PnL Summary Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2 md:p-2.5">
+                <div className="text-center">
+                  <span className={cn(
+                    "text-lg sm:text-xl md:text-2xl font-bold block",
+                    timeFilteredMetrics.totalPnl >= 0 ? "text-primary" : "text-destructive"
+                  )}>
+                    {timeFilteredMetrics.totalPnl >= 0 ? '+' : ''}${timeFilteredMetrics.totalPnl.toFixed(2)}
+                  </span>
+                  <p className="text-[8px] sm:text-[9px] md:text-[10px] text-muted-foreground mt-0.5">P&L</p>
+                  <p className="text-[7px] sm:text-[8px] md:text-[9px] text-muted-foreground/60">{timeFilteredMetrics.totalTrades} trades</p>
                 </div>
+              </div>
 
-                {/* Best Streak Card */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5 flex-1 max-w-[140px]">
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <span className="text-[9px] sm:text-[10px] text-muted-foreground mb-1">Best Streak</span>
-                    <span className="text-xl sm:text-2xl font-bold text-amber-400">
-                      {timeFilteredMetrics.totalTrades === 0 ? '--' : timeFilteredMetrics.bestStreak}
-                    </span>
-                  </div>
-                  {timeFilteredMetrics.totalTrades > 0 && (
-                    <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(timeFilteredMetrics.bestStreak * 10, 100)}%` }}
-                      />
-                    </div>
-                  )}
+              {/* Best Streak Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Best Streak</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-amber-400">
+                    {timeFilteredMetrics.totalTrades === 0 ? '--' : timeFilteredMetrics.bestStreak}
+                  </span>
                 </div>
+                {timeFilteredMetrics.totalTrades > 0 && (
+                  <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(timeFilteredMetrics.bestStreak * 10, 100)}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Center: Character */}
-            <div className="relative flex items-end justify-center">
+            <div className="relative flex items-end justify-center flex-shrink-0">
               {/* Character - Integrated into scene */}
               <div className="relative group">
                 <div className="relative float-anim character-glow">
                   {/* Ground glow effect */}
-                  <div className="absolute -bottom-2 sm:-bottom-4 left-1/2 -translate-x-1/2 w-20 sm:w-24 h-5 sm:h-6 bg-primary/30 blur-2xl rounded-full" />
+                  <div className="absolute -bottom-2 sm:-bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 w-16 sm:w-20 md:w-24 h-4 sm:h-5 md:h-6 bg-primary/30 blur-2xl rounded-full" />
 
                   {/* Character Renderer */}
-                  <div className="relative z-10 w-28 h-40 sm:w-36 sm:h-48">
+                  <div className="relative z-10 w-24 h-36 sm:w-32 sm:h-44 md:w-40 md:h-56">
                     <CharacterRenderer
                       config={characterConfig}
                       className="w-full h-full"
@@ -703,32 +701,32 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                   className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
                   onClick={() => setCustomizerOpen(true)}
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    <span className="text-[10px] sm:text-xs text-primary font-semibold">Customize</span>
+                  <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+                    <Settings className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-primary" />
+                    <span className="text-[8px] sm:text-[10px] md:text-xs text-primary font-semibold">Customize</span>
                   </div>
                 </div>
 
                 {/* Level badge */}
-                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-7 h-7 sm:w-9 sm:h-9 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
-                  <span className="text-xs sm:text-sm font-black text-primary-foreground">{level}</span>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
+                  <span className="text-[10px] sm:text-xs md:text-sm font-black text-primary-foreground">{level}</span>
                 </div>
               </div>
             </div>
 
-            {/* All-Time Stats Section - Below Character */}
-            <div className="w-full space-y-2">
+            {/* Right: Win Rate & All-Time Stats */}
+            <div className="flex-1 max-w-[140px] sm:max-w-[180px] md:max-w-[200px] space-y-1.5 sm:space-y-2">
               {/* Section Header */}
               <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
+                <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
               </div>
 
               {/* Win Rate Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] sm:text-xs text-muted-foreground">Win Rate</span>
+                  <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Win Rate</span>
                   <span className={cn(
-                    "text-lg sm:text-xl font-bold",
+                    "text-sm sm:text-base md:text-lg font-bold",
                     winRate >= 50 ? "text-primary" : "text-destructive"
                   )}>
                     {totalTrades === 0 ? '--' : `${winRate.toFixed(1)}%`}
@@ -747,13 +745,13 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 )}
               </div>
 
-              {/* All-Time Stats Grid */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* All-Time Stats */}
+              <div className="space-y-1.5 sm:space-y-2">
                 {/* Total Trades */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Total Trades</span>
-                    <span className="text-base sm:text-lg font-bold text-foreground">
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Total Trades</span>
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-foreground">
                       {totalTrades}
                     </span>
                   </div>
@@ -766,11 +764,11 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 </div>
 
                 {/* Average R */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Average R</span>
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Average R</span>
                     <span className={cn(
-                      "text-base sm:text-lg font-bold",
+                      "text-sm sm:text-base md:text-lg font-bold",
                       (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive"
                     )}>
                       {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}R` : '0R'}
@@ -788,11 +786,11 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 </div>
 
                 {/* Avg Return */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Avg Return</span>
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Avg Return</span>
                     <span className={cn(
-                      "text-base sm:text-lg font-bold",
+                      "text-sm sm:text-base md:text-lg font-bold",
                       avgReturn > 0 ? "text-primary" : avgReturn < 0 ? "text-destructive" : "text-muted-foreground"
                     )}>
                       {avgReturn >= 0 ? '+' : ''}{avgReturn.toFixed(1)}%
@@ -810,10 +808,10 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                 </div>
 
                 {/* All-Time Best Streak */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">Best Streak</span>
-                    <span className="text-base sm:text-lg font-bold text-amber-400">{bestStreak}</span>
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Best Streak</span>
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-amber-400">{bestStreak}</span>
                   </div>
                   <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
                     <div
