@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { FollowButton } from "./FollowButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isFakeTrader } from "@/hooks/usePublicPredictions";
 import { FAKE_PROFILES } from "@/hooks/fakeTraderData";
+import { CharacterAvatar } from "@/components/profile/CharacterAvatar";
 
 interface FollowingUser {
   user_id: string;
@@ -120,20 +120,12 @@ export function FollowingList({ followingIds, onFollow, onUnfollow }: FollowingL
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10 border border-border">
-                  {user.avatar_url && user.avatar_url.length <= 4 ? (
-                    <div className="w-full h-full flex items-center justify-center text-lg bg-muted">
-                      {user.avatar_url}
-                    </div>
-                  ) : (
-                    <>
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/20 text-primary">
-                        {(user.display_name || "U").slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </>
-                  )}
-                </Avatar>
+                <CharacterAvatar
+                  userId={user.user_id}
+                  avatarUrl={user.avatar_url}
+                  displayName={user.display_name}
+                  size="md"
+                />
                 <div>
                   <p className="font-medium text-sm">{user.display_name || "Trader"}</p>
                   {accuracy !== null && (

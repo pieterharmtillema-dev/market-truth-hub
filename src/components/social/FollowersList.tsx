@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isFakeTrader } from "@/hooks/usePublicPredictions";
 import { FAKE_PROFILES } from "@/hooks/fakeTraderData";
+import { CharacterAvatar } from "@/components/profile/CharacterAvatar";
 
 interface FollowerUser {
   user_id: string;
@@ -113,20 +113,12 @@ export function FollowersList({ followerIds }: FollowersListProps) {
             onClick={() => navigate(`/trader/${user.user_id}`)}
             className="w-full flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-2.5 text-left transition hover:border-primary/60 hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <Avatar className="w-9 h-9 border border-border/60">
-              {user.avatar_url && user.avatar_url.length <= 4 ? (
-                <div className="w-full h-full flex items-center justify-center text-base bg-muted">
-                  {user.avatar_url}
-                </div>
-              ) : (
-                <>
-                  <AvatarImage src={user.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                    {(user.display_name || "U").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </>
-              )}
-            </Avatar>
+            <CharacterAvatar
+              userId={user.user_id}
+              avatarUrl={user.avatar_url}
+              displayName={user.display_name}
+              size="sm"
+            />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{user.display_name || "Trader"}</p>
               {accuracy !== null && <p className="text-xs text-muted-foreground">{accuracy}% accuracy</p>}
