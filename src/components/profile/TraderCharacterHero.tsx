@@ -43,6 +43,7 @@ interface TraderProfile {
   decision_style: string | null;
   experience_level: string | null;
   trader_category: TraderCategory | null;
+  trading_session: string | null;
 }
 
 interface TraderCharacterHeroProps {
@@ -87,6 +88,21 @@ const formatRisk = (risk: string | null): string => {
     "more_than_10": "> 10% Risk",
   };
   return riskMap[risk] || risk;
+};
+
+// Map trading session to environment theme
+const getSessionTheme = (session: string | null): 'day' | 'night' | 'sunset' | 'asian' | 'london' | 'newyork' => {
+  if (!session) return 'night';
+
+  const sessionMap: Record<string, 'day' | 'night' | 'sunset' | 'asian' | 'london' | 'newyork'> = {
+    'asian': 'asian',
+    'london': 'london',
+    'new_york': 'newyork',
+    'overlap': 'sunset', // London/NY overlap = sunset transition
+    'all_sessions': 'night', // Default night theme for all sessions
+  };
+
+  return sessionMap[session] || 'night';
 };
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -256,7 +272,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         // Fetch trader profile data
         const { data: traderData } = await supabase
           .from("trader_profiles")
-          .select("holding_time, risk_per_trade, decision_style, experience_level, trader_category")
+          .select("holding_time, risk_per_trade, decision_style, experience_level, trader_category, trading_session")
           .eq("user_id", userId)
           .maybeSingle();
 
@@ -339,6 +355,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   }
 
   const traderClass = getTradeClass(traderProfile?.holding_time);
+  const environmentTheme = getSessionTheme(traderProfile?.trading_session);
 
   return (
     <>
@@ -383,9 +400,9 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
       <div className="relative overflow-hidden rounded-2xl">
         {/* Full-bleed Environment Background */}
         <div className="absolute inset-0">
-          <HeroEnvironment 
+          <HeroEnvironment
             unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
-            theme="night"
+            theme={environmentTheme}
           />
         </div>
         
