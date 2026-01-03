@@ -61,6 +61,7 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
           decision_style: data.decision_style,
           loss_response: data.loss_response,
           experience_level: data.experience_level,
+          trading_session: data.trading_session,
         });
       }
       setLoading(false);
@@ -90,54 +91,31 @@ export function TraderProfileSection({ userId }: TraderProfileSectionProps) {
         // Continue without category if derivation fails
       }
 
-      // Build update object with all fields (null for undefined)
+      // Build update object with only defined values
       const updateData: any = {
         user_id: userId,
-        holding_time: editAnswers.holding_time || null,
-        risk_per_trade: editAnswers.risk_per_trade || null,
-        trade_frequency: editAnswers.trade_frequency || null,
-        decision_style: editAnswers.decision_style || null,
-        loss_response: editAnswers.loss_response || null,
-        experience_level: editAnswers.experience_level || null,
-        trader_category: traderCategory,
         onboarding_completed: true,
         onboarding_skipped: false,
       };
 
-      console.log("Saving trader profile with data:", updateData);
+      // Add each field from editAnswers if it has a value
+      if (editAnswers.holding_time) updateData.holding_time = editAnswers.holding_time;
+      if (editAnswers.risk_per_trade) updateData.risk_per_trade = editAnswers.risk_per_trade;
+      if (editAnswers.trade_frequency) updateData.trade_frequency = editAnswers.trade_frequency;
+      if (editAnswers.decision_style) updateData.decision_style = editAnswers.decision_style;
+      if (editAnswers.loss_response) updateData.loss_response = editAnswers.loss_response;
+      if (editAnswers.experience_level) updateData.experience_level = editAnswers.experience_level;
+      if (editAnswers.trading_session) updateData.trading_session = editAnswers.trading_session;
+      if (traderCategory) updateData.trader_category = traderCategory;
 
-      // Check if profile exists
-      const { data: existingProfile } = await supabase
+      // Use upsert to handle both insert and update cases
+      const { error } = await supabase
         .from("trader_profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .upsert(updateData, {
+          onConflict: 'user_id'
+        });
 
-      let result;
-      if (existingProfile) {
-        // Update existing profile
-        result = await supabase
-          .from("trader_profiles")
-          .update(updateData)
-          .eq("user_id", userId)
-          .select();
-      } else {
-        // Insert new profile
-        result = await supabase
-          .from("trader_profiles")
-          .insert(updateData)
-          .select();
-      }
-
-      const { error, data } = result;
-
-      if (error) {
-        console.error("Save error details:", error);
-        console.error("Update data being sent:", updateData);
-        throw error;
-      }
-
-      console.log("Profile saved successfully:", data);
+      if (error) throw error;
 
       setProfile(prev => prev ? { ...prev, ...editAnswers, trader_category: traderCategory as any, onboarding_completed: true } : null);
       setEditOpen(false);
