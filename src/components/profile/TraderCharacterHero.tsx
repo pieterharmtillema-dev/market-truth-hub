@@ -433,10 +433,20 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         </div>
         
         {/* Gradient overlays for seamless integration */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent pointer-events-none" />
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background/90 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background/60 to-transparent pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background/60 to-transparent pointer-events-none" />
+        {/* Bottom fade - strong fade from bottom up, ending where trader stats begin */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none" />
+
+        {/* Top fade - subtle header area fade */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background/80 via-background/30 to-transparent pointer-events-none" />
+
+        {/* Side fades - gentle edge darkening for depth */}
+        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background/40 via-background/10 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background/40 via-background/10 to-transparent pointer-events-none" />
+
+        {/* Central vertical fade - creates smooth transition from background to content area */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none" style={{
+          background: 'linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(var(--background-rgb, 0, 0, 0), 0.3) 65%, rgba(var(--background-rgb, 0, 0, 0), 0.85) 100%)'
+        }} />
 
         {/* Content Layer */}
         <div className="relative z-10">
