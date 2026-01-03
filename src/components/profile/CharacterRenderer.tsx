@@ -438,13 +438,6 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
     case 'hoodie':
       return (
         <g>
-          {/* Hood behind head */}
-          <path
-            d={`M 56 40 Q 52 30 56 24 L 88 24 Q 92 30 88 40 L 82 50 L 62 50 Z`}
-            fill={color}
-            opacity="0.9"
-            filter="url(#drop-shadow)"
-          />
           {/* Body */}
           <rect
             x={baseX}
@@ -469,6 +462,13 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
           {/* Drawstrings */}
           <line x1="68" y1="68" x2="66" y2="76" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
           <line x1="76" y1="68" x2="78" y2="76" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          {/* Hood collar visible at neckline */}
+          <path
+            d="M 64 66 Q 72 63 80 66"
+            fill={adjustBrightness(color, -10)}
+            stroke={adjustBrightness(color, -20)}
+            strokeWidth="0.5"
+          />
         </g>
       );
 
