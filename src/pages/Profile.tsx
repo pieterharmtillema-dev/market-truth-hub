@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { TraderCharacterHero } from "@/components/profile/TraderCharacterHero";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
+import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
 import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
@@ -338,6 +339,9 @@ const Profile = () => {
           </Card>
         )}
 
+        {/* Trader Profile Section - Let users update their trading profile */}
+        {userId && <TraderProfileSection userId={userId} />}
+
         {/* Trader Status & Exchange Connections - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Trader Status */}
@@ -376,7 +380,7 @@ const Profile = () => {
                         if (result.success) {
                           toast({
                             title: "Trades Synced",
-                            description: result.synced > 0 
+                            description: result.synced > 0
                               ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
                               : "No new trades found",
                           });
