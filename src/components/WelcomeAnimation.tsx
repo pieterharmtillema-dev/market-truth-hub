@@ -106,7 +106,7 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
 
             {/* Username */}
             {userData.displayName && (
-              <div className="text-white font-medium text-lg backdrop-blur-sm px-3 py-1 rounded-lg bg-black/20">
+              <div className="text-white font-medium text-lg backdrop-blur-xl px-3 py-1 rounded-lg bg-black/60 border border-white/20">
                 @{userData.displayName}
               </div>
             )}
