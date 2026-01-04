@@ -290,7 +290,7 @@ If Lovable generates code with issues:
 ### Issue: Wrong Supabase URL
 ```typescript
 // ❌ Wrong
-const url = 'https://yourproject.supabase.co';
+const url = 'https://hbmebifvlghmhuthofnq.supabase.co';
 
 // ✅ Correct
 const url = import.meta.env.VITE_SUPABASE_URL;
