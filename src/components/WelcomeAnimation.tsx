@@ -58,7 +58,7 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm animate-in fade-in duration-300"
+      className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300"
       onClick={handleComplete}
     >
       <div className="relative w-full h-full flex items-center justify-center">
