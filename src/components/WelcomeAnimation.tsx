@@ -130,19 +130,19 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                 </div>
               ) : (
                 <>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-white to-primary bg-clip-text text-transparent" style={{
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white" style={{
                     textShadow: '0 0 30px rgba(61, 214, 140, 0.5)',
                   }}>
                     Welcome back,
                   </h1>
                   <div className="relative inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-trax/30 to-primary/30 blur-3xl animate-glow-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-trax/30 to-primary/30 blur-3xl" />
                     <div className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-black/80 via-black/90 to-black/80 border-2 border-primary/50 backdrop-blur-xl">
-                      <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white animate-glow-pulse" style={{
+                      <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white" style={{
                         textShadow: '0 0 60px rgba(61, 214, 140, 1), 0 0 100px rgba(125, 197, 66, 0.8), 0 0 140px rgba(255, 255, 255, 0.5), 0 4px 20px rgba(0, 0, 0, 0.8)',
                         WebkitTextStroke: '1px rgba(61, 214, 140, 0.3)',
                       }}>
-                        {userData.displayName || 'Trader'}!
+                        {userData.displayName || 'Trader'}
                       </div>
                     </div>
                   </div>
