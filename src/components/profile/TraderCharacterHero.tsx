@@ -423,9 +423,9 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         }
       `}</style>
 
-      <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0">
+      <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0 min-h-[500px] sm:min-h-[600px]">
         {/* Full-bleed Environment Background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 w-full h-full">
           <HeroEnvironment
             unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
             theme={environmentTheme}

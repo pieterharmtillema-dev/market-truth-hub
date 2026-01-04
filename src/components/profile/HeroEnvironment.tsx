@@ -116,12 +116,12 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
   }, [theme]);
 
   return (
-    <div className={`absolute inset-0 overflow-hidden ${className}`}>
+    <div className={`absolute inset-0 w-full h-full overflow-hidden ${className}`}>
       {/* Background Image or Sky gradient */}
       {backgroundImage ? (
         <>
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 w-full h-full"
             style={{
               backgroundImage: `url(${backgroundImage})`,
               backgroundSize: 'cover',
@@ -135,7 +135,7 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
           <div className="absolute inset-0 bg-gradient-to-r from-background/50 via-transparent to-background/50" />
         </>
       ) : (
-        <div className={`absolute inset-0 bg-gradient-to-b ${gradients.sky}`} />
+        <div className={`absolute inset-0 w-full h-full bg-gradient-to-b ${gradients.sky}`} />
       )}
       
       {/* Stars (night only) */}
