@@ -434,7 +434,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         
         {/* Gradient overlays for seamless integration */}
         {/* Bottom fade - strong fade from bottom up, ending where trader stats begin */}
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-64 sm:h-48 bg-gradient-to-t from-background via-background/70 to-transparent pointer-events-none" />
 
         {/* Top fade - subtle header area fade */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background/80 via-background/30 to-transparent pointer-events-none" />
