@@ -107,7 +107,7 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
             {/* Username */}
             {userData.displayName && (
               <div className="text-white font-medium text-lg backdrop-blur-xl px-3 py-1 rounded-lg bg-black/60 border border-white/20">
-                @{userData.displayName}
+                {userData.displayName}
               </div>
             )}
           </div>
@@ -135,8 +135,8 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                   }}>
                     Welcome back,
                   </h1>
-                  <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-br from-trax via-primary to-trax bg-clip-text text-transparent animate-glow-pulse" style={{
-                    textShadow: '0 0 40px rgba(61, 214, 140, 0.6), 0 0 60px rgba(125, 197, 66, 0.4)',
+                  <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white animate-glow-pulse" style={{
+                    textShadow: '0 0 50px rgba(61, 214, 140, 0.8), 0 0 80px rgba(125, 197, 66, 0.6), 0 0 100px rgba(255, 255, 255, 0.3)',
                   }}>
                     {userData.displayName || 'Trader'}!
                   </div>
