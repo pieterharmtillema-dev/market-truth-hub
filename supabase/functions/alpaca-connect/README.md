@@ -351,7 +351,7 @@ Guide users to create API keys:
 3. Connect via frontend or curl:
 
 ```bash
-curl -X POST https://your-project.supabase.co/functions/v1/alpaca-connect \
+curl -X POST https://hbmebifvlghmhuthofnq.supabase.co/functions/v1/alpaca-connect \
   -H "Authorization: Bearer $USER_JWT" \
   -H "Content-Type: application/json" \
   -d '{
@@ -365,7 +365,7 @@ curl -X POST https://your-project.supabase.co/functions/v1/alpaca-connect \
 5. Sync trades:
 
 ```bash
-curl -X POST https://your-project.supabase.co/functions/v1/alpaca-sync \
+curl -X POST https://hbmebifvlghmhuthofnq.supabase.co/functions/v1/alpaca-sync \
   -H "Authorization: Bearer $USER_JWT"
 ```
 

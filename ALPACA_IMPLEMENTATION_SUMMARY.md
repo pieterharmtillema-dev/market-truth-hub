@@ -251,7 +251,7 @@ Add Alpaca to your exchange connection UI:
 
 ```bash
 # Set your variables
-export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_URL="https://hbmebifvlghmhuthofnq.supabase.co"
 export USER_JWT="<get-from-supabase-auth>"
 
 # Test connect

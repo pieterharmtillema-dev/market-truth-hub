@@ -50,7 +50,7 @@ supabase functions deploy alpaca-connect alpaca-disconnect alpaca-sync
 
 ```bash
 # Get your Supabase project URL and anon key from dashboard
-export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_URL="https://hbmebifvlghmhuthofnq.supabase.co"
 export USER_JWT="<user-jwt-token>"
 
 # Test alpaca-connect

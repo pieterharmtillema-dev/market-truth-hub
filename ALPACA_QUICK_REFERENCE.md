@@ -171,7 +171,7 @@ supabase functions logs alpaca-connect --limit 100
 ### Test Connection
 ```bash
 # Set variables
-export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_URL="https://hbmebifvlghmhuthofnq.supabase.co"
 export USER_JWT="your-user-jwt-token"
 
 # Test
