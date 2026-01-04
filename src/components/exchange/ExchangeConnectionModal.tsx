@@ -28,24 +28,27 @@ import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
 import tradestationLogo from "@/assets/tradestation-logo.svg";
+import alpacaLogo from "@/assets/alpaca-logo.svg";
 import { supabase } from "@/integrations/supabase/client";
+import { AlpacaConnectionModal } from "./AlpacaConnectionModal";
 
 interface ExchangeConnectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Exchange = "binance" | "bitvavo" | "coinbase" | "tradestation";
+type Exchange = "binance" | "bitvavo" | "coinbase" | "tradestation" | "alpaca";
 
 interface ExchangeInfo {
   id: Exchange;
   name: string;
   logo: string;
   color: string;
-  authType?: "api_key" | "oauth"; // oauth for TradeStation
+  authType?: "api_key" | "oauth" | "alpaca";
 }
 
 const EXCHANGES: ExchangeInfo[] = [
+  { id: "alpaca", name: "Alpaca", logo: alpacaLogo, color: "bg-emerald-500/10 border-emerald-500/30", authType: "alpaca" },
   { id: "binance", name: "Binance", logo: binanceLogo, color: "bg-yellow-500/10 border-yellow-500/30" },
   { id: "bitvavo", name: "Bitvavo", logo: bitvavoLogo, color: "bg-blue-500/10 border-blue-500/30" },
   { id: "coinbase", name: "Coinbase", logo: coinbaseLogo, color: "bg-blue-600/10 border-blue-600/30" },
@@ -53,16 +56,23 @@ const EXCHANGES: ExchangeInfo[] = [
 ];
 
 export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnectionModalProps) {
-  const { connections, connectExchange, disconnectExchange, syncTrades, syncing, loading } = useExchangeConnections();
+  const { connections, connectExchange, disconnectExchange, syncTrades, syncing, loading, refetch } = useExchangeConnections();
   const [selectedExchange, setSelectedExchange] = useState<Exchange | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showAlpacaModal, setShowAlpacaModal] = useState(false);
 
   const handleSelectExchange = async (exchange: Exchange) => {
     const exchangeInfo = EXCHANGES.find(e => e.id === exchange);
+
+    // If Alpaca, open dedicated modal
+    if (exchangeInfo?.authType === "alpaca") {
+      setShowAlpacaModal(true);
+      return;
+    }
 
     // If OAuth exchange, start OAuth flow
     if (exchangeInfo?.authType === "oauth") {
@@ -194,6 +204,51 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   };
 
   const handleDisconnect = async (exchange: string) => {
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to disconnect your ${EXCHANGES.find(e => e.id === exchange)?.name} account? ` +
+      'Your imported trades will remain, but automatic syncing will stop.'
+    );
+    if (!confirmed) return;
+
+    // Use Alpaca-specific endpoint
+    if (exchange === "alpaca") {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alpaca-disconnect`,
+          {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+          }
+        );
+
+        const data = await response.json();
+        if (data.success) {
+          toast({
+            title: "Alpaca Disconnected",
+            description: "Successfully disconnected from Alpaca",
+          });
+          refetch();
+        } else {
+          toast({
+            title: "Disconnection Failed",
+            description: data.error || "Failed to disconnect",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        toast({
+          title: "Disconnection Failed",
+          description: "Failed to disconnect from Alpaca",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     const result = await disconnectExchange(exchange);
     
     if (result.success) {
@@ -211,6 +266,46 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   };
 
   const handleSyncTrades = async (exchange?: string) => {
+    // Use Alpaca-specific endpoint
+    if (exchange === "alpaca") {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alpaca-sync`,
+          {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+          }
+        );
+
+        const data = await response.json();
+        if (data.success) {
+          toast({
+            title: "Trades Synced",
+            description: data.imported > 0 
+              ? `Imported ${data.imported} new trades!`
+              : "No new trades to import. You're up to date!",
+          });
+          refetch();
+        } else {
+          toast({
+            title: "Sync Failed",
+            description: data.error || "Failed to sync trades",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        toast({
+          title: "Sync Failed",
+          description: "Failed to sync trades from Alpaca",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     const result = await syncTrades(exchange);
     
     if (result.success) {
@@ -250,7 +345,21 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
                 <div className="flex items-center gap-3">
                   <img src={exchange.logo} alt={exchange.name} className="h-8 w-8 rounded-md object-contain" />
                   <div>
-                    <div className="font-medium">{exchange.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{exchange.name}</span>
+                      {/* Show environment badge for Alpaca */}
+                      {exchange.id === "alpaca" && isConnected && connection?.label && (
+                        <Badge 
+                          variant="outline" 
+                          className={connection.label === "paper" 
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs" 
+                            : "bg-red-500/10 text-red-500 border-red-500/30 text-xs"
+                          }
+                        >
+                          {connection.label === "paper" ? "Paper" : "Live"}
+                        </Badge>
+                      )}
+                    </div>
                     {connection && (
                       <div className="text-xs text-muted-foreground">
                         {connection.last_sync_at && (
@@ -447,27 +556,37 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Connect Your Exchange</DialogTitle>
-          <DialogDescription>
-            {selectedExchange
-              ? "Enter your API credentials to connect your exchange account."
-              : "Select an exchange to connect and sync your trading history."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Your Exchange</DialogTitle>
+            <DialogDescription>
+              {selectedExchange
+                ? "Enter your API credentials to connect your exchange account."
+                : "Select an exchange to connect and sync your trading history."}
+            </DialogDescription>
+          </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : selectedExchange ? (
-          renderConnectionForm()
-        ) : (
-          renderExchangeList()
-        )}
-      </DialogContent>
-    </Dialog>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : selectedExchange ? (
+            renderConnectionForm()
+          ) : (
+            renderExchangeList()
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlpacaConnectionModal
+        open={showAlpacaModal}
+        onOpenChange={setShowAlpacaModal}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
+    </>
   );
 }
