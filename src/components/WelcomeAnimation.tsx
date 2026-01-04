@@ -135,10 +135,16 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                   }}>
                     Welcome back,
                   </h1>
-                  <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white animate-glow-pulse" style={{
-                    textShadow: '0 0 50px rgba(61, 214, 140, 0.8), 0 0 80px rgba(125, 197, 66, 0.6), 0 0 100px rgba(255, 255, 255, 0.3)',
-                  }}>
-                    {userData.displayName || 'Trader'}!
+                  <div className="relative inline-block">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-trax/30 to-primary/30 blur-3xl animate-glow-pulse" />
+                    <div className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-black/80 via-black/90 to-black/80 border-2 border-primary/50 backdrop-blur-xl">
+                      <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white animate-glow-pulse" style={{
+                        textShadow: '0 0 60px rgba(61, 214, 140, 1), 0 0 100px rgba(125, 197, 66, 0.8), 0 0 140px rgba(255, 255, 255, 0.5), 0 4px 20px rgba(0, 0, 0, 0.8)',
+                        WebkitTextStroke: '1px rgba(61, 214, 140, 0.3)',
+                      }}>
+                        {userData.displayName || 'Trader'}!
+                      </div>
+                    </div>
                   </div>
                   {hasActiveStreak && (
                     <div className="mt-4 px-6 py-3 rounded-full backdrop-blur-xl border-2 border-primary/30 inline-block bg-gradient-to-r from-primary/10 to-trax/10 animate-in zoom-in duration-500 delay-800">
