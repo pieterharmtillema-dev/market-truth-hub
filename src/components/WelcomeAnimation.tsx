@@ -137,32 +137,33 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white" style={{
-                    textShadow: '0 0 30px rgba(61, 214, 140, 0.5)',
-                  }}>
-                    Welcome back,
-                  </h1>
-                  <div className="relative inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-trax/30 to-primary/30 blur-3xl" />
-                    <div className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-black/80 via-black/90 to-black/80 border-2 border-primary/50 backdrop-blur-xl">
-                      <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white" style={{
-                        textShadow: '0 0 60px rgba(61, 214, 140, 1), 0 0 100px rgba(125, 197, 66, 0.8), 0 0 140px rgba(255, 255, 255, 0.5), 0 4px 20px rgba(0, 0, 0, 0.8)',
-                        WebkitTextStroke: '1px rgba(61, 214, 140, 0.3)',
-                      }}>
-                        {userData.displayName || 'Trader'}
-                      </div>
-                    </div>
+                <div className="space-y-6">
+                  {/* Welcome back - positioned on top */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/40 via-trax/40 to-primary/40 blur-3xl animate-pulse" />
+                    <h1 className="relative text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white" style={{
+                      textShadow: '0 0 60px rgba(61, 214, 140, 1), 0 0 100px rgba(125, 197, 66, 0.8), 0 0 140px rgba(255, 255, 255, 0.6), 0 6px 30px rgba(0, 0, 0, 0.9)',
+                      WebkitTextStroke: '2px rgba(61, 214, 140, 0.4)',
+                      letterSpacing: '0.02em',
+                    }}>
+                      Welcome back
+                    </h1>
                   </div>
-                  <p className="text-xl sm:text-2xl md:text-3xl font-medium text-white" style={{
-                    textShadow: '0 0 25px rgba(61, 214, 140, 0.7), 0 0 50px rgba(61, 214, 140, 0.3)',
-                  }}>
-                    Successfully logged in
-                  </p>
+
+                  {/* Successfully logged in - smaller, below */}
+                  <div className="relative">
+                    <p className="text-lg sm:text-xl md:text-2xl font-semibold text-white/90 tracking-wide" style={{
+                      textShadow: '0 0 20px rgba(61, 214, 140, 0.6), 0 0 40px rgba(61, 214, 140, 0.3), 0 2px 10px rgba(0, 0, 0, 0.8)',
+                    }}>
+                      Successfully logged in
+                    </p>
+                  </div>
+
+                  {/* Active streak badge */}
                   {hasActiveStreak && (
-                    <div className="mt-2 px-6 py-3 rounded-full backdrop-blur-xl border-2 border-primary/30 inline-block bg-gradient-to-r from-primary/10 to-trax/10 animate-in zoom-in duration-500 delay-800">
+                    <div className="mt-4 px-6 py-3 rounded-full backdrop-blur-xl border-2 border-primary/40 inline-block bg-gradient-to-r from-primary/20 to-trax/20 animate-in zoom-in duration-500 delay-800">
                       <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
-                        textShadow: '0 0 20px rgba(255, 165, 0, 0.5)',
+                        textShadow: '0 0 25px rgba(255, 165, 0, 0.6)',
                       }}>
                         {userData.currentStreak}-trade streak! 🔥
                       </p>
