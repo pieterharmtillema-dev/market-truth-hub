@@ -423,7 +423,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         }
       `}</style>
 
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0">
         {/* Full-bleed Environment Background */}
         <div className="absolute inset-0">
           <HeroEnvironment
