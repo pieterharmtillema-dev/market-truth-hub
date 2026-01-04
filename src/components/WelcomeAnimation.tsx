@@ -116,20 +116,38 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
         {/* Center: Welcome message */}
         {userData && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
-            <div className="text-center space-y-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
+            <div className="text-center space-y-3 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
               {isFirstTime ? (
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-[0_0_20px_rgba(61,214,140,0.6)]">
-                  Welcome to the Pack! 🦖
-                </h1>
+                <div className="relative">
+                  <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-primary to-white bg-clip-text text-transparent animate-glow-pulse" style={{
+                    textShadow: '0 0 40px rgba(61, 214, 140, 0.6), 0 0 80px rgba(61, 214, 140, 0.3)',
+                  }}>
+                    Welcome to the Pack!
+                  </h1>
+                  <div className="text-5xl sm:text-6xl md:text-7xl mt-2 animate-in zoom-in duration-500 delay-700">
+                    🦖
+                  </div>
+                </div>
               ) : (
                 <>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white drop-shadow-[0_0_20px_rgba(61,214,140,0.6)]">
-                    Welcome back, {userData.displayName || 'Trader'}!
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-white to-primary bg-clip-text text-transparent" style={{
+                    textShadow: '0 0 30px rgba(61, 214, 140, 0.5)',
+                  }}>
+                    Welcome back,
                   </h1>
+                  <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-br from-trax via-primary to-trax bg-clip-text text-transparent animate-glow-pulse" style={{
+                    textShadow: '0 0 40px rgba(61, 214, 140, 0.6), 0 0 60px rgba(125, 197, 66, 0.4)',
+                  }}>
+                    {userData.displayName || 'Trader'}!
+                  </div>
                   {hasActiveStreak && (
-                    <p className="text-lg sm:text-xl md:text-2xl text-primary font-medium drop-shadow-[0_0_15px_rgba(61,214,140,0.4)]">
-                      You're on a {userData.currentStreak}-trade streak! 🔥
-                    </p>
+                    <div className="mt-4 px-6 py-3 rounded-full backdrop-blur-xl border-2 border-primary/30 inline-block bg-gradient-to-r from-primary/10 to-trax/10 animate-in zoom-in duration-500 delay-800">
+                      <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
+                        textShadow: '0 0 20px rgba(255, 165, 0, 0.5)',
+                      }}>
+                        {userData.currentStreak}-trade streak! 🔥
+                      </p>
+                    </div>
                   )}
                 </>
               )}
