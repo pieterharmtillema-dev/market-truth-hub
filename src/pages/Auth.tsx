@@ -11,6 +11,7 @@ import { Loader2, CheckCircle, XCircle, Eye, EyeOff, Shield } from "lucide-react
 import { z } from "zod";
 import traxLogo from "@/assets/trax-dino-logo.png";
 import trexClosed from "@/assets/trex-closed.png";
+import WelcomeAnimation from "@/components/WelcomeAnimation";
 
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -35,6 +36,7 @@ export default function Auth() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -47,6 +49,7 @@ export default function Auth() {
   const [isHovered, setIsHovered] = useState(false);
   const [glowBurst, setGlowBurst] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [navigationTarget, setNavigationTarget] = useState<string | null>(null);
 
   const greeting = useMemo(() => getGreeting(), []);
 
@@ -59,14 +62,14 @@ export default function Auth() {
           .select("onboarding_completed, onboarding_skipped")
           .eq("user_id", session.user.id)
           .maybeSingle();
-        
-        if (traderProfile && !traderProfile.onboarding_completed && !traderProfile.onboarding_skipped) {
-          setLoginSuccess(true);
-          setTimeout(() => navigate("/onboarding"), 800);
-        } else {
-          setLoginSuccess(true);
-          setTimeout(() => navigate("/"), 800);
-        }
+
+        const target = (traderProfile && !traderProfile.onboarding_completed && !traderProfile.onboarding_skipped)
+          ? "/onboarding"
+          : "/";
+
+        setLoginSuccess(true);
+        setNavigationTarget(target);
+        setShowWelcomeAnimation(true);
       }
     });
 
@@ -78,6 +81,13 @@ export default function Auth() {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handleWelcomeComplete = () => {
+    setShowWelcomeAnimation(false);
+    if (navigationTarget) {
+      setTimeout(() => navigate(navigationTarget), 100);
+    }
+  };
 
   // Username availability check
   useEffect(() => {
@@ -246,9 +256,12 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Ambient background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <>
+      {showWelcomeAnimation && <WelcomeAnimation onComplete={handleWelcomeComplete} />}
+
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
+        {/* Ambient background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div 
           className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full animate-ambient"
           style={{
@@ -505,5 +518,6 @@ export default function Auth() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
