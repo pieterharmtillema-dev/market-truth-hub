@@ -319,22 +319,56 @@ export function usePublicPredictions(limit = 20) {
           (profilesData || []).map(p => [p.user_id, { ...p, is_verified: verifiedUserIds.has(p.user_id) }])
         );
 
-        // Combine predictions with profiles (use fake profiles as fallback)
-        enrichedPredictions = predictionsData.map(prediction => ({
-          id: prediction.id,
-          user_id: prediction.user_id,
-          asset: prediction.asset,
-          asset_type: prediction.asset_type,
-          direction: prediction.direction,
-          current_price: Number(prediction.current_price),
-          target_price: Number(prediction.target_price),
-          status: prediction.status,
-          created_at: prediction.created_at,
-          resolved_at: prediction.resolved_at,
-          explanation: prediction.explanation,
-          explanation_public: prediction.explanation_public,
-          profile: getFakeOrRealProfile(prediction.user_id, profilesMap.get(prediction.user_id)),
-        }));
+        // Fetch trade source data from positions table
+        const positionIds = predictionsData
+          .filter(p => p.source_position_id)
+          .map(p => p.source_position_id);
+
+        let positionsMap = new Map<number, { trade_source: string | null; platform: string | null; exchange_source: string | null; is_exchange_verified: boolean | null }>();
+
+        if (positionIds.length > 0) {
+          const { data: positionsData } = await supabase
+            .from("positions")
+            .select("id, trade_source, platform, exchange_source, is_exchange_verified")
+            .in("id", positionIds);
+
+          if (positionsData) {
+            positionsMap = new Map(positionsData.map(p => [p.id, {
+              trade_source: p.trade_source,
+              platform: p.platform,
+              exchange_source: p.exchange_source,
+              is_exchange_verified: p.is_exchange_verified
+            }]));
+          }
+        }
+
+        // Combine predictions with profiles and trade source data (use fake profiles as fallback)
+        enrichedPredictions = predictionsData.map(prediction => {
+          const positionData = prediction.source_position_id
+            ? positionsMap.get(prediction.source_position_id)
+            : null;
+
+          return {
+            id: prediction.id,
+            user_id: prediction.user_id,
+            asset: prediction.asset,
+            asset_type: prediction.asset_type,
+            direction: prediction.direction,
+            current_price: Number(prediction.current_price),
+            target_price: Number(prediction.target_price),
+            status: prediction.status,
+            created_at: prediction.created_at,
+            resolved_at: prediction.resolved_at,
+            explanation: prediction.explanation,
+            explanation_public: prediction.explanation_public,
+            data_source: prediction.data_source,
+            trade_source: positionData?.trade_source ?? null,
+            platform: positionData?.platform ?? null,
+            exchange_source: positionData?.exchange_source ?? null,
+            is_exchange_verified: positionData?.is_exchange_verified ?? null,
+            profile: getFakeOrRealProfile(prediction.user_id, profilesMap.get(prediction.user_id)),
+          };
+        });
       }
 
       // Add fake predictions if we don't have enough real ones
@@ -397,29 +431,36 @@ export function useUserTradePredictions(userId: string | null) {
           .eq("user_id", userId)
           .maybeSingle();
 
-        // Fetch PnL data from linked positions (only for user's own trades)
+        // Fetch PnL and trade source data from linked positions (only for user's own trades)
         const positionIds = (data || [])
           .filter(p => p.source_position_id)
           .map(p => p.source_position_id);
 
-        let positionsMap = new Map<number, { pnl: number | null; pnl_pct: number | null }>();
-        
+        let positionsMap = new Map<number, { pnl: number | null; pnl_pct: number | null; trade_source: string | null; platform: string | null; exchange_source: string | null; is_exchange_verified: boolean | null }>();
+
         if (positionIds.length > 0) {
           const { data: positionsData } = await supabase
             .from("positions")
-            .select("id, pnl, pnl_pct")
+            .select("id, pnl, pnl_pct, trade_source, platform, exchange_source, is_exchange_verified")
             .in("id", positionIds);
-          
+
           if (positionsData) {
-            positionsMap = new Map(positionsData.map(p => [p.id, { pnl: p.pnl, pnl_pct: p.pnl_pct }]));
+            positionsMap = new Map(positionsData.map(p => [p.id, {
+              pnl: p.pnl,
+              pnl_pct: p.pnl_pct,
+              trade_source: p.trade_source,
+              platform: p.platform,
+              exchange_source: p.exchange_source,
+              is_exchange_verified: p.is_exchange_verified
+            }]));
           }
         }
 
         const enrichedPredictions: PublicPredictionData[] = (data || []).map(prediction => {
-          const positionData = prediction.source_position_id 
-            ? positionsMap.get(prediction.source_position_id) 
+          const positionData = prediction.source_position_id
+            ? positionsMap.get(prediction.source_position_id)
             : null;
-          
+
           return {
             id: prediction.id,
             user_id: prediction.user_id,
@@ -439,6 +480,10 @@ export function useUserTradePredictions(userId: string | null) {
             pnl: positionData?.pnl ?? null,
             pnl_pct: positionData?.pnl_pct ?? null,
             is_public: prediction.is_public ?? false,
+            trade_source: positionData?.trade_source ?? null,
+            platform: positionData?.platform ?? null,
+            exchange_source: positionData?.exchange_source ?? null,
+            is_exchange_verified: positionData?.is_exchange_verified ?? null,
             profile: profile || null,
           };
         });

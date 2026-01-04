@@ -126,18 +126,51 @@ const TraderProfile = () => {
 
         if (error) throw error;
 
-        // Map to PublicPredictionData format with profile
-        const mappedPredictions: PublicPredictionData[] = (data || []).map(p => ({
-          ...p,
-          profile: profile ? {
-            display_name: profile.display_name,
-            avatar_url: profile.avatar_url,
-            current_streak: profile.current_streak || 0,
-            streak_type: profile.streak_type || "none",
-            total_predictions: profile.total_predictions || 0,
-            total_hits: profile.total_hits || 0,
-          } : null
-        }));
+        // Fetch trade source data from positions table
+        const positionIds = (data || [])
+          .filter(p => p.source_position_id)
+          .map(p => p.source_position_id);
+
+        let positionsMap = new Map<number, { trade_source: string | null; platform: string | null; exchange_source: string | null; is_exchange_verified: boolean | null }>();
+
+        if (positionIds.length > 0) {
+          const { data: positionsData } = await supabase
+            .from("positions")
+            .select("id, trade_source, platform, exchange_source, is_exchange_verified")
+            .in("id", positionIds);
+
+          if (positionsData) {
+            positionsMap = new Map(positionsData.map(p => [p.id, {
+              trade_source: p.trade_source,
+              platform: p.platform,
+              exchange_source: p.exchange_source,
+              is_exchange_verified: p.is_exchange_verified
+            }]));
+          }
+        }
+
+        // Map to PublicPredictionData format with profile and trade source data
+        const mappedPredictions: PublicPredictionData[] = (data || []).map(p => {
+          const positionData = p.source_position_id
+            ? positionsMap.get(p.source_position_id)
+            : null;
+
+          return {
+            ...p,
+            trade_source: positionData?.trade_source ?? null,
+            platform: positionData?.platform ?? null,
+            exchange_source: positionData?.exchange_source ?? null,
+            is_exchange_verified: positionData?.is_exchange_verified ?? null,
+            profile: profile ? {
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              current_streak: profile.current_streak || 0,
+              streak_type: profile.streak_type || "none",
+              total_predictions: profile.total_predictions || 0,
+              total_hits: profile.total_hits || 0,
+            } : null
+          };
+        });
 
         setPredictions(mappedPredictions);
       } catch (err) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Globe, Lock, UserPlus, UserMinus, Loader2, BadgeCheck } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, ChevronDown, ChevronUp, Flame, Snowflake, Calendar, Globe, Lock, UserPlus, UserMinus, Loader2, BadgeCheck, Plug, Chrome, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,11 @@ export interface PublicPredictionData {
   pnl_pct?: number | null;
   // Public visibility
   is_public?: boolean;
+  // Trade source tracking
+  trade_source?: string | null;
+  platform?: string | null;
+  exchange_source?: string | null;
+  is_exchange_verified?: boolean | null;
   // User profile data (from join)
   profile?: {
     display_name: string | null;
@@ -203,8 +208,8 @@ export function PublicPredictionCard({
       className="animate-fade-in overflow-hidden"
     >
       <CardContent className="p-4">
-        {/* Long-Term Label */}
-        {isLongTerm && (
+        {/* Long-Term Label or Trade Source Badges */}
+        {isLongTerm ? (
           <div className="flex items-center gap-1.5 mb-2">
             <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1">
               <Calendar className="w-3 h-3" />
@@ -214,6 +219,42 @@ export function PublicPredictionCard({
               <Badge variant="outline" className="text-[10px] gap-1">
                 <Clock className="w-3 h-3" />
                 Expires {timeRemaining}
+              </Badge>
+            )}
+          </div>
+        ) : isTrade && (prediction.trade_source || prediction.platform || prediction.exchange_source) && (
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            {/* Exchange Verified Badge */}
+            {prediction.is_exchange_verified && (
+              <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-500">
+                <Shield className="h-2.5 w-2.5" />
+                Verified
+              </Badge>
+            )}
+            {/* API Source Badge */}
+            {prediction.trade_source === 'api' && (
+              <Badge variant="outline" className="text-[10px] gap-1 border-primary/50 text-primary">
+                <Plug className="h-2.5 w-2.5" />
+                API
+              </Badge>
+            )}
+            {/* Extension Source Badge */}
+            {prediction.trade_source === 'extension' && (
+              <Badge variant="outline" className="text-[10px] gap-1 border-muted-foreground/50 text-muted-foreground">
+                <Chrome className="h-2.5 w-2.5" />
+                Extension
+              </Badge>
+            )}
+            {/* Platform Badge */}
+            {prediction.platform && (
+              <Badge variant="outline" className="text-[10px]">
+                {prediction.platform}
+              </Badge>
+            )}
+            {/* Exchange Source Badge */}
+            {prediction.exchange_source && (
+              <Badge variant="outline" className="text-[10px] capitalize">
+                {prediction.exchange_source}
               </Badge>
             )}
           </div>
