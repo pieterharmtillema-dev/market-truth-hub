@@ -10,6 +10,7 @@ export interface ExchangeConnection {
   verified_trades_count: number;
   error_message: string | null;
   created_at: string;
+  label?: string | null; // For Alpaca: "paper" or "live"
 }
 
 export interface SyncResult {
