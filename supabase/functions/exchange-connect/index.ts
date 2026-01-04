@@ -233,6 +233,26 @@ serve(async (req) => {
         );
       }
 
+      // TradeStation requires OAuth 2.0 flow, not API keys
+      if (exchange === 'tradestation') {
+        return new Response(
+          JSON.stringify({
+            error: 'TradeStation requires OAuth authentication. Please use the Connect button to authorize via OAuth.'
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Alpaca has a dedicated edge function with environment support
+      if (exchange === 'alpaca') {
+        return new Response(
+          JSON.stringify({
+            error: 'Alpaca requires using the dedicated alpaca-connect endpoint. Please use /alpaca-connect instead.'
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const validExchanges = ['binance', 'bitvavo', 'coinbase'];
       if (!validExchanges.includes(exchange)) {
         return new Response(

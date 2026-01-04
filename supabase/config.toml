@@ -17,3 +17,12 @@ verify_jwt = false
 
 [functions.exchange-sync]
 verify_jwt = false
+
+[functions.alpaca-connect]
+verify_jwt = false
+
+[functions.alpaca-disconnect]
+verify_jwt = false
+
+[functions.alpaca-sync]
+verify_jwt = false

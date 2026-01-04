@@ -27,25 +27,29 @@ import { formatDistanceToNow } from "date-fns";
 import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
+import tradestationLogo from "@/assets/tradestation-logo.svg";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ExchangeConnectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Exchange = "binance" | "bitvavo" | "coinbase";
+type Exchange = "binance" | "bitvavo" | "coinbase" | "tradestation";
 
 interface ExchangeInfo {
   id: Exchange;
   name: string;
   logo: string;
   color: string;
+  authType?: "api_key" | "oauth"; // oauth for TradeStation
 }
 
 const EXCHANGES: ExchangeInfo[] = [
   { id: "binance", name: "Binance", logo: binanceLogo, color: "bg-yellow-500/10 border-yellow-500/30" },
   { id: "bitvavo", name: "Bitvavo", logo: bitvavoLogo, color: "bg-blue-500/10 border-blue-500/30" },
   { id: "coinbase", name: "Coinbase", logo: coinbaseLogo, color: "bg-blue-600/10 border-blue-600/30" },
+  { id: "tradestation", name: "TradeStation", logo: tradestationLogo, color: "bg-green-600/10 border-green-600/30", authType: "oauth" },
 ];
 
 export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnectionModalProps) {
@@ -57,12 +61,99 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSelectExchange = (exchange: Exchange) => {
+  const handleSelectExchange = async (exchange: Exchange) => {
+    const exchangeInfo = EXCHANGES.find(e => e.id === exchange);
+
+    // If OAuth exchange, start OAuth flow
+    if (exchangeInfo?.authType === "oauth") {
+      await handleOAuthConnect(exchange);
+      return;
+    }
+
+    // Otherwise, show API key form
     setSelectedExchange(exchange);
     setApiKey("");
     setApiSecret("");
     setFormError(null);
     setShowSecret(false);
+  };
+
+  const handleOAuthConnect = async (exchange: Exchange) => {
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      // Call init function to get authorization URL
+      const { data, error } = await supabase.functions.invoke('tradestation-oauth-init', {
+        method: 'POST',
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || 'Failed to initialize OAuth');
+      }
+
+      const { authUrl, state } = data;
+
+      // Store state in sessionStorage for callback validation
+      sessionStorage.setItem('oauth_state', state);
+      sessionStorage.setItem('oauth_exchange', exchange);
+
+      // Open OAuth popup
+      const popup = window.open(
+        authUrl,
+        'tradestation-oauth',
+        'width=600,height=700,menubar=no,toolbar=no,location=no,status=no'
+      );
+
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups for this site and try again.');
+      }
+
+      // Listen for callback message
+      const handleMessage = (event: MessageEvent) => {
+        // Security: Verify origin
+        if (event.origin !== window.location.origin) return;
+
+        window.removeEventListener('message', handleMessage);
+        setIsSubmitting(false);
+
+        if (event.data.type === 'oauth-success') {
+          toast({
+            title: "Exchange Connected",
+            description: "Successfully connected to TradeStation",
+          });
+          // Modal will update via useExchangeConnections hook
+        } else if (event.data.type === 'oauth-error') {
+          setFormError(event.data.error || 'OAuth connection failed');
+          toast({
+            title: "Connection Failed",
+            description: event.data.error,
+            variant: "destructive",
+          });
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Cleanup if popup is closed without completing auth
+      const checkPopupClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkPopupClosed);
+          window.removeEventListener('message', handleMessage);
+          setIsSubmitting(false);
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('OAuth init error:', error);
+      setFormError(error instanceof Error ? error.message : 'OAuth initialization failed');
+      setIsSubmitting(false);
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : 'Failed to start OAuth flow',
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBack = () => {

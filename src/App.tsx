@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import DebugEnv from "./pages/DebugEnv";
+import { OAuthCallback } from "./pages/OAuthCallback";
 
 import BetaBadge from "@/components/BetaBadge";
 
@@ -41,6 +42,7 @@ function RouterContent() {
       <Route path="/create-prediction" element={<CreatePrediction />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/debug-env" element={<DebugEnv />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

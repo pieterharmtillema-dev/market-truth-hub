@@ -389,13 +389,15 @@ serve(async (req) => {
     
     console.log(`Starting sync for user ${user.id}, exchange: ${exchange || 'all'}`);
 
-    // Get exchange connections
+    // Get exchange connections (skip TradeStation and Alpaca - they have their own sync functions)
     let query = supabase
       .from('exchange_connections')
       .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'connected');
-    
+      .eq('status', 'connected')
+      .neq('exchange', 'tradestation') // TradeStation uses dedicated tradestation-sync function
+      .neq('exchange', 'alpaca'); // Alpaca uses dedicated alpaca-sync function
+
     if (exchange) {
       query = query.eq('exchange', exchange);
     }
