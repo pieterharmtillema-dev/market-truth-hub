@@ -31,6 +31,15 @@ const getGreeting = () => {
   return { text: "Welcome back", emoji: "🌙" };
 };
 
+// Welcome animation data type
+interface WelcomeAnimationData {
+  isFirstTime: boolean;
+  displayName: string | null;
+  currentStreak: number;
+  streakType: 'hit' | 'miss' | 'none';
+  totalPredictions: number;
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,6 +59,7 @@ export default function Auth() {
   const [glowBurst, setGlowBurst] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState<string | null>(null);
+  const [welcomeData, setWelcomeData] = useState<WelcomeAnimationData | null>(null);
 
   const greeting = useMemo(() => getGreeting(), []);
 
@@ -63,12 +73,33 @@ export default function Auth() {
           .eq("user_id", session.user.id)
           .maybeSingle();
 
+        // Fetch user profile data for welcome animation
+        const { data: userProfile, error: profileError } = await supabase
+          .from("public_profiles")
+          .select("display_name, current_streak, streak_type, total_predictions")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Failed to fetch user profile:', profileError);
+        }
+
+        // Prepare welcome animation data
+        const welcomeAnimationData: WelcomeAnimationData = {
+          isFirstTime: !traderProfile?.onboarding_completed,
+          displayName: userProfile?.display_name || null,
+          currentStreak: userProfile?.current_streak || 0,
+          streakType: (userProfile?.streak_type as 'hit' | 'miss' | 'none') || 'none',
+          totalPredictions: userProfile?.total_predictions || 0,
+        };
+
         const target = (traderProfile && !traderProfile.onboarding_completed && !traderProfile.onboarding_skipped)
           ? "/onboarding"
           : "/";
 
         setLoginSuccess(true);
         setNavigationTarget(target);
+        setWelcomeData(welcomeAnimationData);
         setShowWelcomeAnimation(true);
       }
     });
@@ -257,7 +288,7 @@ export default function Auth() {
 
   return (
     <>
-      {showWelcomeAnimation && <WelcomeAnimation onComplete={handleWelcomeComplete} />}
+      {showWelcomeAnimation && <WelcomeAnimation onComplete={handleWelcomeComplete} userData={welcomeData || undefined} />}
 
       <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
         {/* Ambient background */}
