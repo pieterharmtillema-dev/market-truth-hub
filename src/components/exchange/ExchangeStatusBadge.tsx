@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertCircle, Clock, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 import { formatDistanceToNow, differenceInDays, differenceInHours } from "date-fns";
 import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
@@ -12,8 +11,6 @@ interface ExchangeStatusBadgeProps {
   lastSyncAt?: string | null;
   verifiedTradesCount?: number;
   showDetails?: boolean;
-  onSync?: () => void;
-  syncing?: boolean;
 }
 
 const EXCHANGE_NAMES: Record<string, string> = {
@@ -53,8 +50,6 @@ export function ExchangeStatusBadge({
   lastSyncAt,
   verifiedTradesCount,
   showDetails = false,
-  onSync,
-  syncing = false,
 }: ExchangeStatusBadgeProps) {
   const exchangeName = EXCHANGE_NAMES[exchange] || exchange;
   const exchangeLogo = EXCHANGE_LOGOS[exchange];
@@ -72,26 +67,12 @@ export function ExchangeStatusBadge({
           <CheckCircle2 className="h-3 w-3" />
         </Badge>
         {showDetails && (
-          <>
-            <div className="text-xs text-muted-foreground">
-              {lastSyncAt && <span>{formatLastSync(lastSyncAt)}</span>}
-              {verifiedTradesCount !== undefined && verifiedTradesCount > 0 && (
-                <span className="ml-1">• {verifiedTradesCount} trades</span>
-              )}
-            </div>
-            {onSync && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onSync}
-                disabled={syncing}
-                className="h-6 px-2 text-xs gap-1"
-              >
-                <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync'}
-              </Button>
+          <div className="text-xs text-muted-foreground">
+            {lastSyncAt && <span>{formatLastSync(lastSyncAt)}</span>}
+            {verifiedTradesCount !== undefined && verifiedTradesCount > 0 && (
+              <span className="ml-1">• {verifiedTradesCount} trades</span>
             )}
-          </>
+          </div>
         )}
       </div>
     );

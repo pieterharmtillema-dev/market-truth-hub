@@ -41,6 +41,7 @@ import {
   Calendar,
   Link2,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -355,7 +356,37 @@ const Profile = () => {
                   <Link2 className="w-4 h-4 text-muted-foreground" />
                   <h3 className="font-medium">Exchange Connections</h3>
                 </div>
-                <ConnectExchangeButton variant="outline" size="sm" />
+                <div className="flex items-center gap-2">
+                  {connections.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const result = await syncTrades();
+                        if (result.success) {
+                          toast({
+                            title: "Trades Synced",
+                            description: result.synced > 0
+                              ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
+                              : "No new trades found",
+                          });
+                        } else {
+                          toast({
+                            title: "Sync Failed",
+                            description: result.error || "Failed to sync trades",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={syncing}
+                      className="gap-1.5"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Syncing...' : 'Sync All'}
+                    </Button>
+                  )}
+                  <ConnectExchangeButton variant="outline" size="sm" />
+                </div>
               </div>
 
               {loadingExchanges ? (
@@ -374,24 +405,6 @@ const Profile = () => {
                       lastSyncAt={conn.last_sync_at}
                       verifiedTradesCount={conn.verified_trades_count}
                       showDetails
-                      syncing={syncing}
-                      onSync={async () => {
-                        const result = await syncTrades(conn.exchange);
-                        if (result.success) {
-                          toast({
-                            title: "Trades Synced",
-                            description: result.synced > 0
-                              ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
-                              : "No new trades found",
-                          });
-                        } else {
-                          toast({
-                            title: "Sync Failed",
-                            description: result.error || "Failed to sync trades",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
                     />
                   ))}
                 </div>
