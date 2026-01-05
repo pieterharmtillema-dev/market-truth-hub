@@ -12,6 +12,7 @@ interface ExchangeStatusBadgeProps {
   lastSyncAt?: string | null;
   verifiedTradesCount?: number;
   showDetails?: boolean;
+  label?: string | null;
 }
 
 const EXCHANGE_NAMES: Record<string, string> = {
@@ -53,9 +54,12 @@ export function ExchangeStatusBadge({
   lastSyncAt,
   verifiedTradesCount,
   showDetails = false,
+  label,
 }: ExchangeStatusBadgeProps) {
   const exchangeName = EXCHANGE_NAMES[exchange] || exchange;
   const exchangeLogo = EXCHANGE_LOGOS[exchange];
+  const alpacaEnvironment =
+    exchange === "alpaca" && (label === "paper" || label === "live") ? label : null;
 
   const LogoImage = exchangeLogo ? (
     <img src={exchangeLogo} alt={exchangeName} className="h-4 w-4 rounded object-contain" />
@@ -69,6 +73,18 @@ export function ExchangeStatusBadge({
           {exchangeName}
           <CheckCircle2 className="h-3 w-3" />
         </Badge>
+        {alpacaEnvironment && (
+          <Badge
+            variant="outline"
+            className={
+              alpacaEnvironment === "paper"
+                ? "bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs"
+                : "bg-red-500/10 text-red-500 border-red-500/30 text-xs"
+            }
+          >
+            {alpacaEnvironment === "paper" ? "Paper" : "Live"}
+          </Badge>
+        )}
         {showDetails && (
           <div className="text-xs text-muted-foreground">
             {lastSyncAt && <span>{formatLastSync(lastSyncAt)}</span>}

@@ -325,7 +325,7 @@ serve(async (req) => {
       // Get user's exchange connections
       const { data, error } = await supabase
         .from('exchange_connections')
-        .select('id, exchange, status, last_sync_at, verified_trades_count, error_message, created_at')
+        .select('id, exchange, status, last_sync_at, verified_trades_count, error_message, created_at, label')
         .eq('user_id', user.id);
 
       if (error) {

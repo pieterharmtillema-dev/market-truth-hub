@@ -409,6 +409,7 @@ const Profile = () => {
                       status={conn.status}
                       lastSyncAt={conn.last_sync_at}
                       verifiedTradesCount={conn.verified_trades_count}
+                      label={conn.label}
                       showDetails
                     />
                   ))}
