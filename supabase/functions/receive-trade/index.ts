@@ -808,6 +808,89 @@ async function handleUserActivity(
 }
 
 // ============================================================================
+// EVENT TYPE NORMALIZATION FOR PLATFORM-SPECIFIC LOGIC
+// ============================================================================
+
+/**
+ * Normalizes event type based on platform-specific rules.
+ *
+ * For Alpaca: Alpaca sends all fills as TRADE_ENTRY. We need to detect when
+ * a fill should actually close an existing opposite position (FIFO logic).
+ *
+ * Logic:
+ * - If TRADE_ENTRY from Alpaca with a "sell"/"short" side
+ * - AND there's an open "long" position for the same symbol
+ * - Then treat as TRADE_EXIT to trigger FIFO close logic
+ *
+ * - If TRADE_ENTRY from Alpaca with a "buy"/"long" side
+ * - AND there's an open "short" position for the same symbol
+ * - Then treat as TRADE_EXIT to trigger FIFO close logic
+ *
+ * @returns The normalized event type ("TRADE_ENTRY" or "TRADE_EXIT")
+ */
+async function normalizeEventTypeForPlatform(
+  serviceClient: SupabaseClient,
+  userId: string,
+  eventType: string,
+  payload: {
+    platform: string;
+    symbol: string | null;
+    side: "long" | "short" | null;
+  },
+): Promise<string> {
+  // Only normalize TRADE_ENTRY events from Alpaca
+  if (eventType !== "TRADE_ENTRY" || payload.platform !== "Alpaca") {
+    return eventType;
+  }
+
+  // Need symbol and side to check for opposite positions
+  if (!payload.symbol || !payload.side) {
+    return eventType;
+  }
+
+  console.log(`[Alpaca] Checking if ${payload.side} fill should close opposite position for ${payload.symbol}...`);
+
+  try {
+    // Query for open positions with opposite side
+    const { data: openPositions, error: checkError } = await serviceClient
+      .from("positions")
+      .select("id, side, quantity")
+      .eq("user_id", userId)
+      .eq("symbol", payload.symbol)
+      .eq("open", true)
+      .order("entry_timestamp", { ascending: true });
+
+    if (checkError) {
+      console.error("[Alpaca] Error checking open positions:", checkError);
+      return eventType; // Fall back to original type on error
+    }
+
+    if (!openPositions || openPositions.length === 0) {
+      console.log(`[Alpaca] No open positions found, treating as genuine entry`);
+      return eventType;
+    }
+
+    // Check if any open position has the opposite side
+    const hasOppositeSide = openPositions.some((pos: { side: string }) => {
+      if (payload.side === "long" && pos.side === "short") return true;
+      if (payload.side === "short" && pos.side === "long") return true;
+      return false;
+    });
+
+    if (hasOppositeSide) {
+      console.log(`[Alpaca] Found opposite open position - converting to TRADE_EXIT`);
+      return "TRADE_EXIT";
+    } else {
+      console.log(`[Alpaca] All open positions are same side, treating as genuine entry`);
+      return eventType;
+    }
+  } catch (error) {
+    console.error("[Alpaca] Error in normalizeEventTypeForPlatform:", error);
+    return eventType; // Fall back to original type on error
+  }
+}
+
+// ============================================================================
 // MAIN REQUEST HANDLER
 // ============================================================================
 
@@ -920,8 +1003,15 @@ Deno.serve(async (req: Request) => {
       nowIso,
     );
 
+    // Normalize event type based on platform-specific rules
+    const normalizedEventType = await normalizeEventTypeForPlatform(serviceClient, userId, eventType, {
+      platform,
+      symbol,
+      side,
+    });
+
     // Route to appropriate handler
-    switch (eventType) {
+    switch (normalizedEventType) {
       case "TRADE_ENTRY": {
         if (!symbol || !side || price === null || quantity === null) {
           return errorResponse("invalid_request", "TRADE_ENTRY requires symbol, side, price, and quantity", 400);
