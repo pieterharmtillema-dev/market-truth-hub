@@ -137,19 +137,9 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                   </p>
                 </div>
               ) : (
-                <div className="space-y-32 sm:space-y-40 md:space-y-48">
-                  {/* Welcome back - professional, positioned higher */}
-                  <div className="relative">
-                    <h1 className="relative text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white" style={{
-                      textShadow: '0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(61, 214, 140, 0.4)',
-                      letterSpacing: '-0.02em',
-                    }}>
-                      Welcome back
-                    </h1>
-                  </div>
-
-                  {/* Successfully logged in - smaller, positioned lower */}
-                  <div className="relative">
+                <div className="flex flex-col items-center">
+                  {/* Successfully logged in - positioned much lower */}
+                  <div className="relative mt-48 sm:mt-56 md:mt-64">
                     <p className="text-sm sm:text-base md:text-lg font-medium text-white/70 tracking-wide" style={{
                       textShadow: '0 1px 10px rgba(0, 0, 0, 0.8)',
                     }}>
