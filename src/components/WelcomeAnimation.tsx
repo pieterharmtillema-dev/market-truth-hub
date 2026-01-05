@@ -116,9 +116,9 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
           </div>
         )}
 
-        {/* Center: Welcome message - positioned on top */}
+        {/* Center: Welcome message - positioned higher */}
         {userData && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 sm:pt-32 md:pt-40 pointer-events-none px-4">
             <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
               {isFirstTime ? (
                 <div className="relative space-y-4">
@@ -137,33 +137,31 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                   </p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {/* Welcome back - positioned on top */}
+                <div className="space-y-32 sm:space-y-40 md:space-y-48">
+                  {/* Welcome back - professional, positioned higher */}
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/40 via-trax/40 to-primary/40 blur-3xl animate-pulse" />
-                    <h1 className="relative text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white" style={{
-                      textShadow: '0 0 60px rgba(61, 214, 140, 1), 0 0 100px rgba(125, 197, 66, 0.8), 0 0 140px rgba(255, 255, 255, 0.6), 0 6px 30px rgba(0, 0, 0, 0.9)',
-                      WebkitTextStroke: '2px rgba(61, 214, 140, 0.4)',
-                      letterSpacing: '0.02em',
+                    <h1 className="relative text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white" style={{
+                      textShadow: '0 2px 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(61, 214, 140, 0.4)',
+                      letterSpacing: '-0.02em',
                     }}>
                       Welcome back
                     </h1>
                   </div>
 
-                  {/* Successfully logged in - smaller, below */}
+                  {/* Successfully logged in - smaller, positioned lower */}
                   <div className="relative">
-                    <p className="text-lg sm:text-xl md:text-2xl font-semibold text-white/90 tracking-wide" style={{
-                      textShadow: '0 0 20px rgba(61, 214, 140, 0.6), 0 0 40px rgba(61, 214, 140, 0.3), 0 2px 10px rgba(0, 0, 0, 0.8)',
+                    <p className="text-sm sm:text-base md:text-lg font-medium text-white/70 tracking-wide" style={{
+                      textShadow: '0 1px 10px rgba(0, 0, 0, 0.8)',
                     }}>
                       Successfully logged in
                     </p>
                   </div>
 
-                  {/* Active streak badge */}
+                  {/* Active streak badge - positioned below */}
                   {hasActiveStreak && (
-                    <div className="mt-4 px-6 py-3 rounded-full backdrop-blur-xl border-2 border-primary/40 inline-block bg-gradient-to-r from-primary/20 to-trax/20 animate-in zoom-in duration-500 delay-800">
-                      <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
-                        textShadow: '0 0 25px rgba(255, 165, 0, 0.6)',
+                    <div className="mt-8 px-5 py-2 rounded-full backdrop-blur-md border border-primary/30 inline-block bg-gradient-to-r from-primary/15 to-trax/15 animate-in zoom-in duration-500 delay-800">
+                      <p className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
+                        textShadow: '0 0 20px rgba(255, 165, 0, 0.5)',
                       }}>
                         {userData.currentStreak}-trade streak! 🔥
                       </p>
