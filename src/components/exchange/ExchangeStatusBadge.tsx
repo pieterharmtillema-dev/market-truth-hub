@@ -4,6 +4,7 @@ import { formatDistanceToNow, differenceInDays, differenceInHours } from "date-f
 import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
+import alpacaLogo from "@/assets/alpaca-logo.svg";
 
 interface ExchangeStatusBadgeProps {
   exchange: string;
@@ -17,12 +18,14 @@ const EXCHANGE_NAMES: Record<string, string> = {
   binance: "Binance",
   bitvavo: "Bitvavo", 
   coinbase: "Coinbase",
+  alpaca: "Alpaca",
 };
 
 const EXCHANGE_LOGOS: Record<string, string> = {
   binance: binanceLogo,
   bitvavo: bitvavoLogo,
   coinbase: coinbaseLogo,
+  alpaca: alpacaLogo,
 };
 
 function formatLastSync(lastSyncAt: string): string {
