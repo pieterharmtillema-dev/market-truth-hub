@@ -88,9 +88,9 @@ function normalizeAlpacaOrderToPosition(
     pnl_pct: 0,
     open: false, // Treat each order as closed initially
     is_exchange_verified: true,
+    is_simulation: false,
     exchange_source: 'alpaca',
     trade_source: 'api',
-    external_id: order.id, // Alpaca order ID for deduplication
     fees_total: 0, // Alpaca doesn't charge commissions for stocks, minimal for crypto
     platform: 'Alpaca',
     asset_class: assetClass,
@@ -185,7 +185,7 @@ serve(async (req) => {
       connection.api_secret_encrypted,
       encryptionKey
     );
-    const environment = connection.environment as AlpacaEnvironment;
+    const environment = (connection.label ?? connection.environment) as AlpacaEnvironment;
 
     if (!environment) {
       console.error('No environment specified in connection');
@@ -254,26 +254,33 @@ serve(async (req) => {
         continue; // Skip invalid orders
       }
 
-      // Insert with conflict resolution using external_id unique index
-      // ON CONFLICT DO NOTHING prevents duplicates
-      const { error: insertError } = await supabase
+      // Deduplicate (positions table has no external_id column)
+      const { data: existing, error: existingError } = await supabase
         .from('positions')
-        .insert(position)
-        .select()
-        .single();
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('exchange_source', 'alpaca')
+        .eq('symbol', position.symbol)
+        .eq('side', position.side)
+        .eq('entry_price', position.entry_price)
+        .eq('exit_price', position.exit_price)
+        .eq('entry_timestamp', position.entry_timestamp)
+        .eq('quantity', position.quantity)
+        .limit(1);
+
+      if (existingError) {
+        console.warn(`Dedup check failed for order ${order.id}:`, existingError);
+      }
+
+      if (existing && existing.length > 0) {
+        skippedDuplicates++;
+        continue;
+      }
+
+      const { error: insertError } = await supabase.from('positions').insert(position);
 
       if (insertError) {
-        // Check if it's a duplicate (unique constraint violation)
-        if (
-          insertError.code === '23505' || // PostgreSQL unique violation
-          insertError.message?.includes('duplicate') ||
-          insertError.message?.includes('unique')
-        ) {
-          skippedDuplicates++;
-          console.log(`Skipped duplicate order: ${order.id}`);
-        } else {
-          console.error(`Failed to insert order ${order.id}:`, insertError);
-        }
+        console.error(`Failed to insert order ${order.id}:`, insertError);
       } else {
         imported++;
       }
