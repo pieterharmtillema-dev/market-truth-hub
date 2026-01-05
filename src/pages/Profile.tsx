@@ -6,7 +6,6 @@ import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { TraderCharacterHero } from "@/components/profile/TraderCharacterHero";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
-import { TraderStatusCard } from "@/components/TraderStatusCard";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
 import { ExplanationDialog } from "@/components/predictions/ExplanationDialog";
@@ -348,76 +347,70 @@ const Profile = () => {
         {/* Trader Profile Section - Let users update their trading profile */}
         {userId && <TraderProfileSection userId={userId} />}
 
-        {/* Trader Status & Exchange Connections - Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Trader Status */}
-          <TraderStatusCard />
-
-          {/* Exchange Connections */}
-          {userId && (
-            <Card variant="glass" className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Link2 className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="font-medium">Exchange Connections</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {connections.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        const result = await syncTrades();
-                        if (result.success) {
-                          toast({
-                            title: "Trades Synced",
-                            description: result.synced > 0
-                              ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
-                              : "No new trades found",
-                          });
-                        } else {
-                          toast({
-                            title: "Sync Failed",
-                            description: result.error || "Failed to sync trades",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                      disabled={syncing}
-                      className="gap-1.5"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
-                      {syncing ? 'Syncing...' : 'Sync All'}
-                    </Button>
-                  )}
-                  <ConnectExchangeButton variant="outline" size="sm" />
-                </div>
+        {/* Exchange Connections */}
+        {userId && (
+          <Card variant="glass" className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-medium">Exchange Connections</h3>
               </div>
+              <div className="flex items-center gap-2">
+                {connections.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const result = await syncTrades();
+                      if (result.success) {
+                        toast({
+                          title: "Trades Synced",
+                          description: result.synced > 0
+                            ? `Synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
+                            : "No new trades found",
+                        });
+                      } else {
+                        toast({
+                          title: "Sync Failed",
+                          description: result.error || "Failed to sync trades",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={syncing}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                    {syncing ? 'Syncing...' : 'Sync All'}
+                  </Button>
+                )}
+                <ConnectExchangeButton variant="outline" size="sm" />
+              </div>
+            </div>
 
-              {loadingExchanges ? (
-                <Skeleton className="h-12 w-full" />
-              ) : connections.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Connect your exchange to automatically sync and verify your trades.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {connections.map((conn) => (
-                    <ExchangeStatusBadge
-                      key={conn.id}
-                      exchange={conn.exchange}
-                      status={conn.status}
-                      lastSyncAt={conn.last_sync_at}
-                      verifiedTradesCount={conn.verified_trades_count}
-                      label={conn.label}
-                      showDetails
-                    />
-                  ))}
-                </div>
-              )}
-            </Card>
-          )}
-        </div>
+            {loadingExchanges ? (
+              <Skeleton className="h-12 w-full" />
+            ) : connections.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Connect your exchange to automatically sync and verify your trades.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {connections.map((conn) => (
+                  <ExchangeStatusBadge
+                    key={conn.id}
+                    exchange={conn.exchange}
+                    status={conn.status}
+                    lastSyncAt={conn.last_sync_at}
+                    verifiedTradesCount={conn.verified_trades_count}
+                    label={conn.label}
+                    showDetails
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
 
 
         {/* Content Tabs */}

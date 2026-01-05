@@ -3,7 +3,6 @@ import { Search, Plus, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { TraderStatusIndicator } from "./TraderStatusIndicator";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import traxDinoLogo from "@/assets/trax-dino-logo.png";
 
@@ -88,10 +87,6 @@ export function Header({ showSearch = true, showCreate = true }: HeaderProps) {
             ${hideContent ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}
           `}
         >
-          <div className="hidden sm:block">
-            <TraderStatusIndicator />
-          </div>
-
           {showSearch && (
             <Button variant="ghost" size="icon-sm">
               <Search className="w-4 h-4" />
