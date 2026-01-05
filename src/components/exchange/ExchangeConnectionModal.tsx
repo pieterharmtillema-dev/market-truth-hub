@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +64,13 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showAlpacaModal, setShowAlpacaModal] = useState(false);
+
+  // Refetch connections when modal opens to ensure fresh data
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   const handleSelectExchange = async (exchange: Exchange) => {
     const exchangeInfo = EXCHANGES.find(e => e.id === exchange);
