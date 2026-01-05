@@ -113,16 +113,22 @@ async function closeSellOrder(
       remainingQuantity -= positionQty;
       closedCount++;
     } else {
-      // Partial close - reduce the open position and create a closed record
+      // Partial close - split the position
       const closedQty = remainingQuantity;
       const remainingQty = positionQty - closedQty;
       const { pnl, pnl_pct } = calculatePnL('long', position.entry_price, sellPrice, closedQty);
+
+      // Calculate proportional lots if quantity_lots exists
+      const positionLots = Number(position.quantity_lots) || positionQty;
+      const closedLots = Number(((closedQty / positionQty) * positionLots).toFixed(8));
+      const remainingLots = Number((positionLots - closedLots).toFixed(8));
 
       // Update original position with remaining quantity
       const { error: updateError } = await supabase
         .from('positions')
         .update({
           quantity: remainingQty,
+          quantity_lots: remainingLots,
           updated_at: new Date().toISOString(),
         })
         .eq('id', position.id);
@@ -132,7 +138,7 @@ async function closeSellOrder(
         continue;
       }
 
-      // Create closed position record
+      // Create closed portion as new record (required for FIFO tracking)
       const { error: insertError } = await supabase
         .from('positions')
         .insert({
@@ -140,6 +146,7 @@ async function closeSellOrder(
           symbol: symbol,
           side: 'long',
           quantity: closedQty,
+          quantity_lots: closedLots,
           entry_price: position.entry_price,
           entry_timestamp: position.entry_timestamp,
           exit_price: sellPrice,
@@ -394,12 +401,21 @@ serve(async (req) => {
 
     console.log(`Fetched ${orders.length} filled orders from Alpaca`);
 
+    // Sort orders by filled_at timestamp (earliest first) to ensure buy orders are processed before sells
+    const sortedOrders = orders.sort((a, b) => {
+      const aTime = new Date(a.filled_at || a.updated_at).getTime();
+      const bTime = new Date(b.filled_at || b.updated_at).getTime();
+      return aTime - bTime;
+    });
+
+    console.log(`Processing ${sortedOrders.length} orders in chronological order`);
+
     // Process and insert orders
     let imported = 0;
     let skippedDuplicates = 0;
     let closedPositions = 0;
 
-    for (const order of orders) {
+    for (const order of sortedOrders) {
       const position = normalizeAlpacaOrderToPosition(order, user.id);
 
       if (!position) {
@@ -414,7 +430,7 @@ serve(async (req) => {
 
       // Handle sell orders by closing open positions (FIFO)
       if (!isBuyOrder) {
-        console.log(`Processing SELL order for ${symbol}: ${quantity} @ ${price}`);
+        console.log(`Processing SELL order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
 
         const { closed, error: closeError } = await closeSellOrder(
           supabase,
@@ -426,10 +442,16 @@ serve(async (req) => {
         );
 
         if (closeError) {
-          console.warn(`Failed to close positions for sell order ${order.id}: ${closeError}`);
+          if (closeError === 'no_open_positions') {
+            console.warn(`SELL order ${order.id} for ${symbol} has no matching open position - may be from before sync started`);
+          } else {
+            console.error(`Failed to close positions for sell order ${order.id}: ${closeError}`);
+          }
+        } else if (closed === 0) {
+          console.warn(`SELL order ${order.id} closed 0 positions - no matching open position found`);
         } else {
           closedPositions += closed;
-          console.log(`Closed ${closed} position(s) for ${symbol}`);
+          console.log(`✓ Closed ${closed} position(s) for ${symbol} via FIFO matching`);
         }
 
         continue; // Don't insert sell orders as separate positions
@@ -464,10 +486,10 @@ serve(async (req) => {
       const { error: insertError } = await supabase.from('positions').insert(position);
 
       if (insertError) {
-        console.error(`Failed to insert order ${order.id}:`, insertError);
+        console.error(`Failed to insert BUY order ${order.id}:`, insertError);
       } else {
         imported++;
-        console.log(`Imported BUY order for ${symbol}: ${quantity} @ ${price}`);
+        console.log(`✓ Imported BUY order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
       }
     }
 

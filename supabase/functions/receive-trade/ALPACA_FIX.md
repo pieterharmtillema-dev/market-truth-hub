@@ -1,6 +1,13 @@
-# Alpaca TRADE_ENTRY → TRADE_EXIT Auto-Detection Fix
+# Alpaca Trade Matching Fix
 
-## Problem
+## Overview
+
+This document describes fixes for Alpaca trade matching issues. There are TWO separate paths for Alpaca trades:
+
+1. **Webhook Path** (`receive-trade` function) - For real-time trade webhooks
+2. **Sync Path** (`alpaca-sync` function) - For batch syncing historical trades
+
+## Problem 1: Webhook Path
 
 Alpaca sends all order fills as `type: "TRADE_ENTRY"`, including both opening and closing fills. This caused:
 - Buy fills to always create new long positions ✓
@@ -155,7 +162,43 @@ async function normalizeEventTypeForPlatform(...) {
 }
 ```
 
+## Problem 2: Sync Path
+
+The `alpaca-sync` function processes historical orders in batch. Issues:
+
+1. **Timing**: If you sync immediately after trading, the buy and sell orders might arrive in the API response in unpredictable order
+2. **Duplicate Syncs**: Running sync multiple times can create duplicate positions if deduplication fails
+3. **No Open Position**: If the sell order is processed before the buy order is inserted, it fails silently
+
+### Current Sync Behavior
+
+```typescript
+for (const order of orders) {
+  if (order.side === 'sell') {
+    // Try to close open positions via FIFO
+    await closeSellOrder(...)
+    continue; // Don't insert sell as position
+  }
+
+  if (order.side === 'buy') {
+    // Check for duplicates, then insert as open position
+    await insert(position);
+  }
+}
+```
+
+**Problem**: If orders array has `[SELL, BUY]`, the sell fails because no open position exists yet.
+
+### Solution
+
+The `alpaca-sync` function should:
+1. **Sort orders by timestamp** before processing (earliest first)
+2. **Separate buy/sell orders** and process buys first, then sells
+3. **Better error handling** when no open position exists for a sell
+
 ## Verification
+
+### For Webhook Path
 
 Check Supabase logs for Alpaca webhook calls:
 ```
@@ -163,8 +206,31 @@ Check Supabase logs for Alpaca webhook calls:
 [Alpaca] Found opposite open position - converting to TRADE_EXIT
 ```
 
+### For Sync Path
+
+Check Supabase logs for alpaca-sync calls:
+```
+Processing SELL order for AAPL: 100 @ 150.50
+Closed 1 position(s) for AAPL
+```
+
+### Database Check
+
 Check `positions` table:
-- Each trade should have ONE position record (not two)
+- Each completed trade should have ONE position record (not two)
 - Position should have both `entry_price` and `exit_price` filled
 - `open` should be `false` after close
 - `pnl` should be calculated correctly
+
+### Common Issues
+
+**Seeing duplicate positions?**
+1. Check if they're from same sync (look at `created_at` timestamps)
+2. Check Supabase logs - are sell orders finding open positions?
+3. Verify `exchange_source = 'alpaca'` on all positions
+4. Check if orders are being sorted by timestamp
+
+**Seeing SHORT positions when you only went long?**
+- This shouldn't happen with current code (line 224 hardcodes `side = 'long'`)
+- Check your frontend - it might be inferring side from something else
+- Verify the actual `side` column value in database
