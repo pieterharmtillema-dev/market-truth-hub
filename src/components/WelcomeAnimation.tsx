@@ -120,7 +120,7 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
         {userData && (
           <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 sm:pt-32 md:pt-40 pointer-events-none px-4">
             <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-              {isFirstTime ? (
+              {isFirstTime && (
                 <div className="relative space-y-4">
                   <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-primary to-white bg-clip-text text-transparent animate-glow-pulse" style={{
                     textShadow: '0 0 40px rgba(61, 214, 140, 0.6), 0 0 80px rgba(61, 214, 140, 0.3)',
@@ -136,33 +136,33 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
                     Successfully logged in as {userData.displayName || 'Trader'}
                   </p>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  {/* Successfully logged in - positioned much lower */}
-                  <div className="relative mt-48 sm:mt-56 md:mt-64">
-                    <p className="text-sm sm:text-base md:text-lg font-medium text-white/70 tracking-wide" style={{
-                      textShadow: '0 1px 10px rgba(0, 0, 0, 0.8)',
-                    }}>
-                      Successfully logged in
-                    </p>
-                  </div>
-
-                  {/* Active streak badge - positioned below */}
-                  {hasActiveStreak && (
-                    <div className="mt-8 px-5 py-2 rounded-full backdrop-blur-md border border-primary/30 inline-block bg-gradient-to-r from-primary/15 to-trax/15 animate-in zoom-in duration-500 delay-800">
-                      <p className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
-                        textShadow: '0 0 20px rgba(255, 165, 0, 0.5)',
-                      }}>
-                        {userData.currentStreak}-trade streak! 🔥
-                      </p>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Successfully logged in text for returning users - positioned above click hint */}
+      {userData && !isFirstTime && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
+          <p className="text-sm sm:text-base md:text-lg font-medium text-white/70 tracking-wide" style={{
+            textShadow: '0 1px 10px rgba(0, 0, 0, 0.8)',
+          }}>
+            Successfully logged in
+          </p>
+
+          {/* Active streak badge */}
+          {hasActiveStreak && (
+            <div className="px-5 py-2 rounded-full backdrop-blur-md border border-primary/30 bg-gradient-to-r from-primary/15 to-trax/15 animate-in zoom-in duration-500 delay-800">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-warning via-primary to-warning bg-clip-text text-transparent" style={{
+                textShadow: '0 0 20px rgba(255, 165, 0, 0.5)',
+              }}>
+                {userData.currentStreak}-trade streak! 🔥
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Click anywhere to skip hint */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 text-sm animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-1000">
