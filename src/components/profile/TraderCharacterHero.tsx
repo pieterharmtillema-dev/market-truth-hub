@@ -13,6 +13,7 @@ import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
 import { useToast } from "@/hooks/use-toast";
 import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
+import { formatExchangeName } from "@/lib/exchangeUtils";
 import {
   Trophy,
   TrendingUp,
@@ -48,6 +49,7 @@ interface TraderProfile {
 
 interface TraderCharacterHeroProps {
   userId: string;
+  connectedExchanges?: string[];
   onProfileUpdated?: (data: { display_name: string; avatar_url: string; bio: string }) => void;
   onSocialClick?: () => void;
   followersCount?: number;
@@ -107,7 +109,14 @@ const getSessionTheme = (session: string | null): 'day' | 'night' | 'sunset' | '
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, followersCount = 0, followingCount = 0 }: TraderCharacterHeroProps) {
+export function TraderCharacterHero({
+  userId,
+  connectedExchanges,
+  onProfileUpdated,
+  onSocialClick,
+  followersCount = 0,
+  followingCount = 0
+}: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
   const [totalTrades, setTotalTrades] = useState(0);
@@ -236,6 +245,18 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
   // Real data from metrics
   const accuracy = metrics?.accuracy_score || 0;
   const totalPredictions = metrics?.total_verified_trades || totalTrades;
+  const exchangeLabels = useMemo(
+    () => (connectedExchanges || []).map((exchange) => formatExchangeName(exchange) || exchange).filter(Boolean),
+    [connectedExchanges]
+  );
+  const hasExchangeVerifiedTrades = useMemo(
+    () => positions.some((pos) => pos.is_exchange_verified || pos.exchange_source),
+    [positions]
+  );
+  const showExchangeVerification = hasExchangeVerifiedTrades && exchangeLabels.length > 0;
+  const exchangeSummary = exchangeLabels.join(", ");
+  const exchangePreview = exchangeLabels.slice(0, 2).join(", ");
+  const extraExchangeCount = Math.max(exchangeLabels.length - 2, 0);
 
   // Calculate level
   const level = Math.floor(totalTrades / 25) + 1;
@@ -283,7 +304,7 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
         // Fetch trading stats from positions
         const { data: positionsData } = await supabase
           .from("positions")
-          .select("id, pnl, pnl_pct, open, entry_timestamp")
+          .select("id, pnl, pnl_pct, open, entry_timestamp, exchange_source, is_exchange_verified")
           .eq("user_id", userId);
 
         if (positionsData) {
@@ -610,6 +631,21 @@ export function TraderCharacterHero({ userId, onProfileUpdated, onSocialClick, f
                       <Badge className="bg-background/40 backdrop-blur-sm text-muted-foreground border-border/30">
                         <Shield className="w-3 h-3 mr-1" />
                         {formatRisk(traderProfile.risk_per_trade)}
+                      </Badge>
+                    )}
+                    {showExchangeVerification && (
+                      <Badge
+                        className="bg-emerald-500/15 backdrop-blur-sm text-emerald-200 border-emerald-500/30"
+                        title={exchangeSummary}
+                      >
+                        <Shield className="w-3 h-3 mr-1 text-emerald-400" />
+                        Exchange Verified
+                        {exchangePreview && (
+                          <span className="ml-1 text-[10px] uppercase tracking-wider text-emerald-100">
+                            {exchangePreview}
+                            {extraExchangeCount > 0 ? ` +${extraExchangeCount}` : ""}
+                          </span>
+                        )}
                       </Badge>
                     )}
                   </div>

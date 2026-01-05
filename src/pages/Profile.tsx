@@ -103,6 +103,10 @@ const Profile = () => {
   const { connections, loading: loadingExchanges, syncTrades, syncing } = useExchangeConnections();
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
   const [positions, setPositions] = useState<any[]>([]);
+  const connectedExchangeIds = useMemo(
+    () => connections.filter((c) => c.status === "connected").map((c) => c.exchange),
+    [connections]
+  );
 
   // Filter to only show resolved predictions (hit/missed) from real trades
   const resolvedTradePredictions = tradePredictions.filter((p) => p.status === "hit" || p.status === "missed");
@@ -272,6 +276,7 @@ const Profile = () => {
         {userId && (
           <TraderCharacterHero
             userId={userId}
+            connectedExchanges={connectedExchangeIds}
             onProfileUpdated={handleProfileUpdated}
             onSocialClick={() => setShowSocialDialog(true)}
             followersCount={followers.length}

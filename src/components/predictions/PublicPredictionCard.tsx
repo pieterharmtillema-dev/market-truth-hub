@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig } from "@/components/profile/characterConfig";
 import { FAKE_PROFILES } from "@/lib/fakeProfiles";
+import { formatExchangeName } from "@/lib/exchangeUtils";
 
 export interface PublicPredictionData {
   id: string;
@@ -154,6 +155,9 @@ export function PublicPredictionCard({
   const displayName = prediction.profile?.display_name || "Trader";
   const avatarUrl = prediction.profile?.avatar_url;
   const isVerified = prediction.profile?.is_verified || false;
+  const exchangeLabel = formatExchangeName(prediction.exchange_source);
+  const tradePlatform = prediction.platform || exchangeLabel || null;
+  const isExchangeVerified = Boolean(prediction.is_exchange_verified || prediction.exchange_source);
 
   // Fetch character config for the user
   useEffect(() => {
@@ -222,10 +226,10 @@ export function PublicPredictionCard({
               </Badge>
             )}
           </div>
-        ) : isTrade && (prediction.trade_source || prediction.platform || prediction.exchange_source) && (
+        ) : isTrade && (prediction.trade_source || tradePlatform || isExchangeVerified) && (
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
             {/* Exchange Verified Badge */}
-            {prediction.is_exchange_verified && (
+            {isExchangeVerified && (
               <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-500">
                 <Shield className="h-2.5 w-2.5" />
                 Verified
@@ -246,15 +250,10 @@ export function PublicPredictionCard({
               </Badge>
             )}
             {/* Platform Badge */}
-            {prediction.platform && (
-              <Badge variant="outline" className="text-[10px]">
-                {prediction.platform}
-              </Badge>
-            )}
-            {/* Exchange Source Badge */}
-            {prediction.exchange_source && (
-              <Badge variant="outline" className="text-[10px] capitalize">
-                {prediction.exchange_source}
+            {tradePlatform && (
+              <Badge variant="outline" className="text-[10px] gap-1 border-sky-500/40 text-sky-300">
+                <Globe className="h-2.5 w-2.5" />
+                {prediction.exchange_source ? `Traded on ${tradePlatform}` : tradePlatform}
               </Badge>
             )}
           </div>

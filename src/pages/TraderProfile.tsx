@@ -15,6 +15,7 @@ import { PublicTraderCharacterHero } from "@/components/profile/PublicTraderChar
 import { AvatarDisplay } from "@/components/profile/AvatarDisplay";
 import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 import { FAKE_PROFILES, FAKE_TRADER_META, PublicProfile, FakeTraderMeta } from "@/lib/fakeProfiles";
+import { formatExchangeName } from "@/lib/exchangeUtils";
 import {
   Flame,
   Snowflake,
@@ -140,12 +141,20 @@ const TraderProfile = () => {
             .in("id", positionIds);
 
           if (positionsData) {
-            positionsMap = new Map(positionsData.map(p => [p.id, {
-              trade_source: p.trade_source,
-              platform: p.platform,
-              exchange_source: p.exchange_source,
-              is_exchange_verified: p.is_exchange_verified
-            }]));
+            positionsMap = new Map(
+              positionsData.map((p) => {
+                const formattedPlatform = p.platform || formatExchangeName(p.exchange_source);
+                return [
+                  p.id,
+                  {
+                    trade_source: p.trade_source,
+                    platform: formattedPlatform,
+                    exchange_source: p.exchange_source,
+                    is_exchange_verified: p.is_exchange_verified || Boolean(p.exchange_source),
+                  },
+                ];
+              })
+            );
           }
         }
 

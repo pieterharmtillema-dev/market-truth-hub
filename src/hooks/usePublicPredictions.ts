@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 import { FAKE_PROFILES, isFakeTrader, getFakeTraderIds } from "./fakeTraderData";
+import { formatExchangeName } from "@/lib/exchangeUtils";
 
 // Re-export from fakeTraderData for backwards compatibility
 export { isFakeTrader, getFakeTraderIds };
@@ -305,14 +306,28 @@ export function usePublicPredictions(limit = 20) {
           .select("user_id, display_name, avatar_url, current_streak, streak_type, total_predictions, total_hits")
           .in("user_id", userIds);
 
-        // Check which users have connected exchanges (verified)
-        const { data: exchangeConnections } = await supabase
-          .from("exchange_connections")
-          .select("user_id")
-          .in("user_id", userIds)
-          .eq("status", "connected");
+        let verifiedUserIds = new Set<string>();
+        if (userIds.length > 0) {
+          const { data: exchangeConnections } = await supabase
+            .from("exchange_connections")
+            .select("user_id")
+            .in("user_id", userIds)
+            .eq("status", "connected");
 
-        const verifiedUserIds = new Set((exchangeConnections || []).map(ec => ec.user_id));
+          const connectedUserIds = new Set((exchangeConnections || []).map((ec) => ec.user_id));
+
+          const { data: exchangeTradeUsers } = await supabase
+            .from("positions")
+            .select("user_id")
+            .in("user_id", userIds)
+            .or("is_exchange_verified.eq.true,exchange_source.not.is.null");
+
+          const usersWithExchangeTrades = new Set((exchangeTradeUsers || []).map((row) => row.user_id));
+
+          verifiedUserIds = new Set(
+            [...connectedUserIds].filter((userId) => usersWithExchangeTrades.has(userId))
+          );
+        }
 
         // Map profiles by user_id with verification status
         const profilesMap = new Map(
@@ -333,12 +348,20 @@ export function usePublicPredictions(limit = 20) {
             .in("id", positionIds);
 
           if (positionsData) {
-            positionsMap = new Map(positionsData.map(p => [p.id, {
-              trade_source: p.trade_source,
-              platform: p.platform,
-              exchange_source: p.exchange_source,
-              is_exchange_verified: p.is_exchange_verified
-            }]));
+            positionsMap = new Map(
+              positionsData.map((p) => {
+                const formattedPlatform = p.platform || formatExchangeName(p.exchange_source);
+                return [
+                  p.id,
+                  {
+                    trade_source: p.trade_source,
+                    platform: formattedPlatform,
+                    exchange_source: p.exchange_source,
+                    is_exchange_verified: p.is_exchange_verified || Boolean(p.exchange_source),
+                  },
+                ];
+              })
+            );
           }
         }
 
@@ -445,14 +468,22 @@ export function useUserTradePredictions(userId: string | null) {
             .in("id", positionIds);
 
           if (positionsData) {
-            positionsMap = new Map(positionsData.map(p => [p.id, {
-              pnl: p.pnl,
-              pnl_pct: p.pnl_pct,
-              trade_source: p.trade_source,
-              platform: p.platform,
-              exchange_source: p.exchange_source,
-              is_exchange_verified: p.is_exchange_verified
-            }]));
+            positionsMap = new Map(
+              positionsData.map((p) => {
+                const formattedPlatform = p.platform || formatExchangeName(p.exchange_source);
+                return [
+                  p.id,
+                  {
+                    pnl: p.pnl,
+                    pnl_pct: p.pnl_pct,
+                    trade_source: p.trade_source,
+                    platform: formattedPlatform,
+                    exchange_source: p.exchange_source,
+                    is_exchange_verified: p.is_exchange_verified || Boolean(p.exchange_source),
+                  },
+                ];
+              })
+            );
           }
         }
 
