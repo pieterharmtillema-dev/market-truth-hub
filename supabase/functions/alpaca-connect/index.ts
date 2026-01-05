@@ -160,10 +160,9 @@ serve(async (req) => {
         {
           user_id: user.id,
           exchange: 'alpaca',
-          auth_type: 'api_key',
           api_key_encrypted: encryptedApiKeyId,
           api_secret_encrypted: encryptedApiSecret,
-          environment,
+          label: environment, // 'paper' or 'live'
           status: 'connected',
           last_sync_at: new Date().toISOString(),
           error_message: null,
