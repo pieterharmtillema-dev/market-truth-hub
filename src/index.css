@@ -168,14 +168,10 @@
   to { opacity: 1; }
 }
 
-@keyframes welcome-fade-to-feed {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes welcome-fade-to-black {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes welcome-fade-transition {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Auth page animations */
@@ -260,11 +256,7 @@
 }
 
 .animate-welcome-fade {
-  animation: welcome-fade-to-feed 2.4s ease-out forwards;
-}
-
-.animate-welcome-fade-in {
-  animation: welcome-fade-to-black 0.8s ease-out forwards;
+  animation: welcome-fade-transition 3.2s ease-in-out forwards;
 }
 
 /* Scrollbar styling */

@@ -48,9 +48,8 @@ export default function Auth() {
   const [isHovered, setIsHovered] = useState(false);
   const [glowBurst, setGlowBurst] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [isFadingToBlack, setIsFadingToBlack] = useState(false);
   const hasNavigatedRef = useRef(false);
-  const fadeToBlackDurationMs = 800;
+  const fadeToBlackDurationMs = 800; // Keep in sync with welcome transition keyframes.
 
   const greeting = useMemo(() => getGreeting(), []);
 
@@ -90,10 +89,10 @@ export default function Auth() {
           : "/";
 
         setLoginSuccess(true);
-        setIsFadingToBlack(true);
         hasNavigatedRef.current = true;
+        navigate("/auth", { replace: true, state: { welcomeAnimationData } });
         setTimeout(() => {
-          navigate(target, { state: { welcomeAnimationData } });
+          navigate(target);
         }, fadeToBlackDurationMs);
       }
     });
@@ -275,10 +274,6 @@ export default function Auth() {
 
   return (
     <>
-      {isFadingToBlack && (
-        <div className="fixed inset-0 z-[200] bg-black pointer-events-none animate-welcome-fade-in" />
-      )}
-
       <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
         {/* Ambient background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
