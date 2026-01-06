@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface WelcomeAnimationData {
   isFirstTime: boolean;
@@ -33,7 +33,16 @@ const calculateLevel = (totalPredictions: number): UserLevel => {
 };
 
 export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimationProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [hasEntered, setHasEntered] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [shouldFadeOverlayOut, setShouldFadeOverlayOut] = useState(false);
+  const exitTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+
+  const overlayFadeInMs = 800;
+  const contentFadeInMs = 600;
+  const contentFadeInDelayMs = overlayFadeInMs;
+  const contentFadeOutMs = 400;
+  const overlayFadeOutMs = 800;
 
   // Calculate level if userData exists
   const userLevel = userData ? calculateLevel(userData.totalPredictions) : null;
@@ -41,20 +50,47 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
   const hasActiveStreak = userData && userData.currentStreak > 0 && userData.streakType === 'hit';
 
   useEffect(() => {
+    const enterFrame = requestAnimationFrame(() => setHasEntered(true));
+
     // Auto-close after video ends (fallback timeout of 5 seconds if video doesn't trigger onEnded)
     const fallbackTimer = setTimeout(() => {
       handleComplete();
     }, 5000);
 
-    return () => clearTimeout(fallbackTimer);
+    return () => {
+      cancelAnimationFrame(enterFrame);
+      clearTimeout(fallbackTimer);
+      exitTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+      exitTimersRef.current = [];
+    };
   }, []);
 
   const handleComplete = () => {
-    setIsVisible(false);
-    setTimeout(onComplete, 300); // Wait for fade-out animation
+    if (isExiting) return;
+    setIsExiting(true);
+
+    const overlayTimer = setTimeout(() => {
+      setShouldFadeOverlayOut(true);
+    }, contentFadeOutMs);
+
+    const doneTimer = setTimeout(() => {
+      onComplete();
+    }, contentFadeOutMs + overlayFadeOutMs);
+
+    exitTimersRef.current.push(overlayTimer, doneTimer);
   };
 
-  if (!isVisible) return null;
+  const overlayOpacityClass = shouldFadeOverlayOut
+    ? "opacity-0"
+    : hasEntered
+      ? "opacity-70"
+      : "opacity-0";
+
+  const contentOpacityClass = isExiting
+    ? "opacity-0"
+    : hasEntered
+      ? "opacity-100"
+      : "opacity-0";
 
   return (
     <div
@@ -63,12 +99,21 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
     >
       <div className="relative w-full h-full flex items-center justify-center">
         {/* Black fade-to-feed overlay */}
-        <div className="absolute inset-0 bg-black/80 pointer-events-none animate-welcome-fade" />
+        <div
+          className={`absolute inset-0 bg-black pointer-events-none transition-opacity ${overlayOpacityClass}`}
+          style={{ transitionDuration: `${shouldFadeOverlayOut ? overlayFadeOutMs : overlayFadeInMs}ms` }}
+        />
 
         {/* Dark fade background overlay */}
-        <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-        <div className="absolute inset-0 pointer-events-none animate-welcome-content-in">
+        <div
+          className={`absolute inset-0 pointer-events-none transition-opacity ${contentOpacityClass}`}
+          style={{
+            transitionDuration: `${isExiting ? contentFadeOutMs : contentFadeInMs}ms`,
+            transitionDelay: isExiting ? "0ms" : `${contentFadeInDelayMs}ms`,
+          }}
+        >
           {/* Continuous glow overlay */}
           <div
             className="absolute inset-0 pointer-events-none animate-glow-pulse"

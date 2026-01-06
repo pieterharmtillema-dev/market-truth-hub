@@ -49,7 +49,7 @@ export default function Auth() {
   const [glowBurst, setGlowBurst] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const hasNavigatedRef = useRef(false);
-  const fadeToBlackDurationMs = 800; // Keep in sync with welcome transition keyframes.
+  const fadeToBlackDurationMs = 800; // Keep in sync with WelcomeAnimation overlay fade-in.
 
   const greeting = useMemo(() => getGreeting(), []);
 
