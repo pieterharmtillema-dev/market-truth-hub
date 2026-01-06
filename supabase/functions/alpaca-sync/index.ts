@@ -50,37 +50,38 @@ function calculatePnL(
 }
 
 /**
- * Close open positions using FIFO matching for a sell order
+ * Close open positions using FIFO matching for an opposite-side order
  */
-async function closeSellOrder(
+async function closeOppositePositions(
   supabase: SupabaseClient,
   userId: string,
   symbol: string,
-  sellPrice: number,
-  sellQuantity: number,
-  sellTimestamp: string
-): Promise<{ closed: number; error?: string }> {
+  exitPrice: number,
+  exitQuantity: number,
+  exitTimestamp: string,
+  closeSide: 'long' | 'short'
+): Promise<{ closed: number; remaining: number; error?: string }> {
   // Fetch open positions for this symbol (FIFO order)
   const { data: openPositions, error: fetchError } = await supabase
     .from('positions')
-    .select('id, quantity, quantity_lots, entry_price, entry_timestamp, asset_class')
+    .select('id, side, quantity, quantity_lots, entry_price, entry_timestamp, asset_class')
     .eq('user_id', userId)
     .eq('symbol', symbol)
     .eq('exchange_source', 'alpaca')
+    .eq('side', closeSide)
     .eq('open', true)
     .order('entry_timestamp', { ascending: true });
 
   if (fetchError) {
     console.error('Failed to fetch open positions:', fetchError);
-    return { closed: 0, error: fetchError.message };
+    return { closed: 0, remaining: exitQuantity, error: fetchError.message };
   }
 
   if (!openPositions || openPositions.length === 0) {
-    console.warn(`No open positions found for ${symbol} - sell order may be closing a position not in system`);
-    return { closed: 0, error: 'no_open_positions' };
+    return { closed: 0, remaining: exitQuantity, error: 'no_open_positions' };
   }
 
-  let remainingQuantity = sellQuantity;
+  let remainingQuantity = exitQuantity;
   let closedCount = 0;
 
   for (const position of openPositions) {
@@ -91,13 +92,13 @@ async function closeSellOrder(
 
     if (remainingQuantity >= positionQty) {
       // Full close
-      const { pnl, pnl_pct } = calculatePnL('long', position.entry_price, sellPrice, positionQty);
+      const { pnl, pnl_pct } = calculatePnL(position.side, position.entry_price, exitPrice, positionQty);
 
       const { error: updateError } = await supabase
         .from('positions')
         .update({
-          exit_price: sellPrice,
-          exit_timestamp: sellTimestamp,
+          exit_price: exitPrice,
+          exit_timestamp: exitTimestamp,
           pnl,
           pnl_pct,
           open: false,
@@ -116,7 +117,7 @@ async function closeSellOrder(
       // Partial close - split the position
       const closedQty = remainingQuantity;
       const remainingQty = positionQty - closedQty;
-      const { pnl, pnl_pct } = calculatePnL('long', position.entry_price, sellPrice, closedQty);
+      const { pnl, pnl_pct } = calculatePnL(position.side, position.entry_price, exitPrice, closedQty);
 
       // Calculate proportional lots if quantity_lots exists
       const positionLots = Number(position.quantity_lots) || positionQty;
@@ -144,13 +145,13 @@ async function closeSellOrder(
         .insert({
           user_id: userId,
           symbol: symbol,
-          side: 'long',
+          side: position.side,
           quantity: closedQty,
           quantity_lots: closedLots,
           entry_price: position.entry_price,
           entry_timestamp: position.entry_timestamp,
-          exit_price: sellPrice,
-          exit_timestamp: sellTimestamp,
+          exit_price: exitPrice,
+          exit_timestamp: exitTimestamp,
           pnl,
           pnl_pct,
           open: false,
@@ -172,12 +173,12 @@ async function closeSellOrder(
     }
   }
 
-  return { closed: closedCount };
+  return { closed: closedCount, remaining: remainingQuantity };
 }
 
 /**
  * Normalize Alpaca order to positions table format
- * Buy orders create open positions, sell orders close them via FIFO matching
+ * Opposite-side closes are handled before inserting open positions
  */
 function normalizeAlpacaOrderToPosition(
   order: AlpacaOrder,
@@ -219,29 +220,21 @@ function normalizeAlpacaOrderToPosition(
     }
   }
 
-  // Determine side - buy orders open long positions
-  // Sell orders will be handled separately to close positions
-  const side = 'long'; // Alpaca paper trading is typically long-only
+  // Determine entry side based on order side
+  const side = order.side === 'buy' ? 'long' : 'short';
 
   // Use filled_at timestamp, fallback to updated_at
   const timestamp = order.filled_at || order.updated_at;
-
-  // For buy orders: create open position
-  // For sell orders: this will be handled by matching logic
-  const isBuyOrder = order.side === 'buy';
 
   return {
     user_id: userId,
     symbol,
     side,
     quantity,
+    quantity_lots: quantity,
     entry_price: avgPrice,
     entry_timestamp: timestamp,
-    exit_price: isBuyOrder ? null : avgPrice,
-    exit_timestamp: isBuyOrder ? null : timestamp,
-    pnl: 0,
-    pnl_pct: 0,
-    open: isBuyOrder, // Buy orders are open, sell orders handled separately
+    open: true,
     is_exchange_verified: true,
     is_simulation: false,
     exchange_source: 'alpaca',
@@ -251,9 +244,6 @@ function normalizeAlpacaOrderToPosition(
     asset_class: assetClass,
     created_at: now,
     updated_at: now,
-    // Store original order info for matching
-    _isBuyOrder: isBuyOrder,
-    _originalSide: order.side,
   };
 }
 
@@ -422,51 +412,65 @@ serve(async (req) => {
         continue; // Skip invalid orders
       }
 
-      const isBuyOrder = position._isBuyOrder;
       const symbol = position.symbol;
       const quantity = position.quantity;
       const price = position.entry_price;
       const timestamp = position.entry_timestamp;
+      const entrySide = position.side as 'long' | 'short';
+      const closeSide = entrySide === 'long' ? 'short' : 'long';
 
-      // Handle sell orders by closing open positions (FIFO)
-      if (!isBuyOrder) {
-        console.log(`Processing SELL order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
+      console.log(`Processing ${order.side.toUpperCase()} order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
 
-        const { closed, error: closeError } = await closeSellOrder(
-          supabase,
-          user.id,
-          symbol,
-          price,
-          quantity,
-          timestamp
-        );
+      const { closed, remaining, error: closeError } = await closeOppositePositions(
+        supabase,
+        user.id,
+        symbol,
+        price,
+        quantity,
+        timestamp,
+        closeSide
+      );
 
-        if (closeError) {
-          if (closeError === 'no_open_positions') {
-            console.warn(`SELL order ${order.id} for ${symbol} has no matching open position - may be from before sync started`);
-          } else {
-            console.error(`Failed to close positions for sell order ${order.id}: ${closeError}`);
-          }
-        } else if (closed === 0) {
-          console.warn(`SELL order ${order.id} closed 0 positions - no matching open position found`);
-        } else {
-          closedPositions += closed;
-          console.log(`✓ Closed ${closed} position(s) for ${symbol} via FIFO matching`);
-        }
-
-        continue; // Don't insert sell orders as separate positions
+      if (closeError && closeError !== 'no_open_positions') {
+        console.error(`Failed to close positions for order ${order.id}: ${closeError}`);
+        continue;
       }
 
-      // Handle buy orders - check for duplicates and insert
+      if (closeError === 'no_open_positions' && entrySide === 'short') {
+        console.warn(`SELL order ${order.id} for ${symbol} has no matching long - opening short position`);
+      }
+
+      if (closed > 0) {
+        closedPositions += closed;
+        console.log(`✓ Closed ${closed} position(s) for ${symbol} via FIFO matching`);
+      }
+
+      if (remaining <= 0) {
+        continue;
+      }
+
+      const baseLots = Number(position.quantity_lots) || position.quantity;
+      const remainingLots =
+        position.quantity > 0
+          ? Number(((remaining / position.quantity) * baseLots).toFixed(8))
+          : remaining;
+      const positionToInsert = {
+        ...position,
+        quantity: remaining,
+        quantity_lots: remainingLots,
+      };
+
+      // Check for duplicates and insert
       const { data: existing, error: existingError } = await supabase
         .from('positions')
         .select('id')
         .eq('user_id', user.id)
         .eq('exchange_source', 'alpaca')
-        .eq('symbol', position.symbol)
-        .eq('entry_price', position.entry_price)
-        .eq('entry_timestamp', position.entry_timestamp)
-        .eq('quantity', position.quantity)
+        .eq('symbol', positionToInsert.symbol)
+        .eq('side', positionToInsert.side)
+        .eq('entry_price', positionToInsert.entry_price)
+        .eq('entry_timestamp', positionToInsert.entry_timestamp)
+        .eq('quantity', positionToInsert.quantity)
         .eq('open', true)
         .limit(1);
 
@@ -479,17 +483,13 @@ serve(async (req) => {
         continue;
       }
 
-      // Remove temporary fields before inserting
-      delete position._isBuyOrder;
-      delete position._originalSide;
-
-      const { error: insertError } = await supabase.from('positions').insert(position);
+      const { error: insertError } = await supabase.from('positions').insert(positionToInsert);
 
       if (insertError) {
-        console.error(`Failed to insert BUY order ${order.id}:`, insertError);
+        console.error(`Failed to insert order ${order.id}:`, insertError);
       } else {
         imported++;
-        console.log(`✓ Imported BUY order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
+        console.log(`✓ Imported order ${order.id} for ${symbol}: ${remaining} @ ${price} at ${timestamp}`);
       }
     }
 
@@ -510,7 +510,7 @@ serve(async (req) => {
       .eq('id', connection.id);
 
     console.log(
-      `Sync complete: ${imported} buy orders imported, ${closedPositions} positions closed, ${skippedDuplicates} duplicates skipped`
+      `Sync complete: ${imported} entries imported, ${closedPositions} positions closed, ${skippedDuplicates} duplicates skipped`
     );
 
     return new Response(
