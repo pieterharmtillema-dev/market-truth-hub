@@ -255,7 +255,7 @@
 }
 
 .animate-welcome-fade {
-  animation: welcome-fade-to-feed 1.2s ease-out forwards;
+  animation: welcome-fade-to-feed 2.4s ease-out forwards;
 }
 
 /* Scrollbar styling */
