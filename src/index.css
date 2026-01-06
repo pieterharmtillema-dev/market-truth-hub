@@ -173,6 +173,11 @@
   to { opacity: 0; }
 }
 
+@keyframes welcome-fade-to-black {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Auth page animations */
 @keyframes mascot-float {
   0%, 100% { transform: translateY(0) scale(1); }
@@ -256,6 +261,10 @@
 
 .animate-welcome-fade {
   animation: welcome-fade-to-feed 2.4s ease-out forwards;
+}
+
+.animate-welcome-fade-in {
+  animation: welcome-fade-to-black 0.8s ease-out forwards;
 }
 
 /* Scrollbar styling */

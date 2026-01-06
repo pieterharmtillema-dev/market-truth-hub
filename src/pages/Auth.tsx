@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -48,12 +48,16 @@ export default function Auth() {
   const [isHovered, setIsHovered] = useState(false);
   const [glowBurst, setGlowBurst] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isFadingToBlack, setIsFadingToBlack] = useState(false);
+  const hasNavigatedRef = useRef(false);
+  const fadeToBlackDurationMs = 800;
 
   const greeting = useMemo(() => getGreeting(), []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
+        if (hasNavigatedRef.current) return;
         // Check if user needs onboarding
         const { data: traderProfile } = await supabase
           .from("trader_profiles")
@@ -86,7 +90,11 @@ export default function Auth() {
           : "/";
 
         setLoginSuccess(true);
-        navigate(target, { state: { welcomeAnimationData } });
+        setIsFadingToBlack(true);
+        hasNavigatedRef.current = true;
+        setTimeout(() => {
+          navigate(target, { state: { welcomeAnimationData } });
+        }, fadeToBlackDurationMs);
       }
     });
 
@@ -267,6 +275,10 @@ export default function Auth() {
 
   return (
     <>
+      {isFadingToBlack && (
+        <div className="fixed inset-0 z-[200] bg-black pointer-events-none animate-welcome-fade-in" />
+      )}
+
       <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
         {/* Ambient background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
