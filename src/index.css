@@ -168,6 +168,11 @@
   to { opacity: 1; }
 }
 
+@keyframes welcome-fade-to-feed {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* Auth page animations */
 @keyframes mascot-float {
   0%, 100% { transform: translateY(0) scale(1); }
@@ -247,6 +252,10 @@
 
 .animate-button-glow {
   animation: button-glow 2s ease-in-out infinite;
+}
+
+.animate-welcome-fade {
+  animation: welcome-fade-to-feed 1.2s ease-out forwards;
 }
 
 /* Scrollbar styling */

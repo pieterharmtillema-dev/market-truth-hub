@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-interface WelcomeAnimationData {
+export interface WelcomeAnimationData {
   isFirstTime: boolean;
   displayName: string | null;
   currentStreak: number;
@@ -62,6 +62,9 @@ export default function WelcomeAnimation({ onComplete, userData }: WelcomeAnimat
       onClick={handleComplete}
     >
       <div className="relative w-full h-full flex items-center justify-center">
+        {/* Black fade-to-feed overlay */}
+        <div className="absolute inset-0 bg-black pointer-events-none animate-welcome-fade" />
+
         {/* Dark fade background overlay */}
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 

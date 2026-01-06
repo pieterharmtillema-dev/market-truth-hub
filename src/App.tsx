@@ -22,6 +22,7 @@ import DebugEnv from "./pages/DebugEnv";
 import { OAuthCallback } from "./pages/OAuthCallback";
 
 import BetaBadge from "@/components/BetaBadge";
+import WelcomeAnimationOverlay from "@/components/WelcomeAnimationOverlay";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ function AppContent() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <WelcomeAnimationOverlay />
         <RouterContent />
       </BrowserRouter>
 
