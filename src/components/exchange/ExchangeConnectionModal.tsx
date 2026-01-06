@@ -20,10 +20,8 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  XCircle,
-  RefreshCw
+  XCircle
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import binanceLogo from "@/assets/binance-logo.png";
 import bitvavoLogo from "@/assets/bitvavo-logo.png";
 import coinbaseLogo from "@/assets/coinbase-logo.webp";
@@ -56,7 +54,7 @@ const EXCHANGES: ExchangeInfo[] = [
 ];
 
 export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnectionModalProps) {
-  const { connections, connectExchange, disconnectExchange, syncTrades, syncing, loading, refetch } = useExchangeConnections();
+  const { connections, connectExchange, disconnectExchange, loading, refetch } = useExchangeConnections();
   const [selectedExchange, setSelectedExchange] = useState<Exchange | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
@@ -272,72 +270,13 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
     }
   };
 
-  const handleSyncTrades = async (exchange?: string) => {
-    // Use Alpaca-specific endpoint
-    if (exchange === "alpaca") {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alpaca-sync`,
-          {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}` },
-          }
-        );
-
-        const data = await response.json();
-        if (data.success) {
-          toast({
-            title: "Trades Synced",
-            description: data.imported > 0 
-              ? `Imported ${data.imported} new trades!`
-              : "No new trades to import. You're up to date!",
-          });
-          refetch();
-        } else {
-          toast({
-            title: "Sync Failed",
-            description: data.error || "Failed to sync trades",
-            variant: "destructive",
-          });
-        }
-      } catch (err) {
-        toast({
-          title: "Sync Failed",
-          description: "Failed to sync trades from Alpaca",
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-
-    const result = await syncTrades(exchange);
-    
-    if (result.success) {
-      toast({
-        title: "Trades Synced",
-        description: result.synced > 0 
-          ? `Successfully synced ${result.synced} new trade${result.synced !== 1 ? 's' : ''}`
-          : "No new trades found",
-      });
-    } else {
-      toast({
-        title: "Sync Failed",
-        description: result.error || "Failed to sync trades",
-        variant: "destructive",
-      });
-    }
-  };
-
   const getConnectionForExchange = (exchange: Exchange): ExchangeConnection | undefined => {
     return connections.find(c => c.exchange === exchange);
   };
 
   const renderExchangeList = () => (
-    <div className="space-y-4">
-      <div className="grid gap-3">
+    <div className="space-y-3">
+      <div className="grid gap-2">
         {EXCHANGES.map((exchange) => {
           const connection = getConnectionForExchange(exchange.id);
           const isConnected = connection?.status === "connected";
@@ -346,20 +285,31 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
           return (
             <div
               key={exchange.id}
-              className={`p-4 rounded-lg border ${exchange.color} transition-colors`}
+              className={`p-3 rounded-lg border ${exchange.color} transition-colors`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <img src={exchange.logo} alt={exchange.name} className="h-8 w-8 rounded-md object-contain" />
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{exchange.name}</span>
-                      {/* Show environment badge for Alpaca */}
+                      {isConnected && (
+                        <Badge variant="success" className="gap-1 text-xs">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Connected
+                        </Badge>
+                      )}
+                      {hasIssue && (
+                        <Badge variant="destructive" className="gap-1 text-xs">
+                          <XCircle className="h-3 w-3" />
+                          {connection?.status === "revoked" ? "Revoked" : "Invalid"}
+                        </Badge>
+                      )}
                       {exchange.id === "alpaca" && isConnected && connection?.label && (
-                        <Badge 
-                          variant="outline" 
-                          className={connection.label === "paper" 
-                            ? "bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs" 
+                        <Badge
+                          variant="outline"
+                          className={connection.label === "paper"
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs"
                             : "bg-red-500/10 text-red-500 border-red-500/30 text-xs"
                           }
                         >
@@ -367,87 +317,34 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
                         </Badge>
                       )}
                     </div>
-                    {connection && (
-                      <div className="text-xs text-muted-foreground">
-                        {connection.last_sync_at && (
-                          <>Last sync: {formatDistanceToNow(new Date(connection.last_sync_at), { addSuffix: true })}</>
-                        )}
-                        {connection.verified_trades_count > 0 && (
-                          <> · {connection.verified_trades_count} trades</>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isConnected && (
-                    <>
-                      <Badge variant="success" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Connected
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSyncTrades(exchange.id)}
-                        disabled={syncing}
-                        className="gap-1"
-                      >
-                        <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
-                        {syncing ? 'Syncing...' : 'Sync'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDisconnect(exchange.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        Disconnect
-                      </Button>
-                    </>
-                  )}
-                  {hasIssue && (
-                    <>
-                      <Badge variant="destructive" className="gap-1">
-                        <XCircle className="h-3 w-3" />
-                        {connection.status === "revoked" ? "Revoked" : "Invalid"}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSelectExchange(exchange.id)}
-                        className="gap-1"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        Reconnect
-                      </Button>
-                    </>
-                  )}
-                  {!connection && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSelectExchange(exchange.id)}
-                    >
-                      Connect
-                    </Button>
-                  )}
-                </div>
+                {isConnected ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDisconnect(exchange.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Disconnect
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSelectExchange(exchange.id)}
+                  >
+                    Connect
+                  </Button>
+                )}
               </div>
-              {hasIssue && connection.error_message && (
+              {hasIssue && connection?.error_message && (
                 <p className="text-xs text-destructive mt-2">{connection.error_message}</p>
               )}
             </div>
           );
         })}
       </div>
-
-      <Alert className="border-warning/30 bg-warning/5">
-        <AlertTriangle className="h-4 w-4 text-warning" />
-        <AlertDescription className="text-sm text-muted-foreground">
-          Only read-only API access is required. Never enable withdrawal permissions.
-        </AlertDescription>
-      </Alert>
     </div>
   );
 
@@ -565,13 +462,13 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="sm:max-w-md p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Connect Your Exchange</DialogTitle>
             <DialogDescription>
               {selectedExchange
                 ? "Enter your API credentials to connect your exchange account."
-                : "Select an exchange to connect and sync your trading history."}
+                : "Select an exchange to connect your account."}
             </DialogDescription>
           </DialogHeader>
 
