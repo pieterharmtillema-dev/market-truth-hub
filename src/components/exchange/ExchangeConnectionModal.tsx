@@ -565,7 +565,7 @@ export function ExchangeConnectionModal({ open, onOpenChange }: ExchangeConnecti
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Connect Your Exchange</DialogTitle>
             <DialogDescription>

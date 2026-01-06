@@ -139,7 +139,7 @@ export function AlpacaConnectionModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <img src={alpacaLogo} alt="Alpaca" className="h-6 w-6 rounded" />
