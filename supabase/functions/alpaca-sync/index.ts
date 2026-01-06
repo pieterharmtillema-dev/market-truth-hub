@@ -63,7 +63,7 @@ async function closeSellOrder(
   // Fetch open positions for this symbol (FIFO order)
   const { data: openPositions, error: fetchError } = await supabase
     .from('positions')
-    .select('id, quantity, entry_price, entry_timestamp, asset_class')
+    .select('id, quantity, quantity_lots, entry_price, entry_timestamp, asset_class')
     .eq('user_id', userId)
     .eq('symbol', symbol)
     .eq('exchange_source', 'alpaca')
