@@ -350,12 +350,12 @@ const Profile = () => {
         {/* Exchange Connections */}
         {userId && (
           <Card variant="glass" className="p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-muted-foreground" />
                 <h3 className="font-medium">Exchange Connections</h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                 {connections.length > 0 && (
                   <Button
                     variant="outline"

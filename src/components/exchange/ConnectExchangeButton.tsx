@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ExchangeConnectionModal } from "./ExchangeConnectionModal";
 import { Link2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ConnectExchangeButtonProps {
   variant?: "default" | "outline" | "secondary" | "ghost";
@@ -22,10 +23,11 @@ export function ConnectExchangeButton({
         variant={variant}
         size={size}
         onClick={() => setIsOpen(true)}
-        className={className}
+        className={cn("whitespace-normal sm:whitespace-nowrap", className)}
       >
         <Link2 className="mr-2 h-4 w-4" />
-        Connect Exchange Account
+        <span className="sm:hidden">Connect Exchange</span>
+        <span className="hidden sm:inline">Connect Exchange Account</span>
       </Button>
       <ExchangeConnectionModal open={isOpen} onOpenChange={setIsOpen} />
     </>
