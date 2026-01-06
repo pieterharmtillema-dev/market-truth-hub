@@ -416,43 +416,61 @@ serve(async (req) => {
       const quantity = position.quantity;
       const price = position.entry_price;
       const timestamp = position.entry_timestamp;
-      const entrySide = position.side as 'long' | 'short';
-      const closeSide = entrySide === 'long' ? 'short' : 'long';
+      
+      // CRITICAL: order.side is the actual Alpaca order side (buy/sell)
+      // BUY orders open LONG positions
+      // SELL orders close LONG positions (or open SHORT if no longs exist)
+      const isBuyOrder = order.side === 'buy';
+      const isSellOrder = order.side === 'sell';
 
       console.log(`Processing ${order.side.toUpperCase()} order ${order.id} for ${symbol}: ${quantity} @ ${price} at ${timestamp}`);
 
-      const { closed, remaining, error: closeError } = await closeOppositePositions(
-        supabase,
-        user.id,
-        symbol,
-        price,
-        quantity,
-        timestamp,
-        closeSide
-      );
+      // Only SELL orders should try to close LONG positions
+      // BUY orders just open new LONG positions
+      let remaining = quantity;
+      
+      if (isSellOrder) {
+        const { closed, remaining: leftover, error: closeError } = await closeOppositePositions(
+          supabase,
+          user.id,
+          symbol,
+          price,
+          quantity,
+          timestamp,
+          'long' // SELL closes LONG positions
+        );
 
-      if (closeError && closeError !== 'no_open_positions') {
-        console.error(`Failed to close positions for order ${order.id}: ${closeError}`);
-        continue;
+        if (closeError && closeError !== 'no_open_positions') {
+          console.error(`Failed to close positions for order ${order.id}: ${closeError}`);
+          continue;
+        }
+
+        if (closeError === 'no_open_positions') {
+          console.warn(`SELL order ${order.id} for ${symbol} has no matching long - opening short position`);
+        }
+
+        if (closed > 0) {
+          closedPositions += closed;
+          console.log(`✓ Closed ${closed} position(s) for ${symbol} via FIFO matching`);
+        }
+
+        remaining = leftover;
+        
+        // If all quantity was used to close longs, we're done
+        if (remaining <= 0) {
+          continue;
+        }
+        
+        // If there's remaining quantity after closing longs, open a short position
+        // (this handles the case of selling more than you own)
+        position.side = 'short';
       }
 
-      if (closeError === 'no_open_positions' && entrySide === 'short') {
-        console.warn(`SELL order ${order.id} for ${symbol} has no matching long - opening short position`);
-      }
-
-      if (closed > 0) {
-        closedPositions += closed;
-        console.log(`✓ Closed ${closed} position(s) for ${symbol} via FIFO matching`);
-      }
-
-      if (remaining <= 0) {
-        continue;
-      }
-
+      // For BUY orders or remaining SELL quantity, create a position
       const baseLots = Number(position.quantity_lots) || position.quantity;
       const remainingLots =
-        position.quantity > 0
-          ? Number(((remaining / position.quantity) * baseLots).toFixed(8))
+        quantity > 0
+          ? Number(((remaining / quantity) * baseLots).toFixed(8))
           : remaining;
       const positionToInsert = {
         ...position,
