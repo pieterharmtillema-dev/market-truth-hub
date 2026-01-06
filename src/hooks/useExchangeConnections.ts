@@ -129,48 +129,6 @@ export function useExchangeConnections() {
     }
   };
 
-  const syncAlpacaTrades = async (): Promise<{
-    success: boolean;
-    synced: number;
-    total?: number;
-    error?: string;
-  }> => {
-    if (!session) {
-      return { success: false, synced: 0, error: "Not authenticated" };
-    }
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alpaca-sync`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data?.success) {
-        return {
-          success: false,
-          synced: 0,
-          error: data?.error || "Failed to sync Alpaca trades",
-        };
-      }
-
-      return {
-        success: true,
-        synced: data.imported || 0,
-        total: data.total_fetched,
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Sync failed";
-      return { success: false, synced: 0, error: errorMessage };
-    }
-  };
-
   const syncTrades = async (exchange?: string): Promise<SyncResult> => {
     if (!session) {
       return { success: false, synced: 0, error: "Not authenticated" };
@@ -179,95 +137,25 @@ export function useExchangeConnections() {
     setSyncing(true);
 
     try {
-      if (exchange === "alpaca") {
-        const alpacaResult = await syncAlpacaTrades();
-        if (!alpacaResult.success) {
-          return {
-            success: false,
-            synced: 0,
-            error: alpacaResult.error || "Failed to sync Alpaca trades",
-          };
-        }
+      const response = await supabase.functions.invoke("exchange-sync", {
+        body: exchange ? { exchange } : {},
+      });
 
-        await fetchConnections();
-
-        return {
-          success: true,
-          synced: alpacaResult.synced,
-          results: [
-            {
-              exchange: "alpaca",
-              synced: alpacaResult.synced,
-              total: alpacaResult.total,
-            },
-          ],
-        };
+      if (response.error) {
+        return { success: false, synced: 0, error: response.error.message };
       }
 
-      const shouldSyncAlpaca =
-        !exchange &&
-        connections.some(
-          (connection) =>
-            connection.exchange === "alpaca" &&
-            connection.status === "connected"
-        );
-
-      const [exchangeResponse, alpacaResult] = await Promise.all([
-        supabase.functions.invoke("exchange-sync", {
-          body: exchange ? { exchange } : {},
-        }),
-        shouldSyncAlpaca ? syncAlpacaTrades() : Promise.resolve(null),
-      ]);
-
-      const results: SyncResult["results"] = [];
-      const errors: string[] = [];
-      let totalSynced = 0;
-      let didSync = false;
-
-      if (exchangeResponse.error) {
-        errors.push(exchangeResponse.error.message);
-      } else if (exchangeResponse.data?.error) {
-        errors.push(exchangeResponse.data.error);
-      } else {
-        totalSynced += exchangeResponse.data?.synced || 0;
-        didSync = true;
-        if (exchangeResponse.data?.results?.length) {
-          results.push(...exchangeResponse.data.results);
-        }
+      if (response.data.error) {
+        return { success: false, synced: 0, error: response.data.error };
       }
 
-      if (alpacaResult) {
-        if (!alpacaResult.success) {
-          errors.push(alpacaResult.error || "Failed to sync Alpaca trades");
-        } else {
-          totalSynced += alpacaResult.synced;
-          didSync = true;
-          results.push({
-            exchange: "alpaca",
-            synced: alpacaResult.synced,
-            total: alpacaResult.total,
-          });
-        }
-      }
-
-      if (didSync) {
-        // Refresh connections to get updated sync times
-        await fetchConnections();
-      }
-
-      if (errors.length) {
-        return {
-          success: false,
-          synced: totalSynced,
-          results,
-          error: errors.join("; "),
-        };
-      }
+      // Refresh connections to get updated sync times
+      await fetchConnections();
 
       return {
         success: true,
-        synced: totalSynced,
-        results,
+        synced: response.data.synced || 0,
+        results: response.data.results,
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Sync failed";
