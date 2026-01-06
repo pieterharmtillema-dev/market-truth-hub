@@ -32,6 +32,11 @@ function normalizeSide(raw: string | null | undefined): "long" | "short" | null 
   return null;
 }
 
+function isAlpacaPlatform(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  return raw.toLowerCase().includes("alpaca");
+}
+
 // ============================================================================
 // ASSET CLASS DETECTION
 // ============================================================================
@@ -507,22 +512,48 @@ async function handleTradeExit(
     platform: string;
     timestamp: string;
     isSimulation: boolean;
+    side?: "long" | "short" | null;
   },
   nowIso: string,
 ): Promise<Response> {
   const { symbol, price: exitPrice, quantity: exitQuantity, quantityLots: exitLots, timestamp } = payload;
 
-  console.log("Processing TRADE_EXIT:", { userId, symbol, exitPrice, exitQuantity, exitLots });
+  console.log("Processing TRADE_EXIT:", {
+    userId,
+    symbol,
+    exitPrice,
+    exitQuantity,
+    exitLots,
+    platform: payload.platform,
+    isSimulation: payload.isSimulation,
+    side: payload.side,
+  });
 
-  const { data: openPositions, error: fetchError } = await serviceClient
+  const closeSide = payload.side ? (payload.side === "long" ? "short" : "long") : null;
+  let positionsQuery = serviceClient
     .from("positions")
     .select(
       "id, symbol, side, quantity, quantity_lots, entry_price, entry_timestamp, platform, is_simulation, asset_class",
     )
     .eq("user_id", userId)
     .eq("symbol", symbol)
-    .eq("open", true)
-    .order("entry_timestamp", { ascending: true });
+    .eq("open", true);
+
+  if (payload.platform) {
+    positionsQuery = positionsQuery.ilike("platform", payload.platform);
+  }
+
+  if (payload.isSimulation !== undefined) {
+    positionsQuery = positionsQuery.eq("is_simulation", payload.isSimulation);
+  }
+
+  if (closeSide) {
+    positionsQuery = positionsQuery.eq("side", closeSide);
+  }
+
+  const { data: openPositions, error: fetchError } = await positionsQuery.order("entry_timestamp", {
+    ascending: true,
+  });
 
   if (fetchError) {
     console.error("Fetch positions error:", fetchError);
@@ -540,6 +571,8 @@ async function handleTradeExit(
   let totalPnLPct = 0;
   const closedPositions: Array<{ id: number; pnl: number; pnlPct: number; quantity: number }> = [];
   let partialCloseCount = 0;
+  let openedPositionId: number | null = null;
+  let openedQuantity: number | null = null;
 
   // PnL metadata for response
   let lastPnLResult: PnLResult | null = null;
@@ -674,6 +707,59 @@ async function handleTradeExit(
     return errorResponse("close_failed", "Failed to close any positions", 500);
   }
 
+  if (remainingQuantity > 0 && payload.side) {
+    const remainingLots =
+      exitLots && exitQuantity > 0
+        ? Number(((remainingQuantity / exitQuantity) * exitLots).toFixed(8))
+        : remainingQuantity;
+    const entrySide = payload.side;
+    const entryQuantityLots = remainingLots || remainingQuantity;
+
+    const pipSize = getPipSize(symbol);
+    const tickSize = getTickSize(assetClass, symbol);
+    let pipValue: number | null = null;
+    let tickValue: number | null = null;
+
+    if (assetClass === "forex") {
+      pipValue = remainingQuantity * pipSize;
+    }
+    if (assetClass === "metal" || assetClass === "index" || assetClass === "commodity") {
+      tickValue = remainingQuantity;
+    }
+
+    const { data: openedPosition, error: openError } = await serviceClient
+      .from("positions")
+      .insert({
+        user_id: userId,
+        symbol: symbol,
+        platform: payload.platform,
+        side: entrySide,
+        quantity: remainingQuantity,
+        quantity_lots: entryQuantityLots,
+        entry_price: exitPrice,
+        entry_timestamp: timestamp,
+        open: true,
+        is_simulation: payload.isSimulation,
+        asset_class: assetClass,
+        pip_size: assetClass === "forex" ? pipSize : null,
+        pip_value: pipValue,
+        tick_size: tickSize,
+        tick_value: tickValue,
+      })
+      .select("id")
+      .single();
+
+    if (openError) {
+      console.error("Failed to open flipped position:", openError);
+    } else {
+      openedPositionId = openedPosition.id;
+      openedQuantity = remainingQuantity;
+      console.log(
+        `Opened flipped position ${openedPositionId}: side=${entrySide}, qty=${remainingQuantity}, entry=${exitPrice}`,
+      );
+    }
+  }
+
   const roundedTotalPnL = Math.round(totalPnL * 100) / 100;
   const avgPnLPct = closedPositions.length > 0 ? Math.round((totalPnLPct / closedPositions.length) * 100) / 100 : 0;
 
@@ -766,6 +852,11 @@ async function handleTradeExit(
     responseData.positions = closedPositions;
   }
 
+  if (openedPositionId) {
+    responseData.opened_position_id = openedPositionId;
+    responseData.quantity_opened = openedQuantity;
+  }
+
   return jsonResponse(responseData);
 }
 
@@ -836,10 +927,11 @@ async function normalizeEventTypeForPlatform(
     platform: string;
     symbol: string | null;
     side: "long" | "short" | null;
+    isSimulation: boolean;
   },
 ): Promise<string> {
   // Only normalize TRADE_ENTRY events from Alpaca
-  if (eventType !== "TRADE_ENTRY" || payload.platform !== "Alpaca") {
+  if (eventType !== "TRADE_ENTRY" || !isAlpacaPlatform(payload.platform)) {
     return eventType;
   }
 
@@ -851,13 +943,18 @@ async function normalizeEventTypeForPlatform(
   console.log(`[Alpaca] Checking if ${payload.side} fill should close opposite position for ${payload.symbol}...`);
 
   try {
+    const oppositeSide = payload.side === "long" ? "short" : "long";
+
     // Query for open positions with opposite side
     const { data: openPositions, error: checkError } = await serviceClient
       .from("positions")
       .select("id, side, quantity")
       .eq("user_id", userId)
       .eq("symbol", payload.symbol)
+      .eq("side", oppositeSide)
       .eq("open", true)
+      .eq("is_simulation", payload.isSimulation)
+      .ilike("platform", payload.platform)
       .order("entry_timestamp", { ascending: true });
 
     if (checkError) {
@@ -866,24 +963,12 @@ async function normalizeEventTypeForPlatform(
     }
 
     if (!openPositions || openPositions.length === 0) {
-      console.log(`[Alpaca] No open positions found, treating as genuine entry`);
+      console.log(`[Alpaca] No opposite open positions found, treating as genuine entry`);
       return eventType;
     }
 
-    // Check if any open position has the opposite side
-    const hasOppositeSide = openPositions.some((pos: { side: string }) => {
-      if (payload.side === "long" && pos.side === "short") return true;
-      if (payload.side === "short" && pos.side === "long") return true;
-      return false;
-    });
-
-    if (hasOppositeSide) {
-      console.log(`[Alpaca] Found opposite open position - converting to TRADE_EXIT`);
-      return "TRADE_EXIT";
-    } else {
-      console.log(`[Alpaca] All open positions are same side, treating as genuine entry`);
-      return eventType;
-    }
+    console.log(`[Alpaca] Found opposite open position - converting to TRADE_EXIT`);
+    return "TRADE_EXIT";
   } catch (error) {
     console.error("[Alpaca] Error in normalizeEventTypeForPlatform:", error);
     return eventType; // Fall back to original type on error
@@ -1008,7 +1093,10 @@ Deno.serve(async (req: Request) => {
       platform,
       symbol,
       side,
+      isSimulation,
     });
+    const isAlpacaNormalizedExit =
+      normalizedEventType === "TRADE_EXIT" && eventType === "TRADE_ENTRY" && isAlpacaPlatform(platform);
 
     // Route to appropriate handler
     switch (normalizedEventType) {
@@ -1050,6 +1138,7 @@ Deno.serve(async (req: Request) => {
             platform,
             timestamp,
             isSimulation,
+            side: isAlpacaNormalizedExit ? side : null,
           },
           nowIso,
         );
