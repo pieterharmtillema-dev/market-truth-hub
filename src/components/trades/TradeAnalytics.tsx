@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format, subDays, subMonths, startOfWeek, startOfMonth, startOfYear, endOfDay, startOfDay } from 'date-fns';
+import { format, subDays, subMonths, startOfWeek, startOfMonth, startOfYear, endOfDay, startOfDay, endOfMonth } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AverageHoldTimeCard, DailyPnLChart, MonthlyHeatmap } from './analytics';
 
 interface Position {
   id: number;
@@ -63,6 +64,13 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
+
+  // Handler for heatmap month click - sets custom date range to that month
+  const handleMonthClick = useCallback((monthDate: Date) => {
+    setCustomDateFrom(startOfMonth(monthDate));
+    setCustomDateTo(endOfMonth(monthDate));
+    setTimeFrame('custom');
+  }, []);
 
   const getDateRange = useCallback((tf: TimeFrame): { from: Date | null; to: Date } => {
     const now = new Date();
@@ -447,6 +455,15 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Average Hold Time */}
+          <AverageHoldTimeCard positions={positions} />
+
+          {/* Daily P/L Chart */}
+          <DailyPnLChart positions={positions} />
+
+          {/* Monthly Heatmap */}
+          <MonthlyHeatmap positions={positions} onMonthClick={handleMonthClick} />
 
           {/* Streaks */}
           {(streakMetrics.longestWinStreak > 0 || streakMetrics.longestLossStreak > 0) && (
