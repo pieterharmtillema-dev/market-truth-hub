@@ -25,7 +25,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AverageHoldTimeCard, DailyPnLChart, MonthlyHeatmap } from './analytics';
+import { AverageHoldTimeCard, DailyPnLChart, PnLHeatmap } from './analytics';
 
 interface Position {
   id: number;
@@ -65,10 +65,11 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
 
-  // Handler for heatmap month click - sets custom date range to that month
-  const handleMonthClick = useCallback((monthDate: Date) => {
-    setCustomDateFrom(startOfMonth(monthDate));
-    setCustomDateTo(endOfMonth(monthDate));
+  // Handler for heatmap period click - sets custom date range
+  const handlePeriodClick = useCallback((date: Date) => {
+    // For simplicity, clicking any period sets it as a custom single-day filter
+    setCustomDateFrom(startOfDay(date));
+    setCustomDateTo(endOfDay(date));
     setTimeFrame('custom');
   }, []);
 
@@ -462,8 +463,8 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
           {/* Daily P/L Chart */}
           <DailyPnLChart positions={positions} />
 
-          {/* Monthly Heatmap */}
-          <MonthlyHeatmap positions={positions} onMonthClick={handleMonthClick} />
+          {/* P&L Heatmap - adapts to time period */}
+          <PnLHeatmap positions={positions} timeFrame={timeFrame} onPeriodClick={handlePeriodClick} />
 
           {/* Streaks */}
           {(streakMetrics.longestWinStreak > 0 || streakMetrics.longestLossStreak > 0) && (
