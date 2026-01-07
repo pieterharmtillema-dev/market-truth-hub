@@ -16,6 +16,7 @@ import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
 import { useToast } from "@/hooks/use-toast";
 import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
+import type { EnvironmentUnlocks } from "./HeroEnvironment";
 import { formatExchangeName } from "@/lib/exchangeUtils";
 import {
   Trophy,
@@ -110,6 +111,93 @@ const getSessionTheme = (session: string | null): 'day' | 'night' | 'sunset' | '
   return sessionMap[session] || 'night';
 };
 
+const TRADES_PER_LEVEL = 25;
+
+type UnlockRequirements = {
+  trades?: number;
+  winRate?: number;
+  streak?: number;
+};
+
+type UnlockRoadmapItem = {
+  key: keyof EnvironmentUnlocks;
+  label: string;
+  requirements: UnlockRequirements;
+};
+
+const UNLOCK_ROADMAP: UnlockRoadmapItem[] = [
+  { key: "tradingDesk", label: "Trading Desk", requirements: { trades: 1 } },
+  { key: "briefcase", label: "Briefcase", requirements: { trades: 5 } },
+  { key: "cityscape", label: "Cityscape", requirements: { trades: 10 } },
+  { key: "spotlight", label: "Spotlight", requirements: { trades: 15 } },
+  { key: "moneyPile", label: "Money Pile", requirements: { trades: 25, winRate: 40 } },
+  { key: "lamborghini", label: "Lamborghini", requirements: { trades: 50, winRate: 50 } },
+  { key: "mansion", label: "Mansion", requirements: { trades: 100, winRate: 55 } },
+  { key: "yacht", label: "Yacht", requirements: { trades: 200, winRate: 60 } },
+  { key: "privateJet", label: "Private Jet", requirements: { trades: 500, winRate: 65 } },
+  { key: "rolex", label: "Rolex", requirements: { streak: 3 } },
+  { key: "diamondChain", label: "Diamond Chain", requirements: { streak: 5 } },
+  { key: "crown", label: "Crown", requirements: { streak: 10, winRate: 70 } },
+  { key: "goldRain", label: "Gold Rain", requirements: { trades: 30, winRate: 60 } },
+  { key: "fireworks", label: "Fireworks", requirements: { trades: 50, winRate: 75 } },
+];
+
+const formatRequirementText = (requirements: UnlockRequirements) => {
+  const parts: string[] = [];
+  if (requirements.trades) {
+    parts.push(`${requirements.trades} trade${requirements.trades === 1 ? "" : "s"}`);
+  }
+  if (requirements.winRate) {
+    parts.push(`${requirements.winRate}% win rate`);
+  }
+  if (requirements.streak) {
+    parts.push(`${requirements.streak}-win streak`);
+  }
+  return parts.join(" + ");
+};
+
+const getUnlockProgress = (
+  requirements: UnlockRequirements,
+  totalTrades: number,
+  winRate: number,
+  bestStreak: number
+) => {
+  const progressParts: number[] = [];
+  if (requirements.trades) {
+    progressParts.push(Math.min(totalTrades / requirements.trades, 1));
+  }
+  if (requirements.winRate) {
+    progressParts.push(Math.min(winRate / requirements.winRate, 1));
+  }
+  if (requirements.streak) {
+    progressParts.push(Math.min(bestStreak / requirements.streak, 1));
+  }
+  if (progressParts.length === 0) return 0;
+  return Math.min(...progressParts);
+};
+
+const getUnlockRemainingText = (
+  requirements: UnlockRequirements,
+  totalTrades: number,
+  winRate: number,
+  bestStreak: number
+) => {
+  const remainingParts: string[] = [];
+  if (requirements.trades && totalTrades < requirements.trades) {
+    const remainingTrades = requirements.trades - totalTrades;
+    remainingParts.push(`${remainingTrades} trade${remainingTrades === 1 ? "" : "s"}`);
+  }
+  if (requirements.winRate && winRate < requirements.winRate) {
+    const remainingWinRate = Math.max(requirements.winRate - winRate, 0);
+    remainingParts.push(`${remainingWinRate.toFixed(1)}% win rate`);
+  }
+  if (requirements.streak && bestStreak < requirements.streak) {
+    const remainingStreak = requirements.streak - bestStreak;
+    remainingParts.push(`${remainingStreak} more win${remainingStreak === 1 ? "" : "s"} in a row`);
+  }
+  return remainingParts.length > 0 ? `Need ${remainingParts.join(" + ")}` : "Ready to unlock";
+};
+
 type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export function TraderCharacterHero({
@@ -184,6 +272,37 @@ export function TraderCharacterHero({
     () => calculateUnlocks(totalTrades, winRate, bestStreak, undefined, userEmail ?? undefined),
     [totalTrades, winRate, bestStreak, userEmail]
   );
+  const unlocksEarned = useMemo(
+    () => Object.values(environmentUnlocks).filter(Boolean).length,
+    [environmentUnlocks]
+  );
+  const totalUnlocks = Object.keys(environmentUnlocks).length;
+
+  const upcomingUnlocks = useMemo(() => {
+    return UNLOCK_ROADMAP
+      .filter((unlock) => !environmentUnlocks[unlock.key])
+      .map((unlock) => {
+        const progress = getUnlockProgress(
+          unlock.requirements,
+          totalTrades,
+          winRate,
+          bestStreak
+        );
+        const remainingText = getUnlockRemainingText(
+          unlock.requirements,
+          totalTrades,
+          winRate,
+          bestStreak
+        );
+        return {
+          ...unlock,
+          progress,
+          remainingText,
+        };
+      })
+      .sort((a, b) => b.progress - a.progress)
+      .slice(0, 3);
+  }, [environmentUnlocks, totalTrades, winRate, bestStreak]);
 
   // Get time filter start date based on timeFrame
   const getTimeFilterStartDate = useMemo(() => {
@@ -280,7 +399,10 @@ export function TraderCharacterHero({
   const extraExchangeCount = Math.max(exchangeLabels.length - 2, 0);
 
   // Calculate level
-  const level = Math.floor(totalTrades / 25) + 1;
+  const level = Math.floor(totalTrades / TRADES_PER_LEVEL) + 1;
+  const levelProgress = totalTrades % TRADES_PER_LEVEL;
+  const nextLevelTrades = TRADES_PER_LEVEL - levelProgress;
+  const levelProgressPercent = Math.min((levelProgress / TRADES_PER_LEVEL) * 100, 100);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -890,16 +1012,73 @@ export function TraderCharacterHero({
             </div>
           </div>
 
-          {/* Unlocks indicator */}
-          {totalTrades > 0 && (
-            <div className="flex justify-center pb-4">
-              <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-full px-4 py-1.5">
-                <span className="text-xs text-muted-foreground">
-                  🏆 {Object.values(environmentUnlocks).filter(Boolean).length} unlocks earned
-                </span>
+          {/* Leveling and unlocks */}
+          <div className="px-3 sm:px-4 md:px-6 pb-4">
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 sm:p-4">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Level Up</p>
+                      <p className="text-sm sm:text-base font-semibold text-foreground">Level {level}</p>
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground text-right">
+                      {nextLevelTrades} trade{nextLevelTrades === 1 ? "" : "s"} to Level {level + 1}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
+                      <span>{levelProgress} / {TRADES_PER_LEVEL} trades</span>
+                      <span>{Math.round(levelProgressPercent)}% complete</span>
+                    </div>
+                    <div className="mt-1 h-2 bg-border/40 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${levelProgressPercent}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                      Level up every {TRADES_PER_LEVEL} trades tracked on your profile.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Next Unlocks</p>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                      {unlocksEarned}/{totalUnlocks} unlocked
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {upcomingUnlocks.length === 0 ? (
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">All unlocks earned. New rewards coming soon.</p>
+                    ) : (
+                      upcomingUnlocks.map((unlock) => (
+                        <div key={unlock.key} className="space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">{unlock.label}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatRequirementText(unlock.requirements)}
+                              </p>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground text-right">{unlock.remainingText}</p>
+                          </div>
+                          <div className="h-1 bg-border/40 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary/70 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.round(unlock.progress * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
