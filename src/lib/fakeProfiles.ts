@@ -80,7 +80,7 @@ export interface FakeTraderMeta {
   experience_level: string;
   holding_time: string;
   trade_frequency: string;
-  trading_session?: string;
+  trading_session: string;
   win_rate: number;
   average_r: number;
   total_trades: number;
@@ -129,50 +129,87 @@ const createTraderMeta = (base: Omit<FakeTraderMeta, 'profit_factor' | 'max_draw
 });
 
 // Fake trader metadata with followers/following
+// Note: total_trades increased to meet adjusted win rate minimum thresholds per category
 export const FAKE_TRADER_META: Record<string, FakeTraderMeta> = {
   '11111111-1111-1111-1111-111111111111': createTraderMeta({
-    platform: 'Binance', asset_focus: ['BTC', 'ETH', 'SOL'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Daily', win_rate: 71.8, average_r: 2.1, total_trades: 156, is_active: true, last_active: new Date(Date.now() - 5 * 60 * 1000).toISOString(), followers: ['22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: ['88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+    platform: 'Binance', asset_focus: ['BTC', 'ETH', 'SOL'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Daily', trading_session: 'all_sessions', win_rate: 71.8, average_r: 2.1, total_trades: 156, is_active: true, last_active: new Date(Date.now() - 5 * 60 * 1000).toISOString(), followers: ['22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: ['88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
   }),
   '22222222-2222-2222-2222-222222222222': createTraderMeta({
-    platform: 'MetaTrader 5', asset_focus: ['EUR/USD', 'GBP/JPY', 'USD/JPY'], experience_level: 'Expert', holding_time: 'Scalp (minutes)', trade_frequency: 'Multiple daily', win_rate: 65.2, average_r: 1.8, total_trades: 89, is_active: false, last_active: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), followers: ['77777777-7777-7777-7777-777777777777', 'dddddddd-dddd-dddd-dddd-dddddddddddd'], following: ['11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777'],
+    platform: 'MetaTrader 5', asset_focus: ['EUR/USD', 'GBP/JPY', 'USD/JPY'], experience_level: 'Expert', holding_time: 'Scalp (minutes)', trade_frequency: 'Multiple daily', trading_session: 'london', win_rate: 65.2, average_r: 1.8, total_trades: 189, is_active: false, last_active: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), followers: ['77777777-7777-7777-7777-777777777777', 'dddddddd-dddd-dddd-dddd-dddddddddddd'], following: ['11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777'],
   }),
   '33333333-3333-3333-3333-333333333333': createTraderMeta({
-    platform: 'TradingView', asset_focus: ['AAPL', 'NVDA', 'MSFT', 'META'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Weekly', win_rate: 62.0, average_r: 1.5, total_trades: 234, is_active: true, last_active: new Date(Date.now() - 15 * 60 * 1000).toISOString(), followers: ['44444444-4444-4444-4444-444444444444', '99999999-9999-9999-9999-999999999999', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'], following: ['11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666'],
+    platform: 'TradingView', asset_focus: ['AAPL', 'NVDA', 'MSFT', 'META'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Weekly', trading_session: 'new_york', win_rate: 62.0, average_r: 1.5, total_trades: 234, is_active: true, last_active: new Date(Date.now() - 15 * 60 * 1000).toISOString(), followers: ['44444444-4444-4444-4444-444444444444', '99999999-9999-9999-9999-999999999999', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'], following: ['11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666'],
   }),
   '44444444-4444-4444-4444-444444444444': createTraderMeta({
-    platform: 'Interactive Brokers', asset_focus: ['AMD', 'GOOGL', 'AMZN'], experience_level: 'Intermediate', holding_time: 'Day trading', trade_frequency: 'Daily', win_rate: 61.2, average_r: 1.7, total_trades: 67, is_active: false, last_active: new Date(Date.now() - 45 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333'], following: ['11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', '99999999-9999-9999-9999-999999999999'],
+    platform: 'Interactive Brokers', asset_focus: ['AMD', 'GOOGL', 'AMZN'], experience_level: 'Intermediate', holding_time: 'Day trading', trade_frequency: 'Daily', trading_session: 'new_york', win_rate: 61.2, average_r: 1.7, total_trades: 87, is_active: false, last_active: new Date(Date.now() - 45 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333'], following: ['11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', '99999999-9999-9999-9999-999999999999'],
   }),
   '55555555-5555-5555-5555-555555555555': createTraderMeta({
-    platform: 'MetaTrader 5', asset_focus: ['XAU/USD', 'XAG/USD'], experience_level: 'Intermediate', holding_time: 'Swing (days)', trade_frequency: 'Few per week', win_rate: 66.7, average_r: 1.4, total_trades: 42, is_active: true, last_active: new Date(Date.now() - 3 * 60 * 1000).toISOString(), followers: ['cccccccc-cccc-cccc-cccc-cccccccccccc'], following: ['cccccccc-cccc-cccc-cccc-cccccccccccc'],
+    platform: 'MetaTrader 5', asset_focus: ['XAU/USD', 'XAG/USD'], experience_level: 'Intermediate', holding_time: 'Swing (days)', trade_frequency: 'Few per week', trading_session: 'london', win_rate: 66.7, average_r: 1.4, total_trades: 62, is_active: true, last_active: new Date(Date.now() - 3 * 60 * 1000).toISOString(), followers: ['cccccccc-cccc-cccc-cccc-cccccccccccc'], following: ['cccccccc-cccc-cccc-cccc-cccccccccccc'],
   }),
   '66666666-6666-6666-6666-666666666666': createTraderMeta({
-    platform: 'TD Ameritrade', asset_focus: ['SPY', 'QQQ', 'IWM'], experience_level: 'Advanced', holding_time: 'Swing (1-2 weeks)', trade_frequency: 'Weekly', win_rate: 68.4, average_r: 1.9, total_trades: 98, is_active: true, last_active: new Date(Date.now() - 10 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'], following: ['33333333-3333-3333-3333-333333333333'],
+    platform: 'TD Ameritrade', asset_focus: ['SPY', 'QQQ', 'IWM'], experience_level: 'Advanced', holding_time: 'Swing (1-2 weeks)', trade_frequency: 'Weekly', trading_session: 'new_york', win_rate: 68.4, average_r: 1.9, total_trades: 98, is_active: true, last_active: new Date(Date.now() - 10 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'], following: ['33333333-3333-3333-3333-333333333333'],
   }),
   '77777777-7777-7777-7777-777777777777': createTraderMeta({
-    platform: 'cTrader', asset_focus: ['EUR/USD', 'USD/JPY', 'GBP/USD'], experience_level: 'Expert', holding_time: 'Scalp (1-30 min)', trade_frequency: '20+ per day', win_rate: 63.5, average_r: 1.2, total_trades: 312, is_active: true, last_active: new Date(Date.now() - 1 * 60 * 1000).toISOString(), followers: ['22222222-2222-2222-2222-222222222222', 'dddddddd-dddd-dddd-dddd-dddddddddddd'], following: ['22222222-2222-2222-2222-222222222222'],
+    platform: 'cTrader', asset_focus: ['EUR/USD', 'USD/JPY', 'GBP/USD'], experience_level: 'Expert', holding_time: 'Scalp (1-30 min)', trade_frequency: '20+ per day', trading_session: 'overlap', win_rate: 63.5, average_r: 1.2, total_trades: 512, is_active: true, last_active: new Date(Date.now() - 1 * 60 * 1000).toISOString(), followers: ['22222222-2222-2222-2222-222222222222', 'dddddddd-dddd-dddd-dddd-dddddddddddd'], following: ['22222222-2222-2222-2222-222222222222'],
   }),
   '88888888-8888-8888-8888-888888888888': createTraderMeta({
-    platform: 'Coinbase', asset_focus: ['BTC', 'ETH', 'SOL'], experience_level: 'Advanced', holding_time: 'Long-term (months)', trade_frequency: 'Monthly', win_rate: 87.5, average_r: 5.2, total_trades: 24, is_active: false, last_active: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+    platform: 'Coinbase', asset_focus: ['BTC', 'ETH', 'SOL'], experience_level: 'Advanced', holding_time: 'Long-term (months)', trade_frequency: 'Monthly', trading_session: 'all_sessions', win_rate: 87.5, average_r: 5.2, total_trades: 48, is_active: false, last_active: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
   }),
   '99999999-9999-9999-9999-999999999999': createTraderMeta({
-    platform: 'Tastytrade', asset_focus: ['TSLA', 'NVDA', 'SPY'], experience_level: 'Expert', holding_time: 'Options (weeks)', trade_frequency: 'Daily', win_rate: 61.4, average_r: 2.3, total_trades: 145, is_active: true, last_active: new Date(Date.now() - 20 * 60 * 1000).toISOString(), followers: ['44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333'], following: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'],
+    platform: 'Tastytrade', asset_focus: ['TSLA', 'NVDA', 'SPY'], experience_level: 'Expert', holding_time: 'Options (weeks)', trade_frequency: 'Daily', trading_session: 'new_york', win_rate: 61.4, average_r: 2.3, total_trades: 145, is_active: true, last_active: new Date(Date.now() - 20 * 60 * 1000).toISOString(), followers: ['44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333'], following: ['33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444'],
   }),
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa': createTraderMeta({
-    platform: 'Bybit', asset_focus: ['BTC', 'ETH', 'LINK'], experience_level: 'Expert', holding_time: 'Algo (variable)', trade_frequency: '50+ per day', win_rate: 65.4, average_r: 1.6, total_trades: 456, is_active: true, last_active: new Date(Date.now() - 30 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: [],
+    platform: 'Bybit', asset_focus: ['BTC', 'ETH', 'LINK'], experience_level: 'Expert', holding_time: 'Algo (variable)', trade_frequency: '50+ per day', trading_session: 'all_sessions', win_rate: 65.4, average_r: 1.6, total_trades: 856, is_active: true, last_active: new Date(Date.now() - 30 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'ffffffff-ffff-ffff-ffff-ffffffffffff'], following: [],
   }),
   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb': createTraderMeta({
-    platform: 'Robinhood', asset_focus: ['GME', 'AMC', 'BBBY'], experience_level: 'Beginner', holding_time: 'Variable', trade_frequency: 'Sporadic', win_rate: 53.8, average_r: 0.8, total_trades: 78, is_active: false, last_active: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), followers: [], following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
+    platform: 'Robinhood', asset_focus: ['GME', 'AMC', 'BBBY'], experience_level: 'Beginner', holding_time: 'Variable', trade_frequency: 'Sporadic', trading_session: 'new_york', win_rate: 53.8, average_r: 0.8, total_trades: 78, is_active: false, last_active: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), followers: [], following: ['11111111-1111-1111-1111-111111111111', 'ffffffff-ffff-ffff-ffff-ffffffffffff'],
   }),
   'cccccccc-cccc-cccc-cccc-cccccccccccc': createTraderMeta({
-    platform: 'NinjaTrader', asset_focus: ['CL', 'NG', 'GC'], experience_level: 'Advanced', holding_time: 'Day trading', trade_frequency: 'Daily', win_rate: 67.9, average_r: 2.0, total_trades: 56, is_active: true, last_active: new Date(Date.now() - 8 * 60 * 1000).toISOString(), followers: ['55555555-5555-5555-5555-555555555555'], following: ['55555555-5555-5555-5555-555555555555'],
+    platform: 'NinjaTrader', asset_focus: ['CL', 'NG', 'GC'], experience_level: 'Advanced', holding_time: 'Day trading', trade_frequency: 'Daily', trading_session: 'new_york', win_rate: 67.9, average_r: 2.0, total_trades: 76, is_active: true, last_active: new Date(Date.now() - 8 * 60 * 1000).toISOString(), followers: ['55555555-5555-5555-5555-555555555555'], following: ['55555555-5555-5555-5555-555555555555'],
   }),
   'dddddddd-dddd-dddd-dddd-dddddddddddd': createTraderMeta({
-    platform: 'OANDA', asset_focus: ['USD/JPY', 'EUR/JPY', 'AUD/JPY'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Few per week', win_rate: 66.4, average_r: 1.8, total_trades: 134, is_active: false, last_active: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), followers: ['77777777-7777-7777-7777-777777777777'], following: ['22222222-2222-2222-2222-222222222222', '77777777-7777-7777-7777-777777777777'],
+    platform: 'OANDA', asset_focus: ['USD/JPY', 'EUR/JPY', 'AUD/JPY'], experience_level: 'Advanced', holding_time: 'Swing (days)', trade_frequency: 'Few per week', trading_session: 'asian', win_rate: 66.4, average_r: 1.8, total_trades: 134, is_active: false, last_active: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), followers: ['77777777-7777-7777-7777-777777777777'], following: ['22222222-2222-2222-2222-222222222222', '77777777-7777-7777-7777-777777777777'],
   }),
   'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee': createTraderMeta({
-    platform: 'Fidelity', asset_focus: ['BRK.B', 'JPM', 'V'], experience_level: 'Expert', holding_time: 'Long-term (years)', trade_frequency: 'Monthly', win_rate: 82.4, average_r: 3.1, total_trades: 34, is_active: false, last_active: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333'], following: ['33333333-3333-3333-3333-333333333333'],
+    platform: 'Fidelity', asset_focus: ['BRK.B', 'JPM', 'V'], experience_level: 'Expert', holding_time: 'Long-term (years)', trade_frequency: 'Monthly', trading_session: 'new_york', win_rate: 82.4, average_r: 3.1, total_trades: 34, is_active: false, last_active: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), followers: ['33333333-3333-3333-3333-333333333333'], following: ['33333333-3333-3333-3333-333333333333'],
   }),
   'ffffffff-ffff-ffff-ffff-ffffffffffff': createTraderMeta({
-    platform: 'Kraken', asset_focus: ['SOL', 'AVAX', 'LINK'], experience_level: 'Advanced', holding_time: 'Swing (weeks)', trade_frequency: 'Weekly', win_rate: 58.4, average_r: 3.8, total_trades: 89, is_active: true, last_active: new Date(Date.now() - 25 * 60 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888'], following: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+    platform: 'Kraken', asset_focus: ['SOL', 'AVAX', 'LINK'], experience_level: 'Advanced', holding_time: 'Swing (weeks)', trade_frequency: 'Weekly', trading_session: 'all_sessions', win_rate: 58.4, average_r: 3.8, total_trades: 89, is_active: true, last_active: new Date(Date.now() - 25 * 60 * 1000).toISOString(), followers: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888'], following: ['11111111-1111-1111-1111-111111111111', '88888888-8888-8888-8888-888888888888', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
   }),
 };
+
+// Generate fake positions for a fake trader based on their metadata
+export function generateFakePositions(userId: string): any[] {
+  const meta = FAKE_TRADER_META[userId];
+  if (!meta) return [];
+
+  const positions: any[] = [];
+  const now = Date.now();
+  const winRateDecimal = meta.win_rate / 100;
+  
+  for (let i = 0; i < meta.total_trades; i++) {
+    const isWin = Math.random() < winRateDecimal;
+    const pnlBase = isWin ? meta.avg_win : -meta.avg_loss;
+    const variance = 0.5 + Math.random();
+    const pnl = pnlBase * variance;
+    
+    // Space trades over time
+    const daysAgo = Math.floor((meta.total_trades - i) * (365 / meta.total_trades));
+    const entryTime = new Date(now - daysAgo * 24 * 60 * 60 * 1000);
+    
+    positions.push({
+      id: i + 1,
+      user_id: userId,
+      open: false,
+      pnl: pnl,
+      pnl_pct: pnl / 1000 * 100, // Assuming $1000 base position
+      entry_timestamp: entryTime.toISOString(),
+      exit_timestamp: new Date(entryTime.getTime() + Math.random() * 24 * 60 * 60 * 1000).toISOString(),
+      entry_price: 100 + Math.random() * 50,
+      exit_price: 100 + Math.random() * 50 + (isWin ? 5 : -5),
+      side: Math.random() > 0.5 ? 'long' : 'short',
+    });
+  }
+  
+  return positions;
+}

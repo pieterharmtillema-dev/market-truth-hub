@@ -208,6 +208,11 @@ export function PublicTraderCharacterHero({
           setWinRate(fakeMeta.win_rate);
           setAverageR(fakeMeta.average_r);
 
+          // Generate fake positions for performance trend and metrics
+          const { generateFakePositions } = await import('@/lib/fakeProfiles');
+          const fakePositions = generateFakePositions(userId);
+          setPositions(fakePositions);
+
           setLoading(false);
           setTimeout(() => setStatsAnimated(true), 300);
           return;
