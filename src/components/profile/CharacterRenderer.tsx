@@ -12,12 +12,23 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
     ...DEFAULT_CHARACTER_CONFIG,
     ...inputConfig,
     // Ensure nested objects are properly merged AFTER spreading inputConfig
-    top: { ...DEFAULT_CHARACTER_CONFIG.top, ...inputConfig?.top },
+    top: {
+      ...DEFAULT_CHARACTER_CONFIG.top,
+      ...inputConfig?.top,
+      tie: { ...DEFAULT_CHARACTER_CONFIG.top.tie, ...inputConfig?.top?.tie },
+      pocketSquare: { ...DEFAULT_CHARACTER_CONFIG.top.pocketSquare, ...inputConfig?.top?.pocketSquare },
+    },
+    outerwear: { ...DEFAULT_CHARACTER_CONFIG.outerwear, ...inputConfig?.outerwear },
     bottom: { ...DEFAULT_CHARACTER_CONFIG.bottom, ...inputConfig?.bottom },
     shoes: { ...DEFAULT_CHARACTER_CONFIG.shoes, ...inputConfig?.shoes },
     accessories: { ...DEFAULT_CHARACTER_CONFIG.accessories, ...inputConfig?.accessories },
     special: { ...DEFAULT_CHARACTER_CONFIG.special, ...inputConfig?.special },
-    face: { ...DEFAULT_CHARACTER_CONFIG.face, ...inputConfig?.face },
+    face: {
+      ...DEFAULT_CHARACTER_CONFIG.face,
+      ...inputConfig?.face,
+      skinDetails: { ...DEFAULT_CHARACTER_CONFIG.face?.skinDetails, ...inputConfig?.face?.skinDetails },
+      hairAccessory: { ...DEFAULT_CHARACTER_CONFIG.face?.hairAccessory, ...inputConfig?.face?.hairAccessory },
+    },
   };
 
   const scale = config.height;
@@ -26,6 +37,9 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
   const gradientId = useMemo(() => {
     return config.skinTone.replace('#', '');
   }, [config.skinTone]);
+
+  const hairColor = config.face?.hairColor || '#2D1B0E';
+  const hairFade = config.face?.hairFade ?? 0;
 
   // Body width adjustments based on body type
   const bodyWidthMultiplier = {
@@ -148,6 +162,16 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
             <stop offset="100%" stopColor={config.skinTone} stopOpacity="1" />
           </linearGradient>
 
+          <linearGradient id={`hair-gradient-${gradientId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={adjustBrightness(hairColor, 6)} stopOpacity="1" />
+            <stop
+              offset={`${Math.max(0, 100 - hairFade * 60)}%`}
+              stopColor={hairColor}
+              stopOpacity="1"
+            />
+            <stop offset="100%" stopColor={adjustBrightness(hairColor, -30)} stopOpacity="1" />
+          </linearGradient>
+
           <linearGradient id="clothing-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.1)" stopOpacity="1" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.1)" stopOpacity="1" />
@@ -215,6 +239,9 @@ export function CharacterRenderer({ config: inputConfig, className = "" }: Chara
           {/* Torso */}
           <TopRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} gradientId={gradientId} />
 
+          {/* Outerwear overlay */}
+          <OuterwearRenderer config={config} bodyWidthMultiplier={bodyWidthMultiplier} />
+
           {/* Belt */}
           {config.accessories.belt?.enabled && (
             <rect
@@ -260,12 +287,52 @@ function HeadRenderer({ config, gradientId }: { config: CharacterConfig; gradien
   const hairColor = config.face?.hairColor || '#2D1B0E';
   const hairStyle = config.face?.hairStyle || 'short';
   const eyeColor = config.face?.eyeColor || '#4A90D9';
+  const eyeSize = config.face?.eyeSize ?? 1;
+  const eyebrowSize = config.face?.eyebrowSize ?? 1;
+  const noseStyle = config.face?.nose || 'straight';
+  const mouthShape = config.face?.mouth || 'normal';
+  const expression = config.face?.expression || 'neutral';
+  const skinDetails = config.face?.skinDetails;
+  const hairPart = config.face?.hairPart || 'none';
+  const hairTexture = config.face?.hairTexture || 'straight';
+  const hairHighlights = config.face?.hairHighlights || false;
+  const hairFade = config.face?.hairFade ?? 0;
+  const hairAccessory = config.face?.hairAccessory;
+
+  const eyeRx = 3 * eyeSize;
+  const eyeRy = 2.5 * eyeSize;
+  const pupilR = 1.5 * eyeSize;
+  const highlightR = 0.5 * eyeSize;
+  const eyelidRx = eyeRx + 0.5;
+  const eyelidRy = eyeRy + 0.5;
+
+  const browStroke = 1 * eyebrowSize;
+  const browLift = expression === 'smile' ? -1 : expression === 'focused' ? 1 : 0;
+  const leftBrowLift = browLift + (expression === 'smirk' ? 0.5 : 0);
+  const rightBrowLift = browLift + (expression === 'smirk' ? -1 : 0);
+  const browCurve = expression === 'focused' ? -1 : 1;
+
+  const mouthWidth = mouthShape === 'wide' ? 10 : mouthShape === 'thin' ? 6 : 8;
+  const mouthStroke = mouthShape === 'thin' ? 1 : 1.5;
+  const mouthBaseY = 54;
+  const mouthCurve = expression === 'smile' ? 3 : expression === 'focused' ? -1 : expression === 'smirk' ? 2 : 0;
+  const mouthLeftY = mouthBaseY + (expression === 'smirk' ? 0.5 : 0);
+  const mouthRightY = mouthBaseY + (expression === 'smirk' ? -1 : 0);
+  const mouthPath = `M ${72 - mouthWidth / 2} ${mouthLeftY} Q 72 ${mouthBaseY + mouthCurve} ${72 + mouthWidth / 2} ${mouthRightY}`;
+
+  const hairFill = hairFade > 0 ? `url(#hair-gradient-${gradientId})` : hairColor;
+
+  const nosePath = noseStyle === 'soft'
+    ? 'M 72 46 Q 71 49 72 50 Q 73 51 74 50'
+    : noseStyle === 'sharp'
+      ? 'M 72 46 L 73 51 L 69 52'
+      : 'M 72 46 L 72 50 L 70 51';
 
   return (
     <g>
       {/* Hair back layer (for styles that go behind head) */}
       {hairStyle === 'long' && (
-        <ellipse cx="72" cy="52" rx="20" ry="16" fill={hairColor} filter="url(#drop-shadow)" />
+        <ellipse cx="72" cy="52" rx="20" ry="16" fill={hairFill} filter="url(#drop-shadow)" />
       )}
 
       {/* Head shape */}
@@ -283,34 +350,90 @@ function HeadRenderer({ config, gradientId }: { config: CharacterConfig; gradien
       <ellipse cx="88" cy="46" rx="3" ry="4" fill={config.skinTone} />
 
       {/* Hair front layer */}
-      <HairRenderer hairStyle={hairStyle} hairColor={hairColor} />
+      <HairRenderer
+        hairStyle={hairStyle}
+        hairColor={hairColor}
+        hairFill={hairFill}
+        hairPart={hairPart}
+        hairTexture={hairTexture}
+        hairHighlights={hairHighlights}
+      />
+
+      {/* Hair accessories */}
+      {hairAccessory?.type === 'bandana' && (
+        <path
+          d="M 56 42 Q 72 38 88 42 L 88 46 Q 72 44 56 46 Z"
+          fill={hairAccessory.color || '#1a1a1a'}
+          filter="url(#drop-shadow)"
+        />
+      )}
+      {hairAccessory?.type === 'clip' && (
+        <g>
+          <rect x="84" y="32" width="6" height="3" rx="1" fill={hairAccessory.color || '#C0C0C0'} />
+          <circle cx="85" cy="33.5" r="0.6" fill="rgba(255,255,255,0.6)" />
+        </g>
+      )}
 
       {/* Face features */}
       <g>
         {/* Eyes */}
-        <ellipse cx="66" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
-        <ellipse cx="78" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
+        <ellipse cx="66" cy="44" rx={eyeRx} ry={eyeRy} fill="#FFFFFF" />
+        <ellipse cx="78" cy="44" rx={eyeRx} ry={eyeRy} fill="#FFFFFF" />
         {/* Pupils */}
-        <circle cx="66" cy="44" r="1.5" fill={eyeColor} />
-        <circle cx="78" cy="44" r="1.5" fill={eyeColor} />
+        <circle cx="66" cy="44" r={pupilR} fill={eyeColor} />
+        <circle cx="78" cy="44" r={pupilR} fill={eyeColor} />
         {/* Eye highlights */}
-        <circle cx="65" cy="43.5" r="0.5" fill="#FFFFFF" />
-        <circle cx="77" cy="43.5" r="0.5" fill="#FFFFFF" />
+        <circle cx="65" cy="43.5" r={highlightR} fill="#FFFFFF" />
+        <circle cx="77" cy="43.5" r={highlightR} fill="#FFFFFF" />
 
         {/* Eyelids - animated to close over eyes */}
-        <ellipse className="eyelid-left" cx="66" cy="44" rx="3.5" ry="3" fill={config.skinTone} />
-        <ellipse className="eyelid-right" cx="78" cy="44" rx="3.5" ry="3" fill={config.skinTone} />
+        <ellipse className="eyelid-left" cx="66" cy="44" rx={eyelidRx} ry={eyelidRy} fill={config.skinTone} />
+        <ellipse className="eyelid-right" cx="78" cy="44" rx={eyelidRx} ry={eyelidRy} fill={config.skinTone} />
       </g>
 
       {/* Eyebrows */}
-      <path d="M 63 40 Q 66 39 69 40" stroke={adjustBrightness(hairColor, -20)} strokeWidth="1" fill="none" strokeLinecap="round" />
-      <path d="M 75 40 Q 78 39 81 40" stroke={adjustBrightness(hairColor, -20)} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path
+        d={`M 63 ${40 + leftBrowLift} Q 66 ${40 + leftBrowLift + browCurve} 69 ${40 + leftBrowLift}`}
+        stroke={adjustBrightness(hairColor, -20)}
+        strokeWidth={browStroke}
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d={`M 75 ${40 + rightBrowLift} Q 78 ${40 + rightBrowLift + browCurve} 81 ${40 + rightBrowLift}`}
+        stroke={adjustBrightness(hairColor, -20)}
+        strokeWidth={browStroke}
+        fill="none"
+        strokeLinecap="round"
+      />
 
       {/* Nose */}
-      <path d="M 72 46 L 72 50 L 70 51" stroke={adjustBrightness(config.skinTone, -30)} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d={nosePath} stroke={adjustBrightness(config.skinTone, -30)} strokeWidth="1" fill="none" strokeLinecap="round" />
 
       {/* Mouth */}
-      <path d="M 68 54 Q 72 56 76 54" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d={mouthPath} stroke={adjustBrightness(config.skinTone, -40)} strokeWidth={mouthStroke} fill="none" strokeLinecap="round" />
+
+      {/* Skin details */}
+      {skinDetails?.blush && (
+        <g opacity="0.5">
+          <circle cx="60" cy="52" r="3" fill="#FCA5A5" />
+          <circle cx="84" cy="52" r="3" fill="#FCA5A5" />
+        </g>
+      )}
+      {skinDetails?.wrinkles && (
+        <g opacity="0.35">
+          <path d="M 59 42 L 56 41" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="0.6" />
+          <path d="M 85 42 L 88 41" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="0.6" />
+          <path d="M 59 45 L 56 44" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="0.6" />
+          <path d="M 85 45 L 88 44" stroke={adjustBrightness(config.skinTone, -40)} strokeWidth="0.6" />
+        </g>
+      )}
+      {skinDetails?.scars && (
+        <g opacity="0.7">
+          <path d="M 62 50 L 66 46" stroke={adjustBrightness(config.skinTone, -50)} strokeWidth="1" strokeLinecap="round" />
+          <path d="M 64 48 L 65 50" stroke={adjustBrightness(config.skinTone, -50)} strokeWidth="0.6" strokeLinecap="round" />
+        </g>
+      )}
 
       {/* Beard/facial hair */}
       {config.face?.facialHair && config.face.facialHair !== 'none' && (
@@ -321,58 +444,123 @@ function HeadRenderer({ config, gradientId }: { config: CharacterConfig; gradien
 }
 
 // Helper component for hair styles
-function HairRenderer({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
+function HairRenderer({
+  hairStyle,
+  hairColor,
+  hairFill,
+  hairPart,
+  hairTexture,
+  hairHighlights,
+}: {
+  hairStyle: string;
+  hairColor: string;
+  hairFill: string;
+  hairPart: string;
+  hairTexture: string;
+  hairHighlights: boolean;
+}) {
+  const highlightColor = adjustBrightness(hairColor, 35);
+  const partX = hairPart === 'left' ? 66 : hairPart === 'right' ? 78 : 72;
+
+  const textureOverlay = hairTexture === 'wavy' ? (
+    <g opacity="0.35">
+      <path d="M 60 34 Q 64 32 68 34" stroke={highlightColor} strokeWidth="1" fill="none" />
+      <path d="M 70 32 Q 74 30 78 32" stroke={highlightColor} strokeWidth="1" fill="none" />
+      <path d="M 62 38 Q 66 36 70 38" stroke={highlightColor} strokeWidth="1" fill="none" />
+    </g>
+  ) : hairTexture === 'curly' ? (
+    <g opacity="0.4">
+      <circle cx="62" cy="34" r="1.2" fill={highlightColor} />
+      <circle cx="70" cy="30" r="1.2" fill={highlightColor} />
+      <circle cx="80" cy="34" r="1.2" fill={highlightColor} />
+      <circle cx="68" cy="36" r="1" fill={highlightColor} />
+    </g>
+  ) : null;
+
+  const highlightsOverlay = hairHighlights ? (
+    <g opacity="0.5">
+      <path d="M 60 32 Q 66 28 72 30" stroke={highlightColor} strokeWidth="1.2" fill="none" />
+      <path d="M 72 30 Q 78 28 84 32" stroke={highlightColor} strokeWidth="1.2" fill="none" />
+    </g>
+  ) : null;
+
+  const partOverlay = hairPart !== 'none' && hairStyle !== 'bald' ? (
+    <path d={`M ${partX} 26 L ${partX} 36`} stroke={adjustBrightness(hairColor, 25)} strokeWidth="1" />
+  ) : null;
+
   switch (hairStyle) {
     case 'short':
       return (
         <g>
-          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairColor} />
-          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairFill} />
+          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairFill} />
+          {partOverlay}
+          {textureOverlay}
+          {highlightsOverlay}
         </g>
       );
     case 'medium':
       return (
         <g>
-          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
-          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
-          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
+          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairFill} />
+          <path d="M 56 40 Q 54 48 56 52" fill={hairFill} />
+          <path d="M 88 40 Q 90 48 88 52" fill={hairFill} />
+          {partOverlay}
+          {textureOverlay}
+          {highlightsOverlay}
         </g>
       );
     case 'long':
       return (
         <g>
-          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
-          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
-          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
+          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairFill} />
+          <path d="M 54 40 Q 50 56 54 68" fill={hairFill} />
+          <path d="M 90 40 Q 94 56 90 68" fill={hairFill} />
+          {partOverlay}
+          {textureOverlay}
+          {highlightsOverlay}
         </g>
       );
     case 'buzz':
       return (
-        <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairColor} opacity="0.8" />
+        <g>
+          <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairFill} opacity="0.8" />
+          {highlightsOverlay}
+        </g>
       );
     case 'bald':
       return null;
     case 'mohawk':
       return (
         <g>
-          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairColor} />
-          <path d="M 68 20 L 72 14 L 76 20" fill={hairColor} />
+          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairFill} />
+          <path d="M 68 20 L 72 14 L 76 20" fill={hairFill} />
+          {highlightsOverlay}
         </g>
       );
     case 'ponytail':
       return (
         <g>
-          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairColor} />
-          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairColor} strokeWidth="6" fill="none" strokeLinecap="round" />
+          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairFill} />
+          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairFill} strokeWidth="6" fill="none" strokeLinecap="round" />
+          {partOverlay}
+          {textureOverlay}
+          {highlightsOverlay}
         </g>
       );
     case 'afro':
       return (
-        <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} filter="url(#drop-shadow)" />
+        <g>
+          <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairFill} filter="url(#drop-shadow)" />
+          {highlightsOverlay}
+        </g>
       );
     default:
       return (
-        <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+        <g>
+          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairFill} />
+          {highlightsOverlay}
+        </g>
       );
   }
 }
@@ -408,6 +596,13 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
   const baseX = 72 - (10 * bodyWidthMultiplier);
   const width = 20 * bodyWidthMultiplier;
   const color = config.top.color;
+  const pattern = config.top.pattern || 'none';
+  const patchType = config.top.patch || 'none';
+  const patchColor = config.top.patchColor || adjustBrightness(color, 40);
+  const outerwearType = config.outerwear?.type || 'none';
+  const showTopPatch = patchType !== 'none' && outerwearType === 'none';
+  const showTie = config.top.tie?.enabled && (config.top.type === 'business' || config.top.type === 'suit');
+  const showPocketSquare = config.top.pocketSquare?.enabled && config.top.type === 'suit' && outerwearType === 'none';
 
   switch (config.top.type) {
     case 'tshirt':
@@ -424,6 +619,14 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             className="cotton-fabric"
             filter="url(#drop-shadow)"
           />
+          <PatternOverlay
+            pattern={pattern}
+            x={baseX}
+            y={66}
+            width={width}
+            height={32}
+            color={adjustBrightness(color, 25)}
+          />
           {/* Collar */}
           <ellipse cx="72" cy="68" rx={4 * bodyWidthMultiplier} ry="2" fill={adjustBrightness(color, -20)} />
           {/* Highlight line */}
@@ -431,6 +634,9 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
           {/* Graphic */}
           {config.top.graphic && config.top.graphic !== 'none' && (
             <GraphicRenderer graphic={config.top.graphic} x={72} y={82} />
+          )}
+          {showTopPatch && (
+            <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
           )}
         </g>
       );
@@ -448,6 +654,14 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             fill={color}
             className="cotton-fabric"
             filter="url(#drop-shadow)"
+          />
+          <PatternOverlay
+            pattern={pattern}
+            x={baseX}
+            y={66}
+            width={width}
+            height={32}
+            color={adjustBrightness(color, 20)}
           />
           {/* Kangaroo pocket */}
           <rect
@@ -469,6 +683,9 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             stroke={adjustBrightness(color, -20)}
             strokeWidth="0.5"
           />
+          {showTopPatch && (
+            <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
+          )}
         </g>
       );
 
@@ -486,6 +703,14 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             className="cotton-fabric"
             filter="url(#drop-shadow)"
           />
+          <PatternOverlay
+            pattern={pattern}
+            x={baseX}
+            y={66}
+            width={width}
+            height={32}
+            color={adjustBrightness(color, 25)}
+          />
           {/* Collar */}
           <path d="M 66 66 L 72 70 L 78 66" fill={color} stroke={adjustBrightness(color, -20)} strokeWidth="1" />
           {/* Button line */}
@@ -496,6 +721,12 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
           <circle cx="72" cy="90" r="1" fill={adjustBrightness(color, -40)} />
           {/* Pocket */}
           <rect x="64" y="72" width="6" height="6" rx="1" fill="none" stroke={adjustBrightness(color, -20)} strokeWidth="0.5" />
+          {showTie && (
+            <TieRenderer color={config.top.tie?.color || '#1a1a1a'} style={config.top.tie?.style || 'classic'} />
+          )}
+          {showTopPatch && (
+            <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
+          )}
         </g>
       );
 
@@ -515,12 +746,34 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             className="cotton-fabric"
             filter="url(#drop-shadow)"
           />
+          <PatternOverlay
+            pattern={pattern}
+            x={baseX}
+            y={72}
+            width={width}
+            height={26}
+            color={adjustBrightness(color, 20)}
+          />
           {/* Lapels */}
           <path d="M 62 72 L 72 78 L 72 72 Z" fill={adjustBrightness(color, -10)} />
           <path d="M 82 72 L 72 78 L 72 72 Z" fill={adjustBrightness(color, -10)} />
           {/* Buttons */}
           <circle cx="72" cy="80" r="1.5" fill="#FFD700" />
           <circle cx="72" cy="88" r="1.5" fill="#FFD700" />
+          {showTie && (
+            <TieRenderer color={config.top.tie?.color || '#1a1a1a'} style={config.top.tie?.style || 'classic'} />
+          )}
+          {showPocketSquare && (
+            <PocketSquareRenderer
+              color={config.top.pocketSquare?.color || '#FFFFFF'}
+              fold={config.top.pocketSquare?.fold || 'flat'}
+              x={baseX + width - 7}
+              y={72}
+            />
+          )}
+          {showTopPatch && (
+            <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
+          )}
         </g>
       );
 
@@ -538,9 +791,20 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
             className="cotton-fabric"
             filter="url(#drop-shadow)"
           />
+          <PatternOverlay
+            pattern={pattern}
+            x={baseX + 2}
+            y={66}
+            width={width - 4}
+            height={32}
+            color={adjustBrightness(color, 20)}
+          />
           {/* Straps */}
           <rect x="66" y="66" width="3" height="8" rx="1" fill={adjustBrightness(color, -10)} />
           <rect x="75" y="66" width="3" height="8" rx="1" fill={adjustBrightness(color, -10)} />
+          {showTopPatch && (
+            <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
+          )}
         </g>
       );
 
@@ -558,6 +822,93 @@ function TopRenderer({ config, bodyWidthMultiplier, gradientId }: { config: Char
         />
       );
   }
+}
+
+// Helper component for rendering outerwear
+function OuterwearRenderer({ config, bodyWidthMultiplier }: { config: CharacterConfig; bodyWidthMultiplier: number }) {
+  const outerwear = config.outerwear;
+  if (!outerwear || outerwear.type === 'none') return null;
+
+  const baseX = 72 - (10 * bodyWidthMultiplier);
+  const width = 20 * bodyWidthMultiplier;
+  const color = outerwear.color;
+  const trimColor = outerwear.trimColor || adjustBrightness(color, -20);
+  const pattern = outerwear.pattern || 'none';
+  const patchType = config.top.patch || 'none';
+  const patchColor = config.top.patchColor || adjustBrightness(color, 40);
+
+  return (
+    <g>
+      {outerwear.type === 'jacket' ? (
+        <>
+          {/* Left and right panels with open center */}
+          <rect
+            x={baseX}
+            y="72"
+            width={width / 2 - 1}
+            height="26"
+            rx="4"
+            fill={color}
+            className="cotton-fabric"
+            filter="url(#drop-shadow)"
+          />
+          <rect
+            x={baseX + width / 2 + 1}
+            y="72"
+            width={width / 2 - 1}
+            height="26"
+            rx="4"
+            fill={color}
+            className="cotton-fabric"
+            filter="url(#drop-shadow)"
+          />
+          {/* Lapels */}
+          <path d="M 62 72 L 70 80 L 70 72 Z" fill={trimColor} />
+          <path d="M 82 72 L 74 80 L 74 72 Z" fill={trimColor} />
+        </>
+      ) : (
+        <>
+          {/* Vest with V neckline */}
+          <path
+            d={`M ${baseX} 72 L 72 84 L ${baseX + width} 72 L ${baseX + width} 98 L ${baseX} 98 Z`}
+            fill={color}
+            className="cotton-fabric"
+            filter="url(#drop-shadow)"
+          />
+          <path d={`M ${baseX + 4} 76 L 72 86 L ${baseX + width - 4} 76`} stroke={trimColor} strokeWidth="1" fill="none" />
+        </>
+      )}
+
+      <PatternOverlay
+        pattern={pattern}
+        x={baseX}
+        y={72}
+        width={width}
+        height={26}
+        color={adjustBrightness(color, 20)}
+      />
+
+      {config.top.pocketSquare?.enabled && (
+        <PocketSquareRenderer
+          color={config.top.pocketSquare?.color || '#FFFFFF'}
+          fold={config.top.pocketSquare?.fold || 'flat'}
+          x={baseX + width - 7}
+          y={72}
+        />
+      )}
+
+      {patchType !== 'none' && (
+        <PatchRenderer type={patchType} x={baseX + width - 7} y={74} color={patchColor} />
+      )}
+
+      {config.accessories.lapelPin?.enabled && (
+        <LapelPinRenderer
+          style={config.accessories.lapelPin.style || 'bull'}
+          color={config.accessories.lapelPin.color || '#FBBF24'}
+        />
+      )}
+    </g>
+  );
 }
 
 // Helper component for rendering bottoms
@@ -795,9 +1146,18 @@ function ArmRenderer({ config, side, bodyWidthMultiplier, gradientId }: { config
   const armWidth = 6 * bodyWidthMultiplier;
 
   // Determine sleeve color based on top
-  const sleeveColor = config.top.type !== 'none' && config.top.type !== 'tank'
-    ? config.top.color
-    : null;
+  const sleeveColor = config.outerwear?.type === 'jacket'
+    ? config.outerwear.color
+    : config.top.type !== 'none' && config.top.type !== 'tank'
+      ? config.top.color
+      : null;
+  const hasLongSleeves = config.outerwear?.type === 'jacket'
+    || config.top.type === 'business'
+    || config.top.type === 'suit'
+    || config.top.type === 'hoodie';
+  const showBracelet = side === 'right' && config.accessories.bracelet?.enabled;
+  const showRing = side === 'right' && config.accessories.ring?.enabled;
+  const showHandheld = side === 'right' && config.accessories.handheld?.enabled;
 
   return (
     <g>
@@ -820,9 +1180,22 @@ function ArmRenderer({ config, side, bodyWidthMultiplier, gradientId }: { config
         width={armWidth}
         height="16"
         rx="3"
-        fill={config.top.type === 'business' || config.top.type === 'suit' ? sleeveColor : `url(#body-gradient-${gradientId})`}
+        fill={hasLongSleeves && sleeveColor ? sleeveColor : `url(#body-gradient-${gradientId})`}
         filter="url(#drop-shadow)"
       />
+
+      {/* Bracelet */}
+      {showBracelet && (
+        <rect
+          x={x - armWidth / 2 - 0.5}
+          y="98"
+          width={armWidth + 1}
+          height="3"
+          rx="1"
+          fill={config.accessories.bracelet?.color || '#C0C0C0'}
+          filter="url(#drop-shadow)"
+        />
+      )}
 
       {/* Hand */}
       <ellipse
@@ -833,6 +1206,28 @@ function ArmRenderer({ config, side, bodyWidthMultiplier, gradientId }: { config
         fill={config.special?.diamondHands ? '#60A5FA' : `url(#body-gradient-${gradientId})`}
         filter="url(#drop-shadow)"
       />
+
+      {/* Ring */}
+      {showRing && (
+        <ellipse
+          cx={x + 1.5}
+          cy="106"
+          rx="1.6"
+          ry="1"
+          fill={config.accessories.ring?.color || '#FFD700'}
+          filter="url(#drop-shadow)"
+        />
+      )}
+
+      {/* Handheld props */}
+      {showHandheld && config.accessories.handheld && (
+        <HandheldRenderer
+          type={config.accessories.handheld.type}
+          color={config.accessories.handheld.color || '#1a1a1a'}
+          x={x + 6}
+          y={100}
+        />
+      )}
 
       {/* Diamond hands sparkle effect */}
       {config.special?.diamondHands && (
@@ -1072,6 +1467,24 @@ function AccessoriesRenderer({ config }: { config: CharacterConfig }) {
           })()}
         </g>
       )}
+
+      {/* Lanyard */}
+      {config.accessories.lanyard?.enabled && (
+        <g>
+          <path d="M 66 64 L 60 86" stroke={config.accessories.lanyard.color || '#06B6D4'} strokeWidth="2" strokeLinecap="round" />
+          <path d="M 78 64 L 84 86" stroke={config.accessories.lanyard.color || '#06B6D4'} strokeWidth="2" strokeLinecap="round" />
+          <rect x="66" y="86" width="12" height="10" rx="2" fill={adjustBrightness(config.accessories.lanyard.color || '#06B6D4', -20)} filter="url(#drop-shadow)" />
+          <rect x="68" y="88" width="8" height="6" rx="1" fill="#FFFFFF" opacity="0.8" />
+        </g>
+      )}
+
+      {/* Lapel pin (no outerwear) */}
+      {config.accessories.lapelPin?.enabled && config.outerwear?.type === 'none' && (
+        <LapelPinRenderer
+          style={config.accessories.lapelPin.style || 'bull'}
+          color={config.accessories.lapelPin.color || '#FBBF24'}
+        />
+      )}
     </g>
   );
 }
@@ -1156,6 +1569,152 @@ function SpecialItemsRenderer({ config }: { config: CharacterConfig }) {
           <path d="M 60 22 L 64 24 L 68 21 L 72 23 L 76 20 L 80 22 L 84 23" stroke="#10B981" strokeWidth="1" fill="none" />
         </g>
       )}
+    </g>
+  );
+}
+
+function PatternOverlay({
+  pattern,
+  x,
+  y,
+  width,
+  height,
+  color,
+}: {
+  pattern: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+}) {
+  if (pattern === 'none') return null;
+
+  if (pattern === 'pinstripe') {
+    const stripes = Array.from({ length: Math.max(1, Math.floor(width / 4)) });
+    return (
+      <g opacity="0.25">
+        {stripes.map((_, index) => {
+          const stripeX = x + 2 + index * 4;
+          return (
+            <line key={stripeX} x1={stripeX} y1={y + 2} x2={stripeX} y2={y + height - 2} stroke={color} strokeWidth="0.6" />
+          );
+        })}
+      </g>
+    );
+  }
+
+  if (pattern === 'grid') {
+    const columns = Array.from({ length: Math.max(1, Math.floor(width / 6)) });
+    const rows = Array.from({ length: Math.max(1, Math.floor(height / 6)) });
+    return (
+      <g opacity="0.2">
+        {columns.map((_, index) => {
+          const gridX = x + 2 + index * 6;
+          return (
+            <line key={`col-${gridX}`} x1={gridX} y1={y + 2} x2={gridX} y2={y + height - 2} stroke={color} strokeWidth="0.6" />
+          );
+        })}
+        {rows.map((_, index) => {
+          const gridY = y + 2 + index * 6;
+          return (
+            <line key={`row-${gridY}`} x1={x + 2} y1={gridY} x2={x + width - 2} y2={gridY} stroke={color} strokeWidth="0.6" />
+          );
+        })}
+      </g>
+    );
+  }
+
+  if (pattern === 'wave') {
+    return (
+      <g opacity="0.25">
+        <path d={`M ${x + 2} ${y + 6} Q ${x + width / 2} ${y + 2} ${x + width - 2} ${y + 6}`} stroke={color} strokeWidth="1" fill="none" />
+        <path d={`M ${x + 2} ${y + 12} Q ${x + width / 2} ${y + 8} ${x + width - 2} ${y + 12}`} stroke={color} strokeWidth="1" fill="none" />
+        <path d={`M ${x + 2} ${y + 18} Q ${x + width / 2} ${y + 14} ${x + width - 2} ${y + 18}`} stroke={color} strokeWidth="1" fill="none" />
+      </g>
+    );
+  }
+
+  return null;
+}
+
+function TieRenderer({ color, style }: { color: string; style: 'classic' | 'slim' }) {
+  const tieWidth = style === 'slim' ? 4 : 6;
+  return (
+    <g>
+      <rect x={72 - tieWidth / 2} y="70" width={tieWidth} height="4" rx="1" fill={color} />
+      <path
+        d={`M 72 ${74} L ${72 - tieWidth / 2} 80 L 72 94 L ${72 + tieWidth / 2} 80 Z`}
+        fill={color}
+        filter="url(#drop-shadow)"
+      />
+    </g>
+  );
+}
+
+function PocketSquareRenderer({ color, fold, x = 80, y = 74 }: { color: string; fold: 'flat' | 'point'; x?: number; y?: number }) {
+  return fold === 'point' ? (
+    <path d={`M ${x} ${y + 6} L ${x + 6} ${y + 6} L ${x + 3} ${y} Z`} fill={color} filter="url(#drop-shadow)" />
+  ) : (
+    <rect x={x} y={y + 2} width="6" height="4" rx="1" fill={color} filter="url(#drop-shadow)" />
+  );
+}
+
+function PatchRenderer({ type, x, y, color }: { type: string; x: number; y: number; color: string }) {
+  const iconColor = adjustBrightness(color, -40);
+  return (
+    <g>
+      <rect x={x} y={y} width="6" height="6" rx="1" fill={color} filter="url(#drop-shadow)" />
+      {type === 'bull' && (
+        <path d={`M ${x + 1.5} ${y + 4.5} L ${x + 3} ${y + 2} L ${x + 4.5} ${y + 4.5}`} stroke={iconColor} strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      )}
+      {type === 'bear' && (
+        <path d={`M ${x + 1.5} ${y + 2} L ${x + 3} ${y + 4.5} L ${x + 4.5} ${y + 2}`} stroke={iconColor} strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      )}
+      {type === 'trax' && (
+        <path d={`M ${x + 1} ${y + 2} L ${x + 5} ${y + 2} M ${x + 3} ${y + 2} L ${x + 3} ${y + 5}`} stroke={iconColor} strokeWidth="0.8" strokeLinecap="round" />
+      )}
+    </g>
+  );
+}
+
+function LapelPinRenderer({ style, color }: { style: 'bull' | 'bear' | 'trax'; color: string }) {
+  const pinX = 64;
+  const pinY = 78;
+  return (
+    <g>
+      <circle cx={pinX} cy={pinY} r="2.2" fill={color} filter="url(#drop-shadow)" />
+      {style === 'bull' && (
+        <path d={`M ${pinX - 1} ${pinY + 1} L ${pinX} ${pinY - 0.8} L ${pinX + 1} ${pinY + 1}`} stroke="#1a1a1a" strokeWidth="0.6" fill="none" strokeLinecap="round" />
+      )}
+      {style === 'bear' && (
+        <path d={`M ${pinX - 1} ${pinY - 0.8} L ${pinX} ${pinY + 1} L ${pinX + 1} ${pinY - 0.8}`} stroke="#1a1a1a" strokeWidth="0.6" fill="none" strokeLinecap="round" />
+      )}
+      {style === 'trax' && (
+        <path d={`M ${pinX - 1} ${pinY - 0.8} L ${pinX + 1} ${pinY - 0.8} M ${pinX} ${pinY - 0.8} L ${pinX} ${pinY + 1}`} stroke="#1a1a1a" strokeWidth="0.6" strokeLinecap="round" />
+      )}
+    </g>
+  );
+}
+
+function HandheldRenderer({ type, color, x, y }: { type: 'phone' | 'tablet' | 'coffee'; color: string; x: number; y: number }) {
+  if (type === 'coffee') {
+    return (
+      <g>
+        <rect x={x} y={y + 4} width="6" height="6" rx="1" fill={color} filter="url(#drop-shadow)" />
+        <path d={`M ${x + 6} ${y + 5} Q ${x + 8} ${y + 6} ${x + 6} ${y + 7}`} stroke={color} strokeWidth="1" fill="none" />
+        <rect x={x + 1} y={y + 2} width="4" height="2" rx="1" fill={adjustBrightness(color, 20)} />
+      </g>
+    );
+  }
+
+  const width = type === 'tablet' ? 8 : 5;
+  const height = type === 'tablet' ? 10 : 8;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} rx="1.2" fill={color} filter="url(#drop-shadow)" />
+      <rect x={x + 1} y={y + 1} width={width - 2} height={height - 2} rx="0.8" fill="#1a1a1a" opacity="0.7" />
+      <circle cx={x + width / 2} cy={y + height - 1.2} r="0.5" fill="#FFFFFF" opacity="0.6" />
     </g>
   );
 }

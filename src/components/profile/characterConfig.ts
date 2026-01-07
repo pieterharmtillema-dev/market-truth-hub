@@ -10,6 +10,24 @@ export interface CharacterConfig {
     hairColor: string;
     eyeColor: string;
     facialHair?: 'none' | 'stubble' | 'beard' | 'goatee' | 'mustache';
+    eyeSize?: number; // 0.8-1.4
+    eyebrowSize?: number; // 0.6-1.6
+    nose?: 'soft' | 'straight' | 'sharp';
+    mouth?: 'thin' | 'normal' | 'wide';
+    expression?: 'neutral' | 'focused' | 'smile' | 'smirk';
+    skinDetails?: {
+      scars?: boolean;
+      wrinkles?: boolean;
+      blush?: boolean;
+    };
+    hairPart?: 'none' | 'left' | 'center' | 'right';
+    hairTexture?: 'straight' | 'wavy' | 'curly';
+    hairHighlights?: boolean;
+    hairFade?: number; // 0-1
+    hairAccessory?: {
+      type: 'none' | 'clip' | 'bandana';
+      color?: string;
+    };
   };
 
   // Clothing
@@ -19,6 +37,26 @@ export interface CharacterConfig {
     secondaryColor?: string; // for details
     graphic?: 'bull' | 'bear' | 'moon' | 'diamond' | 'chart' | 'none';
     style?: 'tucked' | 'untucked' | 'open';
+    pattern?: 'none' | 'pinstripe' | 'grid' | 'wave';
+    patch?: 'none' | 'bull' | 'bear' | 'trax';
+    patchColor?: string;
+    tie?: {
+      enabled: boolean;
+      color: string;
+      style: 'classic' | 'slim';
+    };
+    pocketSquare?: {
+      enabled: boolean;
+      color: string;
+      fold: 'flat' | 'point';
+    };
+  };
+
+  outerwear?: {
+    type: 'none' | 'jacket' | 'vest';
+    color: string;
+    trimColor?: string;
+    pattern?: 'none' | 'pinstripe' | 'grid';
   };
 
   bottom: {
@@ -61,6 +99,29 @@ export interface CharacterConfig {
       enabled: boolean;
       color: string;
     };
+    ring?: {
+      enabled: boolean;
+      color: string;
+    };
+    bracelet?: {
+      enabled: boolean;
+      color: string;
+    };
+    lapelPin?: {
+      enabled: boolean;
+      style: 'bull' | 'bear' | 'trax';
+      color: string;
+    };
+    lanyard?: {
+      enabled: boolean;
+      color: string;
+      badge?: 'id' | 'vip' | 'press';
+    };
+    handheld?: {
+      enabled: boolean;
+      type: 'phone' | 'tablet' | 'coffee';
+      color: string;
+    };
   };
 
   // Trading-themed special items
@@ -88,11 +149,48 @@ export const DEFAULT_CHARACTER_CONFIG: CharacterConfig = {
     hairColor: '#2D1B0E',
     eyeColor: '#4A90D9',
     facialHair: 'none',
+    eyeSize: 1,
+    eyebrowSize: 1,
+    nose: 'straight',
+    mouth: 'normal',
+    expression: 'neutral',
+    skinDetails: {
+      scars: false,
+      wrinkles: false,
+      blush: false,
+    },
+    hairPart: 'none',
+    hairTexture: 'straight',
+    hairHighlights: false,
+    hairFade: 0,
+    hairAccessory: {
+      type: 'none',
+      color: '#1a1a1a',
+    },
   },
   top: {
     type: 'tshirt',
     color: '#06B6D4',
     graphic: 'none',
+    pattern: 'none',
+    patch: 'none',
+    patchColor: '#FBBF24',
+    tie: {
+      enabled: false,
+      color: '#1a1a1a',
+      style: 'classic',
+    },
+    pocketSquare: {
+      enabled: false,
+      color: '#FFFFFF',
+      fold: 'flat',
+    },
+  },
+  outerwear: {
+    type: 'none',
+    color: '#1a1a1a',
+    trimColor: '#E5E7EB',
+    pattern: 'none',
   },
   bottom: {
     type: 'jeans',

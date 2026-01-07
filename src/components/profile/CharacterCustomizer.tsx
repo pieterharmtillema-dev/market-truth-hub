@@ -40,6 +40,98 @@ const EYE_COLORS = [
   '#2F4F4F', '#4B0082', '#808080', '#000000'
 ];
 
+const NOSE_SHAPES = [
+  { value: 'soft', label: 'Soft' },
+  { value: 'straight', label: 'Straight' },
+  { value: 'sharp', label: 'Sharp' },
+];
+
+const MOUTH_SHAPES = [
+  { value: 'thin', label: 'Thin' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'wide', label: 'Wide' },
+];
+
+const EXPRESSIONS = [
+  { value: 'neutral', label: 'Neutral' },
+  { value: 'focused', label: 'Focused' },
+  { value: 'smile', label: 'Smile' },
+  { value: 'smirk', label: 'Smirk' },
+];
+
+const HAIR_PARTS = [
+  { value: 'none', label: 'None' },
+  { value: 'left', label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right', label: 'Right' },
+];
+
+const HAIR_TEXTURES = [
+  { value: 'straight', label: 'Straight' },
+  { value: 'wavy', label: 'Wavy' },
+  { value: 'curly', label: 'Curly' },
+];
+
+const HAIR_ACCESSORIES = [
+  { value: 'none', label: 'None' },
+  { value: 'clip', label: 'Clip' },
+  { value: 'bandana', label: 'Bandana' },
+];
+
+const TOP_PATTERNS = [
+  { value: 'none', label: 'None' },
+  { value: 'pinstripe', label: 'Pinstripe' },
+  { value: 'grid', label: 'Grid' },
+  { value: 'wave', label: 'Wave' },
+];
+
+const PATCH_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'bull', label: 'Bull' },
+  { value: 'bear', label: 'Bear' },
+  { value: 'trax', label: 'TRAX' },
+];
+
+const TIE_STYLES = [
+  { value: 'classic', label: 'Classic' },
+  { value: 'slim', label: 'Slim' },
+];
+
+const POCKET_FOLDS = [
+  { value: 'flat', label: 'Flat' },
+  { value: 'point', label: 'Point' },
+];
+
+const OUTERWEAR_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'jacket', label: 'Jacket' },
+  { value: 'vest', label: 'Vest' },
+];
+
+const OUTERWEAR_PATTERNS = [
+  { value: 'none', label: 'None' },
+  { value: 'pinstripe', label: 'Pinstripe' },
+  { value: 'grid', label: 'Grid' },
+];
+
+const LAPEL_PIN_STYLES = [
+  { value: 'bull', label: 'Bull' },
+  { value: 'bear', label: 'Bear' },
+  { value: 'trax', label: 'TRAX' },
+];
+
+const LANYARD_BADGES = [
+  { value: 'id', label: 'ID' },
+  { value: 'vip', label: 'VIP' },
+  { value: 'press', label: 'Press' },
+];
+
+const HANDHELD_TYPES = [
+  { value: 'phone', label: 'Phone' },
+  { value: 'tablet', label: 'Tablet' },
+  { value: 'coffee', label: 'Coffee' },
+];
+
 const PRESET_COLORS = [
   { name: 'Cyan', value: '#06B6D4' },
   { name: 'Green', value: '#10B981' },
@@ -94,6 +186,24 @@ export function CharacterCustomizer({
 
   const updateConfig = (updates: Partial<CharacterConfig>) => {
     setPreviewConfig(prev => ({ ...prev, ...updates }));
+  };
+
+  const updateFace = (updates: Partial<CharacterConfig['face']>) => {
+    updateConfig({
+      face: { ...previewConfig.face, ...updates } as CharacterConfig['face'],
+    });
+  };
+
+  const updateTop = (updates: Partial<CharacterConfig['top']>) => {
+    updateConfig({
+      top: { ...previewConfig.top, ...updates },
+    });
+  };
+
+  const updateOuterwear = (updates: Partial<CharacterConfig['outerwear']>) => {
+    updateConfig({
+      outerwear: { ...previewConfig.outerwear, ...updates } as CharacterConfig['outerwear'],
+    });
   };
 
   const loadPreset = (presetKey: string) => {
@@ -266,6 +376,91 @@ export function CharacterCustomizer({
                   </div>
                 </div>
 
+                {/* Hair Details */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Hair Details</Label>
+                  <div className="space-y-3">
+                    <Select
+                      value={previewConfig.face?.hairPart || 'none'}
+                      onValueChange={(value: any) => updateFace({ hairPart: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Part" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_PARTS.map((part) => (
+                          <SelectItem key={part.value} value={part.value}>{part.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={previewConfig.face?.hairTexture || 'straight'}
+                      onValueChange={(value: any) => updateFace({ hairTexture: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Texture" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_TEXTURES.map((texture) => (
+                          <SelectItem key={texture.value} value={texture.value}>{texture.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-gray-400">Highlights</Label>
+                      <Switch
+                        checked={previewConfig.face?.hairHighlights || false}
+                        onCheckedChange={(checked) => updateFace({ hairHighlights: checked })}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400 mb-2 block">
+                        Fade: {(previewConfig.face?.hairFade ?? 0).toFixed(2)}
+                      </Label>
+                      <Slider
+                        value={[previewConfig.face?.hairFade ?? 0]}
+                        onValueChange={([value]) => updateFace({ hairFade: value })}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        className="mb-2"
+                      />
+                    </div>
+
+                    <Select
+                      value={previewConfig.face?.hairAccessory?.type || 'none'}
+                      onValueChange={(value: any) => updateFace({
+                        hairAccessory: {
+                          type: value,
+                          color: previewConfig.face?.hairAccessory?.color || '#1a1a1a',
+                        }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Accessory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_ACCESSORIES.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {previewConfig.face?.hairAccessory?.type && previewConfig.face?.hairAccessory?.type !== 'none' && (
+                      <ColorPicker
+                        value={previewConfig.face?.hairAccessory?.color || '#1a1a1a'}
+                        onChange={(color) => updateFace({
+                          hairAccessory: { ...previewConfig.face?.hairAccessory, color }
+                        })}
+                        compact
+                      />
+                    )}
+                  </div>
+                </div>
+
                 {/* Eye Color */}
                 <div>
                   <Label className="text-sm font-semibold mb-3 block">Eye Color</Label>
@@ -283,6 +478,122 @@ export function CharacterCustomizer({
                         })}
                       />
                     ))}
+                  </div>
+                </div>
+
+                {/* Eye Size */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">
+                    Eye Size: {(previewConfig.face?.eyeSize ?? 1).toFixed(2)}x
+                  </Label>
+                  <Slider
+                    value={[previewConfig.face?.eyeSize ?? 1]}
+                    onValueChange={([value]) => updateFace({ eyeSize: value })}
+                    min={0.8}
+                    max={1.4}
+                    step={0.05}
+                  />
+                </div>
+
+                {/* Eyebrow Size */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">
+                    Eyebrow Thickness: {(previewConfig.face?.eyebrowSize ?? 1).toFixed(2)}x
+                  </Label>
+                  <Slider
+                    value={[previewConfig.face?.eyebrowSize ?? 1]}
+                    onValueChange={([value]) => updateFace({ eyebrowSize: value })}
+                    min={0.6}
+                    max={1.6}
+                    step={0.05}
+                  />
+                </div>
+
+                {/* Nose Shape */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Nose Shape</Label>
+                  <Select
+                    value={previewConfig.face?.nose || 'straight'}
+                    onValueChange={(value: any) => updateFace({ nose: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NOSE_SHAPES.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Mouth Shape */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Mouth Shape</Label>
+                  <Select
+                    value={previewConfig.face?.mouth || 'normal'}
+                    onValueChange={(value: any) => updateFace({ mouth: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOUTH_SHAPES.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Expression */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Expression</Label>
+                  <Select
+                    value={previewConfig.face?.expression || 'neutral'}
+                    onValueChange={(value: any) => updateFace({ expression: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPRESSIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Skin Details */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Skin Details</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex items-center justify-between border border-gray-700 rounded-lg px-3 py-2">
+                      <Label className="text-xs text-gray-400">Scars</Label>
+                      <Switch
+                        checked={previewConfig.face?.skinDetails?.scars || false}
+                        onCheckedChange={(checked) => updateFace({
+                          skinDetails: { ...previewConfig.face?.skinDetails, scars: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between border border-gray-700 rounded-lg px-3 py-2">
+                      <Label className="text-xs text-gray-400">Wrinkles</Label>
+                      <Switch
+                        checked={previewConfig.face?.skinDetails?.wrinkles || false}
+                        onCheckedChange={(checked) => updateFace({
+                          skinDetails: { ...previewConfig.face?.skinDetails, wrinkles: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between border border-gray-700 rounded-lg px-3 py-2">
+                      <Label className="text-xs text-gray-400">Blush</Label>
+                      <Switch
+                        checked={previewConfig.face?.skinDetails?.blush || false}
+                        onCheckedChange={(checked) => updateFace({
+                          skinDetails: { ...previewConfig.face?.skinDetails, blush: checked }
+                        })}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -379,15 +690,58 @@ export function CharacterCustomizer({
                     <ColorPicker
                       label="Color"
                       value={previewConfig.top.color}
-                      onChange={(color) => updateConfig({ top: { ...previewConfig.top, color } })}
+                      onChange={(color) => updateTop({ color })}
                     />
+
+                    <div>
+                      <Label className="text-xs text-gray-400 mb-2 block">Pattern</Label>
+                      <Select
+                        value={previewConfig.top.pattern || 'none'}
+                        onValueChange={(value: any) => updateTop({ pattern: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TOP_PATTERNS.map((pattern) => (
+                            <SelectItem key={pattern.value} value={pattern.value}>{pattern.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-400 mb-2 block">Patch</Label>
+                      <Select
+                        value={previewConfig.top.patch || 'none'}
+                        onValueChange={(value: any) => updateTop({ patch: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PATCH_TYPES.map((patch) => (
+                            <SelectItem key={patch.value} value={patch.value}>{patch.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {previewConfig.top.patch && previewConfig.top.patch !== 'none' && (
+                        <div className="mt-3">
+                          <ColorPicker
+                            value={previewConfig.top.patchColor || '#FBBF24'}
+                            onChange={(color) => updateTop({ patchColor: color })}
+                            compact
+                          />
+                        </div>
+                      )}
+                    </div>
 
                     {previewConfig.top.type === 'tshirt' && (
                       <div>
                         <Label className="text-xs text-gray-400 mb-2 block">Graphic</Label>
                         <Select
                           value={previewConfig.top.graphic || 'none'}
-                          onValueChange={(value: any) => updateConfig({ top: { ...previewConfig.top, graphic: value } })}
+                          onValueChange={(value: any) => updateTop({ graphic: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -402,6 +756,147 @@ export function CharacterCustomizer({
                           </SelectContent>
                         </Select>
                       </div>
+                    )}
+
+                    {(previewConfig.top.type === 'business' || previewConfig.top.type === 'suit') && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-gray-400">Tie</Label>
+                          <Switch
+                            checked={previewConfig.top.tie?.enabled || false}
+                            onCheckedChange={(checked) => updateTop({
+                              tie: {
+                                enabled: checked,
+                                color: previewConfig.top.tie?.color || '#1a1a1a',
+                                style: previewConfig.top.tie?.style || 'classic',
+                              }
+                            })}
+                          />
+                        </div>
+                        {previewConfig.top.tie?.enabled && (
+                          <>
+                            <Select
+                              value={previewConfig.top.tie?.style || 'classic'}
+                              onValueChange={(value: any) => updateTop({
+                                tie: { ...previewConfig.top.tie!, style: value }
+                              })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIE_STYLES.map((style) => (
+                                  <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <ColorPicker
+                              value={previewConfig.top.tie?.color || '#1a1a1a'}
+                              onChange={(color) => updateTop({ tie: { ...previewConfig.top.tie!, color } })}
+                              compact
+                            />
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {(previewConfig.top.type === 'suit' || (previewConfig.outerwear?.type && previewConfig.outerwear.type !== 'none')) && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-gray-400">Pocket Square</Label>
+                          <Switch
+                            checked={previewConfig.top.pocketSquare?.enabled || false}
+                            onCheckedChange={(checked) => updateTop({
+                              pocketSquare: {
+                                enabled: checked,
+                                color: previewConfig.top.pocketSquare?.color || '#FFFFFF',
+                                fold: previewConfig.top.pocketSquare?.fold || 'flat',
+                              }
+                            })}
+                          />
+                        </div>
+                        {previewConfig.top.pocketSquare?.enabled && (
+                          <>
+                            <Select
+                              value={previewConfig.top.pocketSquare?.fold || 'flat'}
+                              onValueChange={(value: any) => updateTop({
+                                pocketSquare: { ...previewConfig.top.pocketSquare!, fold: value }
+                              })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {POCKET_FOLDS.map((fold) => (
+                                  <SelectItem key={fold.value} value={fold.value}>{fold.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <ColorPicker
+                              value={previewConfig.top.pocketSquare?.color || '#FFFFFF'}
+                              onChange={(color) => updateTop({ pocketSquare: { ...previewConfig.top.pocketSquare!, color } })}
+                              compact
+                            />
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Outerwear */}
+                <div>
+                  <Label className="text-sm font-semibold mb-3 block">Outerwear</Label>
+                  <div className="space-y-3">
+                    <Select
+                      value={previewConfig.outerwear?.type || 'none'}
+                      onValueChange={(value: any) => updateOuterwear({
+                        type: value,
+                        color: previewConfig.outerwear?.color || '#1a1a1a',
+                        trimColor: previewConfig.outerwear?.trimColor || '#E5E7EB',
+                        pattern: previewConfig.outerwear?.pattern || 'none',
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OUTERWEAR_TYPES.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {previewConfig.outerwear?.type && previewConfig.outerwear.type !== 'none' && (
+                      <>
+                        <ColorPicker
+                          label="Color"
+                          value={previewConfig.outerwear.color || '#1a1a1a'}
+                          onChange={(color) => updateOuterwear({ color })}
+                        />
+                        <ColorPicker
+                          label="Trim"
+                          value={previewConfig.outerwear.trimColor || '#E5E7EB'}
+                          onChange={(color) => updateOuterwear({ trimColor: color })}
+                          compact
+                        />
+                        <div>
+                          <Label className="text-xs text-gray-400 mb-2 block">Pattern</Label>
+                          <Select
+                            value={previewConfig.outerwear.pattern || 'none'}
+                            onValueChange={(value: any) => updateOuterwear({ pattern: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {OUTERWEAR_PATTERNS.map((pattern) => (
+                                <SelectItem key={pattern.value} value={pattern.value}>{pattern.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -701,6 +1196,213 @@ export function CharacterCustomizer({
                           accessories: {
                             ...previewConfig.accessories,
                             belt: { ...previewConfig.accessories.belt!, color }
+                          }
+                        })}
+                        compact
+                      />
+                    </div>
+                  )}
+                </AccessoryCard>
+
+                {/* Ring */}
+                <AccessoryCard
+                  title="Ring"
+                  enabled={previewConfig.accessories.ring?.enabled || false}
+                  onToggle={(enabled) => updateConfig({
+                    accessories: {
+                      ...previewConfig.accessories,
+                      ring: enabled ? {
+                        enabled: true,
+                        color: previewConfig.accessories.ring?.color || '#FFD700'
+                      } : undefined
+                    }
+                  })}
+                >
+                  {previewConfig.accessories.ring?.enabled && (
+                    <div className="mt-3">
+                      <ColorPicker
+                        value={previewConfig.accessories.ring?.color || '#FFD700'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            ring: { ...previewConfig.accessories.ring!, color }
+                          }
+                        })}
+                        compact
+                      />
+                    </div>
+                  )}
+                </AccessoryCard>
+
+                {/* Bracelet */}
+                <AccessoryCard
+                  title="Bracelet"
+                  enabled={previewConfig.accessories.bracelet?.enabled || false}
+                  onToggle={(enabled) => updateConfig({
+                    accessories: {
+                      ...previewConfig.accessories,
+                      bracelet: enabled ? {
+                        enabled: true,
+                        color: previewConfig.accessories.bracelet?.color || '#C0C0C0'
+                      } : undefined
+                    }
+                  })}
+                >
+                  {previewConfig.accessories.bracelet?.enabled && (
+                    <div className="mt-3">
+                      <ColorPicker
+                        value={previewConfig.accessories.bracelet?.color || '#C0C0C0'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            bracelet: { ...previewConfig.accessories.bracelet!, color }
+                          }
+                        })}
+                        compact
+                      />
+                    </div>
+                  )}
+                </AccessoryCard>
+
+                {/* Lapel Pin */}
+                <AccessoryCard
+                  title="Lapel Pin"
+                  enabled={previewConfig.accessories.lapelPin?.enabled || false}
+                  onToggle={(enabled) => updateConfig({
+                    accessories: {
+                      ...previewConfig.accessories,
+                      lapelPin: enabled ? {
+                        enabled: true,
+                        style: previewConfig.accessories.lapelPin?.style || 'bull',
+                        color: previewConfig.accessories.lapelPin?.color || '#FBBF24'
+                      } : undefined
+                    }
+                  })}
+                >
+                  {previewConfig.accessories.lapelPin?.enabled && (
+                    <div className="space-y-3 mt-3">
+                      <Select
+                        value={previewConfig.accessories.lapelPin?.style || 'bull'}
+                        onValueChange={(value: any) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            lapelPin: { ...previewConfig.accessories.lapelPin!, style: value }
+                          }
+                        })}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LAPEL_PIN_STYLES.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <ColorPicker
+                        value={previewConfig.accessories.lapelPin?.color || '#FBBF24'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            lapelPin: { ...previewConfig.accessories.lapelPin!, color }
+                          }
+                        })}
+                        compact
+                      />
+                    </div>
+                  )}
+                </AccessoryCard>
+
+                {/* Lanyard */}
+                <AccessoryCard
+                  title="Lanyard"
+                  enabled={previewConfig.accessories.lanyard?.enabled || false}
+                  onToggle={(enabled) => updateConfig({
+                    accessories: {
+                      ...previewConfig.accessories,
+                      lanyard: enabled ? {
+                        enabled: true,
+                        color: previewConfig.accessories.lanyard?.color || '#06B6D4',
+                        badge: previewConfig.accessories.lanyard?.badge || 'id'
+                      } : undefined
+                    }
+                  })}
+                >
+                  {previewConfig.accessories.lanyard?.enabled && (
+                    <div className="space-y-3 mt-3">
+                      <Select
+                        value={previewConfig.accessories.lanyard.badge || 'id'}
+                        onValueChange={(value: any) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            lanyard: { ...previewConfig.accessories.lanyard!, badge: value }
+                          }
+                        })}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LANYARD_BADGES.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <ColorPicker
+                        value={previewConfig.accessories.lanyard?.color || '#06B6D4'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            lanyard: { ...previewConfig.accessories.lanyard!, color }
+                          }
+                        })}
+                        compact
+                      />
+                    </div>
+                  )}
+                </AccessoryCard>
+
+                {/* Handheld */}
+                <AccessoryCard
+                  title="Handheld"
+                  enabled={previewConfig.accessories.handheld?.enabled || false}
+                  onToggle={(enabled) => updateConfig({
+                    accessories: {
+                      ...previewConfig.accessories,
+                      handheld: enabled ? {
+                        enabled: true,
+                        type: previewConfig.accessories.handheld?.type || 'phone',
+                        color: previewConfig.accessories.handheld?.color || '#1a1a1a'
+                      } : undefined
+                    }
+                  })}
+                >
+                  {previewConfig.accessories.handheld?.enabled && (
+                    <div className="space-y-3 mt-3">
+                      <Select
+                        value={previewConfig.accessories.handheld?.type || 'phone'}
+                        onValueChange={(value: any) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            handheld: { ...previewConfig.accessories.handheld!, type: value }
+                          }
+                        })}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HANDHELD_TYPES.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <ColorPicker
+                        value={previewConfig.accessories.handheld?.color || '#1a1a1a'}
+                        onChange={(color) => updateConfig({
+                          accessories: {
+                            ...previewConfig.accessories,
+                            handheld: { ...previewConfig.accessories.handheld!, color }
                           }
                         })}
                         compact
