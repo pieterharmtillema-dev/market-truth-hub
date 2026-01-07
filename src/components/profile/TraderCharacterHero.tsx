@@ -29,7 +29,6 @@ import {
   Clock,
   Shield,
   ArrowUp,
-  ChevronDown,
   Users,
   Share2,
   Settings,
@@ -105,8 +104,8 @@ const getSessionTheme = (session: string | null): 'day' | 'night' | 'sunset' | '
     'asian': 'asian',
     'london': 'london',
     'new_york': 'newyork',
-    'overlap': 'sunset',
-    'all_sessions': 'night',
+    'overlap': 'sunset', // London/NY overlap = sunset transition
+    'all_sessions': 'night', // Default night theme for all sessions
   };
 
   return sessionMap[session] || 'night';
@@ -201,66 +200,6 @@ const getUnlockRemainingText = (
 
 type TimeFrame = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-// Helper function to adjust brightness for colors
-function adjustBrightness(color: string, amount: number): string {
-  const hex = color.replace('#', '');
-  const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) + amount));
-  const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
-  const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-}
-
-// Helper component for hair in avatar
-function HairSVG({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
-  switch (hairStyle) {
-    case 'short':
-      return (
-        <g>
-          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairColor} />
-          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
-        </g>
-      );
-    case 'medium':
-      return (
-        <g>
-          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
-          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
-          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
-        </g>
-      );
-    case 'long':
-      return (
-        <g>
-          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
-          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
-          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
-        </g>
-      );
-    case 'buzz':
-      return <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairColor} opacity="0.8" />;
-    case 'bald':
-      return null;
-    case 'mohawk':
-      return (
-        <g>
-          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairColor} />
-          <path d="M 68 20 L 72 14 L 76 20" fill={hairColor} />
-        </g>
-      );
-    case 'ponytail':
-      return (
-        <g>
-          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairColor} />
-          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairColor} strokeWidth="6" fill="none" strokeLinecap="round" />
-        </g>
-      );
-    case 'afro':
-      return <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} />;
-    default:
-      return <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />;
-  }
-}
-
 export function TraderCharacterHero({
   userId,
   connectedExchanges,
@@ -279,7 +218,6 @@ export function TraderCharacterHero({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
   const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [levelingExpanded, setLevelingExpanded] = useState(false);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('weekly');
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { toast } = useToast();
@@ -365,17 +303,18 @@ export function TraderCharacterHero({
       .sort((a, b) => b.progress - a.progress)
       .slice(0, 3);
   }, [environmentUnlocks, totalTrades, winRate, bestStreak]);
-  const nextUnlock = upcomingUnlocks[0];
 
   // Get time filter start date based on timeFrame
   const getTimeFilterStartDate = useMemo(() => {
     const now = new Date();
     let startDate = new Date();
     
+    // Reset to start of day for accurate "today" filtering
     startDate.setHours(0, 0, 0, 0);
 
     switch (timeFrame) {
       case 'daily':
+        // Today: start of current day (already set above)
         break;
       case 'weekly':
         startDate.setDate(now.getDate() - 7);
@@ -407,6 +346,7 @@ export function TraderCharacterHero({
     const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
     const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
 
+    // Calculate best streak for this time frame
     let longestWin = 0;
     let currentStreak = 0;
     let lastResult: 'win' | 'loss' | null = null;
@@ -472,6 +412,7 @@ export function TraderCharacterHero({
         const { data: authData } = await supabase.auth.getUser();
         setUserEmail(authData.user?.email ?? null);
 
+        // Fetch profile data
         const { data: profileData } = await supabase
           .from("profiles")
           .select("display_name, avatar_url, bio, character_config")
@@ -486,6 +427,7 @@ export function TraderCharacterHero({
             character_config: profileData.character_config as string | null,
           });
 
+          // Parse character config
           if (profileData.character_config && typeof profileData.character_config === 'string') {
             const parsed = parseCharacterConfig(profileData.character_config);
             if (parsed) {
@@ -494,6 +436,7 @@ export function TraderCharacterHero({
           }
         }
 
+        // Fetch trader profile data
         const { data: traderData } = await supabase
           .from("trader_profiles")
           .select("holding_time, risk_per_trade, decision_style, experience_level, trader_category, trading_session")
@@ -504,6 +447,7 @@ export function TraderCharacterHero({
           setTraderProfile(traderData);
         }
 
+        // Fetch trading stats from positions
         const { data: positionsData } = await supabase
           .from("positions")
           .select("id, pnl, pnl_pct, open, entry_timestamp, exit_timestamp, exchange_source, is_exchange_verified")
@@ -513,6 +457,7 @@ export function TraderCharacterHero({
           setPositions(positionsData);
           setTotalTrades(positionsData.length);
 
+          // Calculate win rate
           const closedTrades = positionsData.filter(p => p.pnl !== null);
           const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
           const calculatedWinRate = closedTrades.length > 0
@@ -523,6 +468,7 @@ export function TraderCharacterHero({
 
         setLoading(false);
 
+        // Trigger animation after data loads
         setTimeout(() => setStatsAnimated(true), 300);
       } catch (error) {
         console.error("Error fetching trader data:", error);
@@ -532,6 +478,7 @@ export function TraderCharacterHero({
 
     fetchData();
 
+    // Subscribe to trader profile changes for real-time updates
     const channel = supabase
       .channel('trader_profile_changes')
       .on(
@@ -544,6 +491,7 @@ export function TraderCharacterHero({
         },
         (payload) => {
           console.log('Trader profile updated:', payload);
+          // Update trader profile state with new data
           if (payload.new) {
             setTraderProfile(payload.new as TraderProfile);
           }
@@ -551,6 +499,7 @@ export function TraderCharacterHero({
       )
       .subscribe();
 
+    // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
@@ -601,73 +550,81 @@ export function TraderCharacterHero({
   const traderClass = getTradeClass(traderProfile?.holding_time);
   const environmentTheme = getSessionTheme(traderProfile?.trading_session);
 
-  const heroStyles = `
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-    .float-anim {
-      animation: float 4s ease-in-out infinite;
-    }
-    .glow-pulse {
-      animation: pulse-glow 2s ease-in-out infinite;
-    }
-    .stat-bar-fill {
-      transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .character-glow {
-      filter: drop-shadow(0 0 40px rgba(61, 214, 140, 0.3));
-    }
-    .scanline {
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(61, 214, 140, 0.1) 2px,
-        rgba(61, 214, 140, 0.1) 4px
-      );
-    }
-  `;
-
   return (
     <>
-      <style>{heroStyles}</style>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
 
-      <div className="space-y-3">
-        <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0 min-h-[500px] sm:min-h-[600px]">
-          {/* Full-bleed Environment Background */}
-          <div className="absolute inset-0 w-full h-full">
-            <HeroEnvironment
-              unlocks={environmentUnlocks}
-              theme={environmentTheme}
-              preferences={characterConfig.environment}
-            />
-          </div>
-          
-          {/* Gradient overlays for seamless integration */}
-          <div className="absolute inset-x-0 bottom-0 h-80 sm:h-64 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none" />
-          <div className="absolute inset-x-0 top-0 h-32 sm:h-40 bg-gradient-to-b from-background/90 via-background/50 to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 left-0 w-32 sm:w-40 bg-gradient-to-r from-background/60 via-background/20 to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-32 sm:w-40 bg-gradient-to-l from-background/60 via-background/20 to-transparent pointer-events-none" />
-          <div 
-            className="absolute inset-0 pointer-events-none" 
-            style={{
-              background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.5) 55%, rgba(0, 0, 0, 0.95) 100%)'
-            }} 
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+
+        .float-anim {
+          animation: float 4s ease-in-out infinite;
+        }
+
+        .glow-pulse {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .stat-bar-fill {
+          transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .character-glow {
+          filter: drop-shadow(0 0 40px rgba(61, 214, 140, 0.3));
+        }
+
+        .scanline {
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(61, 214, 140, 0.1) 2px,
+            rgba(61, 214, 140, 0.1) 4px
+          );
+        }
+      `}</style>
+
+      <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0 min-h-[500px] sm:min-h-[600px]">
+        {/* Full-bleed Environment Background */}
+        <div className="absolute inset-0 w-full h-full">
+          <HeroEnvironment
+            unlocks={environmentUnlocks}
+            theme={environmentTheme}
+            preferences={characterConfig.environment}
           />
+        </div>
+        
+        {/* Gradient overlays for seamless integration */}
+        {/* Bottom fade - strong fade from bottom up, ending where trader stats begin */}
+        <div className="absolute inset-x-0 bottom-0 h-80 sm:h-64 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none" />
 
-          {/* Content Layer */}
-          <div className="relative z-10">
-            {/* Top Profile Bar */}
-            <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+        {/* Top fade - stronger header area fade */}
+        <div className="absolute inset-x-0 top-0 h-32 sm:h-40 bg-gradient-to-b from-background/90 via-background/50 to-transparent pointer-events-none" />
+
+        {/* Side fades - stronger edge darkening for depth */}
+        <div className="absolute inset-y-0 left-0 w-32 sm:w-40 bg-gradient-to-r from-background/60 via-background/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-32 sm:w-40 bg-gradient-to-l from-background/60 via-background/20 to-transparent pointer-events-none" />
+
+        {/* Central vertical fade - creates smooth transition from background to content area */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/95 pointer-events-none" style={{
+          background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(var(--background-rgb, 0, 0, 0), 0.5) 55%, rgba(var(--background-rgb, 0, 0, 0), 0.95) 100%)'
+        }} />
+
+        {/* Content Layer */}
+        <div className="relative z-10">
+          {/* Top Profile Bar */}
+          <div className="p-4 sm:p-6 pb-3 sm:pb-4">
             <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-0">
               {/* Left: Avatar + Name */}
               <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto">
                 <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 border-primary/50 overflow-hidden flex-shrink-0" style={{ background: 'rgba(0, 0, 0, 0.1)' }}>
+                  {/* Character upper body portrait - head prominently focused */}
                   <svg viewBox="42 24 60 60" className="w-full h-full" preserveAspectRatio="xMidYMid slice" style={{ transform: 'scale(1.1)' }}>
                     <defs>
                       <linearGradient id="avatar-head-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -680,28 +637,40 @@ export function TraderCharacterHero({
                       </linearGradient>
                     </defs>
 
+                    {/* Left Arm */}
                     <rect x="54" y="72" width="4" height="16" rx="2"
                       fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
+
+                    {/* Right Arm */}
                     <rect x="86" y="72" width="4" height="16" rx="2"
                       fill={characterConfig.top.type !== 'none' && characterConfig.top.type !== 'tank' ? characterConfig.top.color : `url(#avatar-body-gradient)`} />
+
+                    {/* Neck */}
                     <rect x="69" y="60" width="6" height="8" rx="3" fill="url(#avatar-body-gradient)" />
 
+                    {/* Torso - matching hero card style */}
                     {characterConfig.top.type !== 'none' ? (
                       <rect x="62" y="66" width="20" height="18" rx="6" fill={characterConfig.top.color} />
                     ) : (
                       <rect x="62" y="66" width="20" height="18" rx="6" fill="url(#avatar-body-gradient)" />
                     )}
 
+                    {/* Hair back layer */}
                     {characterConfig.face?.hairStyle === 'long' && (
                       <ellipse cx="72" cy="52" rx="20" ry="16" fill={characterConfig.face?.hairColor || '#2D1B0E'} />
                     )}
 
+                    {/* Head */}
                     <ellipse cx="72" cy="44" rx="16" ry="18" fill="url(#avatar-head-gradient)" />
+
+                    {/* Ears */}
                     <ellipse cx="56" cy="46" rx="3" ry="4" fill={characterConfig.skinTone} />
                     <ellipse cx="88" cy="46" rx="3" ry="4" fill={characterConfig.skinTone} />
 
+                    {/* Hair - using HeadRenderer logic inline */}
                     <HairSVG hairStyle={characterConfig.face?.hairStyle || 'short'} hairColor={characterConfig.face?.hairColor || '#2D1B0E'} />
 
+                    {/* Eyes */}
                     <ellipse cx="66" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
                     <ellipse cx="78" cy="44" rx="3" ry="2.5" fill="#FFFFFF" />
                     <circle cx="66" cy="44" r="1.5" fill={characterConfig.face?.eyeColor || '#4A90D9'} />
@@ -709,9 +678,14 @@ export function TraderCharacterHero({
                     <circle cx="65" cy="43.5" r="0.5" fill="#FFFFFF" />
                     <circle cx="77" cy="43.5" r="0.5" fill="#FFFFFF" />
 
+                    {/* Nose */}
                     <path d="M 72 46 L 72 50 L 70 51" stroke={adjustBrightness(characterConfig.skinTone, -30)} strokeWidth="1" fill="none" strokeLinecap="round" />
+
+                    {/* Mouth */}
                     <path d="M 68 54 Q 72 56 76 54" stroke={adjustBrightness(characterConfig.skinTone, -40)} strokeWidth="1.5" fill="none" strokeLinecap="round" />
 
+                    {/* Accessories */}
+                    {/* Sunglasses */}
                     {characterConfig.accessories.sunglasses?.enabled && (
                       <g>
                         {characterConfig.accessories.sunglasses.style === 'aviator' ? (
@@ -742,6 +716,7 @@ export function TraderCharacterHero({
                       </g>
                     )}
 
+                    {/* Necklace */}
                     {characterConfig.accessories.necklace?.enabled && (
                       <g>
                         <path d="M 62 64 Q 72 68 82 64" stroke={characterConfig.accessories.necklace.color || '#FFD700'} strokeWidth="2.5" fill="none" strokeLinecap="round" />
@@ -859,11 +834,13 @@ export function TraderCharacterHero({
                 />
               </div>
             </div>
+          </div>
 
           {/* Main Hero Area with Character and Trading Metrics */}
           <div className="relative flex flex-row items-center justify-center gap-2 sm:gap-4 md:gap-6 px-2 sm:px-4 md:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
             {/* Left: PnL & Period Streak */}
             <div className="flex-1 max-w-[140px] sm:max-w-[180px] md:max-w-[200px] space-y-1.5 sm:space-y-2">
+              {/* Section Header with Time Frame Filter */}
               <div className="flex flex-col items-center gap-1 mb-1">
                 <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Period</span>
                 <div className="flex gap-0.5 bg-background/40 backdrop-blur-sm rounded-md p-0.5 border border-border/30">
@@ -884,6 +861,7 @@ export function TraderCharacterHero({
                 </div>
               </div>
 
+              {/* PnL Summary Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2 md:p-2.5">
                 <div className="text-center">
                   <span className={cn(
@@ -897,10 +875,12 @@ export function TraderCharacterHero({
                 </div>
               </div>
 
+              {/* Performance Trend - Full Hero Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg overflow-hidden h-20 sm:h-24">
                 <PerformanceTrend positions={timeFilteredPositions} hero isPublic={false} />
               </div>
 
+              {/* Best Streak Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Best Streak</span>
@@ -921,21 +901,26 @@ export function TraderCharacterHero({
 
             {/* Center: Character */}
             <div className="relative flex items-end justify-center flex-shrink-0">
+              {/* Character - Integrated into scene */}
               <div className="relative group">
                 <div className="relative float-anim character-glow">
+                  {/* Ground glow effect */}
                   <div className="absolute -bottom-2 sm:-bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 w-16 sm:w-20 md:w-24 h-4 sm:h-5 md:h-6 bg-primary/30 blur-2xl rounded-full" />
 
+                  {/* Character Renderer */}
                   <div className="relative z-10 w-32 h-48 sm:w-40 sm:h-56 md:w-48 md:h-64">
                     <CharacterRenderer
                       config={characterConfig}
                       className="w-full h-full"
                     />
+                    {/* Unlockable accessories overlay */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
                       <CharacterAccessories unlocks={environmentUnlocks} />
                     </svg>
                   </div>
                 </div>
 
+                {/* Edit overlay on hover */}
                 <div
                   className="absolute inset-0 rounded-xl bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-20"
                   onClick={() => setCustomizerOpen(true)}
@@ -946,6 +931,7 @@ export function TraderCharacterHero({
                   </div>
                 </div>
 
+                {/* Level badge */}
                 <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full border-2 border-background flex items-center justify-center shadow-lg z-30">
                   <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-primary-foreground">{level}</span>
                 </div>
@@ -954,17 +940,21 @@ export function TraderCharacterHero({
 
             {/* Right: Win Rate & All-Time Stats */}
             <div className="flex-1 max-w-[140px] sm:max-w-[180px] md:max-w-[200px] space-y-1.5 sm:space-y-2">
+              {/* Section Header */}
               <div className="flex items-center justify-center gap-2 mb-1">
                 <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
               </div>
 
+              {/* Adjusted Win Rate Card */}
               <AdjustedWinRate 
                 positions={positions} 
                 traderCategory={traderProfile?.trader_category}
                 showCard={false}
               />
 
+              {/* All-Time Stats */}
               <div className="space-y-1.5 sm:space-y-2">
+                {/* Total Trades */}
                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Total Trades</span>
@@ -980,8 +970,10 @@ export function TraderCharacterHero({
                   </div>
                 </div>
 
+                {/* Win/Loss Size Ratio */}
                 <WinLossSizeRatio positions={positions} showCard={false} />
 
+                {/* Avg Return */}
                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Avg Return</span>
@@ -1003,6 +995,7 @@ export function TraderCharacterHero({
                   </div>
                 </div>
 
+                {/* All-Time Best Streak */}
                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Best Streak</span>
@@ -1018,57 +1011,36 @@ export function TraderCharacterHero({
               </div>
             </div>
           </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Leveling and unlocks */}
-      <div className="-mx-4 sm:mx-0">
-        <div className="px-3 sm:px-4 md:px-6 pb-4">
-          <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-2 sm:p-3">
-            <button
-              type="button"
-              className="w-full text-left"
-              onClick={() => setLevelingExpanded((prev) => !prev)}
-              aria-expanded={levelingExpanded}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Level Up</p>
-                  <p className="text-xs sm:text-sm font-semibold text-foreground">
-                    Level {level} • {levelProgress}/{TRADES_PER_LEVEL} trades
-                  </p>
-                  {nextUnlock ? (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Next unlock: {nextUnlock.label} ({nextUnlock.remainingText})
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">All unlocks earned.</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>{nextLevelTrades} to Level {level + 1}</span>
-                  <ChevronDown className={cn("w-4 h-4 transition-transform", levelingExpanded && "rotate-180")} />
-                </div>
-              </div>
-              <div className="mt-2 h-1.5 bg-border/40 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${levelProgressPercent}%` }}
-                />
-              </div>
-            </button>
-
-            {levelingExpanded && (
-              <div className="mt-3 grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
+          {/* Leveling and unlocks */}
+          <div className="px-3 sm:px-4 md:px-6 pb-4">
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 sm:p-4">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
-                    <span>{levelProgress} / {TRADES_PER_LEVEL} trades</span>
-                    <span>{Math.round(levelProgressPercent)}% complete</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Level Up</p>
+                      <p className="text-sm sm:text-base font-semibold text-foreground">Level {level}</p>
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground text-right">
+                      {nextLevelTrades} trade{nextLevelTrades === 1 ? "" : "s"} to Level {level + 1}
+                    </div>
                   </div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Level up every {TRADES_PER_LEVEL} trades tracked on your profile.
-                  </p>
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
+                      <span>{levelProgress} / {TRADES_PER_LEVEL} trades</span>
+                      <span>{Math.round(levelProgressPercent)}% complete</span>
+                    </div>
+                    <div className="mt-1 h-2 bg-border/40 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${levelProgressPercent}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                      Level up every {TRADES_PER_LEVEL} trades tracked on your profile.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -1105,7 +1077,7 @@ export function TraderCharacterHero({
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -1125,4 +1097,64 @@ export function TraderCharacterHero({
       />
     </>
   );
+}
+
+// Helper function to adjust brightness for colors
+function adjustBrightness(color: string, amount: number): string {
+  const hex = color.replace('#', '');
+  const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) + amount));
+  const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
+  const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Helper component for hair in avatar
+function HairSVG({ hairStyle, hairColor }: { hairStyle: string; hairColor: string }) {
+  switch (hairStyle) {
+    case 'short':
+      return (
+        <g>
+          <path d="M 58 36 Q 60 28 72 26 Q 84 28 86 36 Q 84 32 72 30 Q 60 32 58 36" fill={hairColor} />
+          <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />
+        </g>
+      );
+    case 'medium':
+      return (
+        <g>
+          <path d="M 56 40 Q 56 28 72 24 Q 88 28 88 40" fill={hairColor} />
+          <path d="M 56 40 Q 54 48 56 52" fill={hairColor} />
+          <path d="M 88 40 Q 90 48 88 52" fill={hairColor} />
+        </g>
+      );
+    case 'long':
+      return (
+        <g>
+          <path d="M 54 40 Q 52 28 72 22 Q 92 28 90 40" fill={hairColor} />
+          <path d="M 54 40 Q 50 56 54 68" fill={hairColor} />
+          <path d="M 90 40 Q 94 56 90 68" fill={hairColor} />
+        </g>
+      );
+    case 'buzz':
+      return <ellipse cx="72" cy="32" rx="14" ry="8" fill={hairColor} opacity="0.8" />;
+    case 'bald':
+      return null;
+    case 'mohawk':
+      return (
+        <g>
+          <rect x="68" y="20" width="8" height="18" rx="2" fill={hairColor} />
+          <path d="M 68 20 L 72 14 L 76 20" fill={hairColor} />
+        </g>
+      );
+    case 'ponytail':
+      return (
+        <g>
+          <ellipse cx="72" cy="30" rx="14" ry="8" fill={hairColor} />
+          <path d="M 72 38 Q 80 40 85 50 Q 88 60 86 70" stroke={hairColor} strokeWidth="6" fill="none" strokeLinecap="round" />
+        </g>
+      );
+    case 'afro':
+      return <ellipse cx="72" cy="36" rx="22" ry="20" fill={hairColor} />;
+    default:
+      return <ellipse cx="72" cy="30" rx="12" ry="6" fill={hairColor} />;
+  }
 }
