@@ -31,7 +31,7 @@ export function ApiKeySection({ apiKey, userId, onKeyRegenerated }: ApiKeySectio
   };
 
   const handleRegenerate = async () => {
-    if (!confirm('Are you sure you want to regenerate your API key? Your Chrome extension will need to be updated with the new key.')) {
+    if (!confirm('Are you sure you want to regenerate your API key? Any integrations using this key will stop working.')) {
       return;
     }
 
@@ -58,9 +58,9 @@ export function ApiKeySection({ apiKey, userId, onKeyRegenerated }: ApiKeySectio
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-lg">Chrome Extension API Key</CardTitle>
+        <CardTitle className="text-lg">API Key</CardTitle>
         <CardDescription>
-          Use this key to authenticate your Chrome extension for real-time trade capture.
+          Use this key to authenticate external integrations for trade capture.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
