@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, startOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -55,42 +55,38 @@ export function MonthlyHeatmap({ positions, onMonthClick }: MonthlyHeatmapProps)
     
     if (closedPositions.length === 0) return [];
 
-    // Group by month
-    const byMonth: Record<string, { pnl: number; trades: number; wins: number }> = {};
+    // Group by month - only months with actual trades from filtered positions
+    const byMonth: Record<string, { pnl: number; trades: number; wins: number; date: Date }> = {};
     
     closedPositions.forEach(p => {
-      const monthKey = format(new Date(p.exit_timestamp!), 'yyyy-MM');
-      if (!byMonth[monthKey]) byMonth[monthKey] = { pnl: 0, trades: 0, wins: 0 };
+      const exitDate = new Date(p.exit_timestamp!);
+      const monthKey = format(exitDate, 'yyyy-MM');
+      if (!byMonth[monthKey]) {
+        byMonth[monthKey] = { pnl: 0, trades: 0, wins: 0, date: startOfMonth(exitDate) };
+      }
       byMonth[monthKey].pnl += p.pnl || 0;
       byMonth[monthKey].trades += 1;
       if ((p.pnl || 0) > 0) byMonth[monthKey].wins += 1;
     });
 
-    // Create last 12 months array (including months with no trades for context)
-    const months: MonthData[] = [];
-    const now = new Date();
-    
-    for (let i = 11; i >= 0; i--) {
-      const monthDate = startOfMonth(subMonths(now, i));
-      const monthKey = format(monthDate, 'yyyy-MM');
-      const data = byMonth[monthKey] || { pnl: 0, trades: 0, wins: 0 };
-      
-      months.push({
-        date: monthDate,
+    // Only include months that have trades (respects the time period filter)
+    const months: MonthData[] = Object.entries(byMonth)
+      .map(([monthKey, data]) => ({
+        date: data.date,
         monthKey,
-        displayMonth: format(monthDate, 'MMM'),
-        displayYear: format(monthDate, 'yyyy'),
+        displayMonth: format(data.date, 'MMM'),
+        displayYear: format(data.date, 'yyyy'),
         pnl: data.pnl,
         trades: data.trades,
         wins: data.wins,
         winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0
-      });
-    }
+      }))
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
 
     return months;
   }, [positions]);
 
-  if (monthlyData.length === 0 || monthlyData.every(m => m.trades === 0)) {
+  if (monthlyData.length === 0) {
     return null;
   }
 
@@ -115,15 +111,8 @@ export function MonthlyHeatmap({ positions, onMonthClick }: MonthlyHeatmapProps)
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Year label row */}
-        <div className="mb-2 flex justify-center">
-          <div className="text-xs text-muted-foreground">
-            {monthlyData[0]?.displayYear} - {monthlyData[monthlyData.length - 1]?.displayYear}
-          </div>
-        </div>
-
-        {/* Heatmap grid */}
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+        {/* Heatmap grid - adapts to filtered data */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {monthlyData.map((month) => (
             <TooltipProvider key={month.monthKey}>
               <Tooltip>
@@ -134,16 +123,14 @@ export function MonthlyHeatmap({ positions, onMonthClick }: MonthlyHeatmapProps)
                       rounded-lg p-3 text-center transition-all
                       hover:ring-2 hover:ring-primary/50
                       ${getHeatmapColor(month.pnl, maxAbsPnl)}
-                      ${month.trades === 0 ? 'opacity-40' : ''}
                       ${onMonthClick ? 'cursor-pointer' : 'cursor-default'}
                     `}
                   >
                     <p className="text-xs font-medium">{month.displayMonth}</p>
-                    {month.trades > 0 && (
-                      <p className={`text-xs font-bold ${month.pnl >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                        {month.pnl >= 0 ? '+' : ''}{month.pnl.toFixed(0)}
-                      </p>
-                    )}
+                    <p className="text-[10px] text-muted-foreground">{month.displayYear}</p>
+                    <p className={`text-xs font-bold ${month.pnl >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                      {month.pnl >= 0 ? '+' : ''}${month.pnl.toFixed(0)}
+                    </p>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="space-y-1">
