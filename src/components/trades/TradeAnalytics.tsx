@@ -22,11 +22,15 @@ import {
   Activity,
   Tags,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Shield,
+  BookOpen
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AverageHoldTimeCard, DailyPnLChart, PnLHeatmap } from './analytics';
 import { EquityCurve } from '@/components/analytics';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Link } from 'react-router-dom';
 
 interface Position {
   id: number;
@@ -39,6 +43,7 @@ interface Position {
   pnl: number | null;
   open: boolean;
   tags: string[] | null;
+  is_simulation: boolean;
 }
 
 interface TradeAnalyticsProps {
@@ -65,6 +70,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
+  const { isAdmin } = useUserRole();
 
   // Handler for heatmap period click - sets custom date range
   const handlePeriodClick = useCallback((date: Date) => {
@@ -116,9 +122,14 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
       
       let query = supabase
         .from('positions')
-        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags')
+        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags, is_simulation')
         .eq('user_id', user.id)
         .eq('open', false);
+      
+      // Filter out simulation trades unless admin
+      if (!isAdmin) {
+        query = query.eq('is_simulation', false);
+      }
       
       if (from) {
         query = query.gte('exit_timestamp', from.toISOString());
@@ -135,7 +146,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
     } finally {
       setLoading(false);
     }
-  }, [timeFrame, getDateRange]);
+  }, [timeFrame, getDateRange, isAdmin]);
 
   useEffect(() => {
     fetchPositions();
@@ -294,6 +305,22 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
 
   return (
     <div className="space-y-4">
+      {/* Verified trades notice */}
+      <div className="flex items-center justify-between gap-2 text-sm bg-primary/10 border border-primary/30 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="text-primary">
+            {isAdmin ? 'Showing all trades (admin view)' : 'Analytics show verified trades only'}
+          </span>
+        </div>
+        {!isAdmin && (
+          <Link to="/journal" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span className="text-xs">Paper trades in Journal</span>
+          </Link>
+        )}
+      </div>
+
       {/* Time Frame Selector */}
       <Card className="border-border/50 bg-card/50">
         <CardContent className="py-3">

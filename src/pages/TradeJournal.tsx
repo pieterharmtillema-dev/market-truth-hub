@@ -13,6 +13,7 @@ export default function TradeJournal() {
   
   const dateFrom = searchParams.get('from') || undefined;
   const dateTo = searchParams.get('to') || undefined;
+  const verifiedOnly = searchParams.get('verified') === 'true';
   
   // Default to journal tab when date params are present
   const [activeTab, setActiveTab] = useState(() => {
@@ -58,6 +59,7 @@ export default function TradeJournal() {
               refreshTrigger={refreshTrigger} 
               dateFrom={dateFrom}
               dateTo={dateTo}
+              verifiedOnly={verifiedOnly}
               onClearDateFilter={handleClearDateFilter}
             />
           </TabsContent>

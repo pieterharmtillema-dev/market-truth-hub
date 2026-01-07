@@ -35,16 +35,18 @@ interface Position {
   tags: string[] | null;
   exchange_source: string | null;
   is_exchange_verified: boolean | null;
+  is_simulation: boolean;
 }
 
 interface TradeJournalListProps {
   refreshTrigger?: number;
   dateFrom?: string;
   dateTo?: string;
+  verifiedOnly?: boolean;
   onClearDateFilter?: () => void;
 }
 
-export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, onClearDateFilter }: TradeJournalListProps) {
+export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnly, onClearDateFilter }: TradeJournalListProps) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
@@ -142,10 +144,13 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, onClearDate
   // Get unique symbols for filter
   const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Filter positions by date range (if provided) and symbol
+  // Filter positions by date range (if provided), symbol, and verified status
   const filteredPositions = positions.filter(p => {
     // Symbol filter
     if (filterSymbol !== 'all' && p.symbol !== filterSymbol) return false;
+    
+    // Verified only filter (non-simulation trades)
+    if (verifiedOnly && p.is_simulation) return false;
     
     // Date filter - use exit_timestamp for closed trades, entry_timestamp for open
     if (dateFrom || dateTo) {
@@ -227,11 +232,19 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, onClearDate
       </div>
 
       {/* Date Range Filter Banner */}
-      {(dateFrom || dateTo) && (
+      {(dateFrom || dateTo || verifiedOnly) && (
         <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-lg px-3 py-2">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm flex-wrap">
             <CalendarDays className="h-4 w-4 text-primary" />
-            <span className="text-primary font-medium">Showing trades: {getDateRangeLabel()}</span>
+            <span className="text-primary font-medium">
+              {getDateRangeLabel() ? `Showing trades: ${getDateRangeLabel()}` : 'Filtered trades'}
+            </span>
+            {verifiedOnly && (
+              <Badge variant="outline" className="text-[10px] border-primary/50 text-primary gap-1">
+                <Shield className="h-2.5 w-2.5" />
+                Verified only
+              </Badge>
+            )}
           </div>
           <Button
             variant="ghost"
