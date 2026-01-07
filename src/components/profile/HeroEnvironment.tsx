@@ -251,11 +251,12 @@ export function HeroEnvironment({ unlocks, theme = 'night', preferences, classNa
       {unlocks.lamborghini && (preferences?.lamborghini ?? true) && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 sm:w-64 opacity-100 pointer-events-none">
           <div className="absolute inset-0 blur-2xl opacity-70" style={{ background: 'radial-gradient(circle, rgba(255,170,0,0.6) 0%, rgba(255,140,0,0.2) 45%, transparent 70%)' }} />
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-40 sm:w-56 h-6 sm:h-8 bg-black/60 blur-xl opacity-70" />
           <img
             src="/images/hero/Lambo.png"
             alt=""
             className="relative w-full h-auto object-contain"
-            style={{ filter: 'drop-shadow(0 0 18px rgba(255, 170, 0, 0.8)) drop-shadow(0 0 36px rgba(255, 120, 0, 0.5))' }}
+            style={{ filter: 'drop-shadow(0 0 18px rgba(255, 170, 0, 0.8)) drop-shadow(0 0 36px rgba(255, 120, 0, 0.5)) saturate(1.25) brightness(1.15)' }}
           />
         </div>
       )}
