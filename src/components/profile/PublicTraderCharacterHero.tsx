@@ -4,12 +4,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
 import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig } from "./characterConfig";
 import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
 import { FAKE_PROFILES, FAKE_TRADER_META } from "@/lib/fakeProfiles";
+import { calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics";
+import { PerformanceTrend } from "@/components/analytics";
 import {
   Trophy,
   TrendingUp,
@@ -23,6 +26,8 @@ import {
   ArrowUp,
   Users,
   Share2,
+  HelpCircle,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -539,53 +544,49 @@ export function PublicTraderCharacterHero({
 
           {/* Main Hero Area with Character and Trading Metrics */}
           <div className="relative flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-6 px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
-            {/* Left: Win Rate & Stats */}
+            {/* Left: Adjusted Win Rate & Performance Trend */}
             <div className="w-full lg:flex-1 lg:max-w-[200px] space-y-2.5 order-1 lg:order-none">
               {/* Section Header */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Performance</span>
               </div>
 
-              {/* Win Rate Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 sm:p-3">
-                <div className="text-center">
-                  <span className={cn(
-                    "text-2xl font-bold block",
-                    winRate >= 50 ? "text-primary" : "text-destructive"
-                  )}>
-                    {totalTrades === 0 ? '--' : `${winRate.toFixed(1)}%`}
-                  </span>
-                  <p className="text-[10px] text-muted-foreground mt-1">Win Rate</p>
-                  {totalTrades > 0 && (
-                    <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          winRate >= 50 ? "bg-primary" : "bg-destructive"
-                        )}
-                        style={{ width: `${winRate}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Adjusted Win Rate Card */}
+              <AdjustedWinRateHeroCard 
+                positions={positions} 
+                traderCategory={traderProfile?.trader_category}
+                totalTrades={totalTrades}
+              />
 
-              {/* Best Streak Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2 sm:p-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Best Streak</span>
-                  <span className="text-base font-bold text-amber-400">
-                    {totalTrades === 0 ? '--' : bestStreak}
-                  </span>
+              {/* Mini Performance Trend Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 sm:p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Performance Trend</span>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-5 w-5">
+                        <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Performance Trend</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          This chart shows the direction and consistency of performance.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Monetary values are intentionally hidden for privacy.
+                        </p>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                {totalTrades > 0 && (
-                  <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
-                    />
-                  </div>
-                )}
+                <PerformanceTrend positions={positions} isPublic={true} showCard={false} compact={true} />
+                <p className="text-[10px] text-muted-foreground text-center mt-1">
+                  Relative performance (no values)
+                </p>
               </div>
             </div>
 
@@ -702,6 +703,103 @@ export function PublicTraderCharacterHero({
         </div>
       </div>
     </>
+  );
+}
+
+// Adjusted Win Rate Hero Card Component
+interface AdjustedWinRateHeroCardProps {
+  positions: any[];
+  traderCategory?: TraderCategory | null;
+  totalTrades: number;
+}
+
+function AdjustedWinRateHeroCard({ positions, traderCategory, totalTrades }: AdjustedWinRateHeroCardProps) {
+  const metrics = useMemo(() => {
+    const closedTrades = positions.filter(p => !p.open && p.pnl !== null);
+    const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
+    const losses = closedTrades.filter(p => (p.pnl || 0) < 0).length;
+    const totalClosed = wins + losses; // Exclude breakeven
+    
+    const adjustedWinRate = calculateAdjustedWinRate(wins, losses);
+    const minimumTrades = getMinimumTrades(traderCategory);
+    const meetsMinimum = totalClosed >= minimumTrades;
+    
+    return {
+      wins,
+      losses,
+      totalClosed,
+      adjustedWinRate,
+      minimumTrades,
+      meetsMinimum,
+    };
+  }, [positions, traderCategory]);
+
+  return (
+    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-2.5 sm:p-3">
+      <div className="text-center">
+        {metrics.meetsMinimum ? (
+          <>
+            <div className="flex items-center justify-center gap-1">
+              <span className={cn(
+                "text-2xl font-bold",
+                metrics.adjustedWinRate >= 50 ? "text-primary" : "text-destructive"
+              )}>
+                {metrics.adjustedWinRate.toFixed(1)}%
+              </span>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-5 w-5">
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adjusted Win Rate</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Win rate is adjusted to reduce noise with small sample sizes.
+                    </p>
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-xs font-mono text-center">
+                        Adjusted = (Wins + 2) / (Wins + Losses + 4)
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Minimum trades vary by trading style.
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Win Rate (adjusted)
+            </p>
+            <p className="text-[9px] text-muted-foreground">
+              Based on {metrics.totalClosed} closed trades
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-1.5">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-lg font-bold text-muted-foreground">
+                {metrics.totalClosed}/{metrics.minimumTrades}
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Win Rate (locked)
+            </p>
+            <div className="mt-1.5 h-0.5 bg-border/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${Math.min((metrics.totalClosed / metrics.minimumTrades) * 100, 100)}%` }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
