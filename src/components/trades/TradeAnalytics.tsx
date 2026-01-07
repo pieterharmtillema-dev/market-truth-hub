@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AverageHoldTimeCard, DailyPnLChart, PnLHeatmap } from './analytics';
+import { EquityCurve } from '@/components/analytics';
 
 interface Position {
   id: number;
@@ -459,6 +460,9 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
 
           {/* Average Hold Time */}
           <AverageHoldTimeCard positions={positions} />
+
+          {/* Private Equity Curve - Shows numeric PnL values */}
+          <EquityCurve positions={positions} currency="$" />
 
           {/* Daily P/L Chart */}
           <DailyPnLChart positions={positions} />
