@@ -402,7 +402,7 @@ export default function PastTrades() {
             ) : positions.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 <p>No positions found.</p>
-                <p className="text-sm mt-1">Trades sent from your Chrome extension will appear here.</p>
+                <p className="text-sm mt-1">Connect an exchange or import trades to get started.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">

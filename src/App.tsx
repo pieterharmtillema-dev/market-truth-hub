@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useTradeDetectorSync } from "@/hooks/useTradeDetectorSync";
 
 import Index from "./pages/Index";
 import Markets from "./pages/Markets";
@@ -27,8 +26,6 @@ import WelcomeAnimationOverlay from "@/components/WelcomeAnimationOverlay";
 const queryClient = new QueryClient();
 
 function RouterContent() {
-  useTradeDetectorSync();
-
   return (
     <Routes>
       <Route path="/" element={<Index />} />
