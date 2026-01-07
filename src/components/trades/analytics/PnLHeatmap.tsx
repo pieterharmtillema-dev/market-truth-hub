@@ -224,7 +224,7 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
       endDate = format(yearEnd, 'yyyy-MM-dd');
     }
     
-    navigate(`/trade-journal?from=${startDate}&to=${endDate}`);
+    navigate(`/journal?from=${startDate}&to=${endDate}`);
     onPeriodClick?.(period.date);
   };
 
