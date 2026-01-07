@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { 
@@ -67,6 +68,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('30_days');
+  const [analyticsView, setAnalyticsView] = useState<'performance' | 'charts'>('performance');
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
@@ -414,6 +416,31 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         </CardContent>
       </Card>
 
+      {/* Analytics View Selector */}
+      <Card className="border-border/50 bg-card/50">
+        <CardContent className="py-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Analytics View:</span>
+            </div>
+            <Tabs value={analyticsView} onValueChange={(value) => setAnalyticsView(value as 'performance' | 'charts')} className="w-full sm:w-auto">
+              <TabsList className="w-full sm:w-auto bg-muted/30">
+                <TabsTrigger value="performance" className="flex-1 gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span className="sm:hidden">Performance</span>
+                  <span className="hidden sm:inline">Overall Performance</span>
+                </TabsTrigger>
+                <TabsTrigger value="charts" className="flex-1 gap-1.5">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Graphs
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
+
       {positions.length === 0 ? (
         <Card className="border-border/50 bg-card/50">
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -424,266 +451,272 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         </Card>
       ) : (
         <>
-          {/* Overall Performance */}
-          <Card className="border-border/50 bg-card/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Overall Performance
-                <Badge variant="outline" className="ml-auto text-xs">
-                  {positions.length} trade{positions.length !== 1 ? 's' : ''}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold text-primary">{positions.length}</p>
-                  <p className="text-sm text-muted-foreground">Trades</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className={`text-3xl font-bold ${overallMetrics.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {overallMetrics.totalPnL >= 0 ? '+' : ''}${overallMetrics.totalPnL.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Net P/L</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className={cn("text-3xl font-bold", overallMetrics.winRate >= 50 ? "text-green-500" : "text-red-500")}>
-                    {overallMetrics.winRate.toFixed(1)}%
-                  </p>
-                  <p className="text-sm text-muted-foreground">Adj. Win Rate</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className={`text-3xl font-bold ${overallMetrics.avgPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {overallMetrics.avgPnl >= 0 ? '+' : ''}${overallMetrics.avgPnl.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg P/L</p>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Wins:</span>
-                  <span className="font-medium">{overallMetrics.wins}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                  <span className="text-muted-foreground">Losses:</span>
-                  <span className="font-medium">{overallMetrics.losses}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Best:</span>
-                  <span className="font-medium text-green-500">+${overallMetrics.bestTrade.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                  <span className="text-muted-foreground">Worst:</span>
-                  <span className="font-medium text-red-500">${overallMetrics.worstTrade.toFixed(2)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Average Hold Time */}
-          <AverageHoldTimeCard positions={positions} />
-
-          {/* Private Equity Curve - Shows numeric PnL values */}
-          <EquityCurve positions={positions} currency="$" />
-
-          {/* Daily P/L Chart */}
-          <DailyPnLChart positions={positions} />
-
-          {/* P&L Heatmap - has its own independent time filter */}
-          <PnLHeatmap positions={positions} onPeriodClick={handlePeriodClick} />
-
-          {/* Streaks */}
-          {(streakMetrics.longestWinStreak > 0 || streakMetrics.longestLossStreak > 0) && (
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Flame className="h-5 w-5 text-primary" />
-                  Streaks
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Streaks show patterns in consecutive wins or losses, helping you spot momentum or overtrading.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      {streakMetrics.isCurrentlyWinning ? (
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-red-500" />
-                      )}
-                      <span className="text-xs text-muted-foreground">Current</span>
+          {analyticsView === 'performance' ? (
+            <>
+              {/* Overall Performance */}
+              <Card className="border-border/50 bg-card/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    Overall Performance
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {positions.length} trade{positions.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-muted/50 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-primary">{positions.length}</p>
+                      <p className="text-sm text-muted-foreground">Trades</p>
                     </div>
-                    <p className={`text-2xl font-bold ${streakMetrics.isCurrentlyWinning ? 'text-green-500' : 'text-red-500'}`}>
-                      {streakMetrics.isCurrentlyWinning ? streakMetrics.currentWinStreak : streakMetrics.currentLossStreak}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {streakMetrics.isCurrentlyWinning ? 'Win Streak' : 'Loss Streak'}
-                    </p>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Flame className="h-4 w-4 text-green-500" />
-                      <span className="text-xs text-muted-foreground">Best</span>
+                    <div className="bg-muted/50 rounded-lg p-4 text-center">
+                      <p className={`text-3xl font-bold ${overallMetrics.totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {overallMetrics.totalPnL >= 0 ? '+' : ''}${overallMetrics.totalPnL.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Net P/L</p>
                     </div>
-                    <p className="text-2xl font-bold text-green-500">{streakMetrics.longestWinStreak}</p>
-                    <p className="text-xs text-muted-foreground">Longest Win</p>
+                    <div className="bg-muted/50 rounded-lg p-4 text-center">
+                      <p className={cn("text-3xl font-bold", overallMetrics.winRate >= 50 ? "text-green-500" : "text-red-500")}>
+                        {overallMetrics.winRate.toFixed(1)}%
+                      </p>
+                      <p className="text-sm text-muted-foreground">Adj. Win Rate</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-4 text-center">
+                      <p className={`text-3xl font-bold ${overallMetrics.avgPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {overallMetrics.avgPnl >= 0 ? '+' : ''}${overallMetrics.avgPnl.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Avg P/L</p>
+                    </div>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
+
+                  <Separator className="my-4" />
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-muted-foreground">Wins:</span>
+                      <span className="font-medium">{overallMetrics.wins}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <TrendingDown className="h-4 w-4 text-red-500" />
-                      <span className="text-xs text-muted-foreground">Worst</span>
+                      <span className="text-muted-foreground">Losses:</span>
+                      <span className="font-medium">{overallMetrics.losses}</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-500">{streakMetrics.longestLossStreak}</p>
-                    <p className="text-xs text-muted-foreground">Longest Loss</p>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-muted-foreground">Best:</span>
+                      <span className="font-medium text-green-500">+${overallMetrics.bestTrade.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <span className="text-muted-foreground">Worst:</span>
+                      <span className="font-medium text-red-500">${overallMetrics.worstTrade.toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Activity className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">Avg</span>
-                    </div>
-                    <p className="text-2xl font-bold">{streakMetrics.avgStreakLength.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">Streak Length</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
 
-          {/* Setup Performance */}
-          {setupStats.length > 0 && (
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Tags className="h-5 w-5 text-primary" />
-                  Performance by Setup
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>See how different trade setups perform over time based on your own tagging.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {setupStats.map((setup) => (
-                    <div key={setup.tag} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-medium">{setup.tag}</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {setup.trades} trade{setup.trades !== 1 ? 's' : ''}
-                        </span>
+              {/* Average Hold Time */}
+              <AverageHoldTimeCard positions={positions} />
+
+              {/* Streaks */}
+              {(streakMetrics.longestWinStreak > 0 || streakMetrics.longestLossStreak > 0) && (
+                <Card className="border-border/50 bg-card/50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Flame className="h-5 w-5 text-primary" />
+                      Streaks
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Streaks show patterns in consecutive wins or losses, helping you spot momentum or overtrading.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          {streakMetrics.isCurrentlyWinning ? (
+                            <TrendingUp className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 text-red-500" />
+                          )}
+                          <span className="text-xs text-muted-foreground">Current</span>
+                        </div>
+                        <p className={`text-2xl font-bold ${streakMetrics.isCurrentlyWinning ? 'text-green-500' : 'text-red-500'}`}>
+                          {streakMetrics.isCurrentlyWinning ? streakMetrics.currentWinStreak : streakMetrics.currentLossStreak}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {streakMetrics.isCurrentlyWinning ? 'Win Streak' : 'Loss Streak'}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant={setup.winRate >= 50 ? 'default' : 'secondary'}>
-                          {setup.winRate.toFixed(0)}% WR
-                        </Badge>
-                        <span className={`font-medium min-w-[80px] text-right ${setup.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {setup.pnl >= 0 ? '+' : ''}${setup.pnl.toFixed(2)}
-                        </span>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Flame className="h-4 w-4 text-green-500" />
+                          <span className="text-xs text-muted-foreground">Best</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-500">{streakMetrics.longestWinStreak}</p>
+                        <p className="text-xs text-muted-foreground">Longest Win</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <TrendingDown className="h-4 w-4 text-red-500" />
+                          <span className="text-xs text-muted-foreground">Worst</span>
+                        </div>
+                        <p className="text-2xl font-bold text-red-500">{streakMetrics.longestLossStreak}</p>
+                        <p className="text-xs text-muted-foreground">Longest Loss</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Activity className="h-4 w-4 text-primary" />
+                          <span className="text-xs text-muted-foreground">Avg</span>
+                        </div>
+                        <p className="text-2xl font-bold">{streakMetrics.avgStreakLength.toFixed(1)}</p>
+                        <p className="text-xs text-muted-foreground">Streak Length</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  </CardContent>
+                </Card>
+              )}
 
-          {/* Daily Performance */}
-          {dailySummaries.length > 0 && (
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5 text-primary" />
-                  Daily Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[200px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-center">Trades</TableHead>
-                        <TableHead className="text-center">Win Rate</TableHead>
-                        <TableHead className="text-right">P/L</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailySummaries.map((day) => (
-                        <TableRow key={day.date}>
-                          <TableCell className="font-medium">
-                            {format(new Date(day.date), 'MMM d, yyyy')}
-                          </TableCell>
-                          <TableCell className="text-center">{day.trades}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={day.winRate >= 50 ? 'default' : 'secondary'}>
-                              {day.winRate.toFixed(0)}%
+              {/* Setup Performance */}
+              {setupStats.length > 0 && (
+                <Card className="border-border/50 bg-card/50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Tags className="h-5 w-5 text-primary" />
+                      Performance by Setup
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>See how different trade setups perform over time based on your own tagging.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {setupStats.map((setup) => (
+                        <div key={setup.tag} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="font-medium">{setup.tag}</Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {setup.trades} trade{setup.trades !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant={setup.winRate >= 50 ? 'default' : 'secondary'}>
+                              {setup.winRate.toFixed(0)}% WR
                             </Badge>
-                          </TableCell>
-                          <TableCell className={`text-right font-medium ${day.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {day.pnl >= 0 ? '+' : ''}${day.pnl.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
+                            <span className={`font-medium min-w-[80px] text-right ${setup.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {setup.pnl >= 0 ? '+' : ''}${setup.pnl.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* By Symbol */}
-          {symbolSummaries.length > 0 && (
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Performance by Symbol
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {symbolSummaries.slice(0, 10).map((item) => (
-                    <div key={item.symbol} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-mono">{item.symbol}</Badge>
-                        <span className="text-sm text-muted-foreground">{item.trades} trades</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant={item.winRate >= 50 ? 'default' : 'secondary'}>
-                          {item.winRate.toFixed(0)}% win
-                        </Badge>
-                        <span className={`font-medium ${item.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)}
-                        </span>
-                      </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Daily Performance */}
+              {dailySummaries.length > 0 && (
+                <Card className="border-border/50 bg-card/50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <CalendarIcon className="h-5 w-5 text-primary" />
+                      Daily Performance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[200px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-center">Trades</TableHead>
+                            <TableHead className="text-center">Win Rate</TableHead>
+                            <TableHead className="text-right">P/L</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dailySummaries.map((day) => (
+                            <TableRow key={day.date}>
+                              <TableCell className="font-medium">
+                                {format(new Date(day.date), 'MMM d, yyyy')}
+                              </TableCell>
+                              <TableCell className="text-center">{day.trades}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant={day.winRate >= 50 ? 'default' : 'secondary'}>
+                                  {day.winRate.toFixed(0)}%
+                                </Badge>
+                              </TableCell>
+                              <TableCell className={`text-right font-medium ${day.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {day.pnl >= 0 ? '+' : ''}${day.pnl.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* By Symbol */}
+              {symbolSummaries.length > 0 && (
+                <Card className="border-border/50 bg-card/50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      Performance by Symbol
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {symbolSummaries.slice(0, 10).map((item) => (
+                        <div key={item.symbol} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="font-mono">{item.symbol}</Badge>
+                            <span className="text-sm text-muted-foreground">{item.trades} trades</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant={item.winRate >= 50 ? 'default' : 'secondary'}>
+                              {item.winRate.toFixed(0)}% win
+                            </Badge>
+                            <span className={`font-medium ${item.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Daily P/L Chart */}
+              <DailyPnLChart positions={positions} />
+
+              {/* Private Equity Curve - Shows numeric PnL values */}
+              <EquityCurve positions={positions} currency="$" />
+
+              {/* P&L Heatmap - has its own independent time filter */}
+              <PnLHeatmap positions={positions} onPeriodClick={handlePeriodClick} />
+            </>
           )}
         </>
       )}
