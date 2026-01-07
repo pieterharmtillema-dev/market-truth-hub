@@ -68,7 +68,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('30_days');
-  const [analyticsView, setAnalyticsView] = useState<'performance' | 'charts'>('performance');
+  const [analyticsView, setAnalyticsView] = useState<'performance' | 'graphs' | null>(null);
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
@@ -296,6 +296,52 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
 
   const selectedTimeFrameLabel = timeFrameOptions.find(o => o.value === timeFrame)?.label || 'Select';
 
+  if (analyticsView === null) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-border/50 bg-card/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Choose Analytics View</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                variant="outline"
+                className="h-auto w-full justify-start p-4 text-left"
+                onClick={() => setAnalyticsView('performance')}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <span className="text-base font-semibold">Performance</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Overall performance, average hold time, streaks, daily performance, and performance by symbol.
+                  </p>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto w-full justify-start p-4 text-left"
+                onClick={() => setAnalyticsView('graphs')}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <span className="text-base font-semibold">Graphs</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Daily profit & loss, equity curve, and the monthly P&L heatmap.
+                  </p>
+                </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -424,14 +470,14 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Analytics View:</span>
             </div>
-            <Tabs value={analyticsView} onValueChange={(value) => setAnalyticsView(value as 'performance' | 'charts')} className="w-full sm:w-auto">
+            <Tabs value={analyticsView} onValueChange={(value) => setAnalyticsView(value as 'performance' | 'graphs')} className="w-full sm:w-auto">
               <TabsList className="w-full sm:w-auto bg-muted/30">
                 <TabsTrigger value="performance" className="flex-1 gap-1.5">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="sm:hidden">Performance</span>
                   <span className="hidden sm:inline">Overall Performance</span>
                 </TabsTrigger>
-                <TabsTrigger value="charts" className="flex-1 gap-1.5">
+                <TabsTrigger value="graphs" className="flex-1 gap-1.5">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Graphs
                 </TabsTrigger>
