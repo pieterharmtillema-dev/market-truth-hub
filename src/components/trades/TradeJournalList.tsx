@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save, Plug, Chrome, Shield } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save, Plug, Chrome, Shield, X, CalendarDays } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,9 +39,12 @@ interface Position {
 
 interface TradeJournalListProps {
   refreshTrigger?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  onClearDateFilter?: () => void;
 }
 
-export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
+export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, onClearDateFilter }: TradeJournalListProps) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
@@ -139,16 +142,43 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
   // Get unique symbols for filter
   const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Filter positions
-  const filteredPositions = filterSymbol === 'all' 
-    ? positions 
-    : positions.filter(p => p.symbol === filterSymbol);
+  // Filter positions by date range (if provided) and symbol
+  const filteredPositions = positions.filter(p => {
+    // Symbol filter
+    if (filterSymbol !== 'all' && p.symbol !== filterSymbol) return false;
+    
+    // Date filter - use exit_timestamp for closed trades, entry_timestamp for open
+    if (dateFrom || dateTo) {
+      const tradeDate = new Date(p.exit_timestamp || p.entry_timestamp);
+      if (dateFrom) {
+        const fromDate = startOfDay(parseISO(dateFrom));
+        if (tradeDate < fromDate) return false;
+      }
+      if (dateTo) {
+        const toDate = endOfDay(parseISO(dateTo));
+        if (tradeDate > toDate) return false;
+      }
+    }
+    
+    return true;
+  });
 
   // Calculate summary stats
   const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
   const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
   const closedCount = filteredPositions.filter(p => !p.open).length;
   const winRate = closedCount > 0 ? (wins / closedCount) * 100 : 0;
+  
+  // Format date range label
+  const getDateRangeLabel = () => {
+    if (!dateFrom && !dateTo) return null;
+    if (dateFrom === dateTo) {
+      return format(parseISO(dateFrom!), 'MMM d, yyyy');
+    }
+    const from = dateFrom ? format(parseISO(dateFrom), 'MMM d') : '';
+    const to = dateTo ? format(parseISO(dateTo), 'MMM d, yyyy') : '';
+    return `${from} – ${to}`;
+  };
 
   // Check if position has attachments
   const hasAttachments = (positionId: number) => {
@@ -195,6 +225,24 @@ export function TradeJournalList({ refreshTrigger }: TradeJournalListProps) {
           <p className="text-lg font-bold">{filteredPositions.length}</p>
         </div>
       </div>
+
+      {/* Date Range Filter Banner */}
+      {(dateFrom || dateTo) && (
+        <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <span className="text-primary font-medium">Showing trades: {getDateRangeLabel()}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearDateFilter}
+            className="h-7 px-2 text-primary hover:text-primary"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Filter */}
       <div className="flex gap-3 items-center">
