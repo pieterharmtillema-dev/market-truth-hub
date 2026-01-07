@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AverageHoldTimeCard, DailyPnLChart, PnLHeatmap } from './analytics';
-import { EquityCurve } from '@/components/analytics';
+import { EquityCurve, calculateAdjustedWinRate } from '@/components/analytics';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Link } from 'react-router-dom';
 
@@ -158,12 +158,13 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
     const total = pnlValues.reduce((sum, v) => sum + v, 0);
     const wins = positions.filter(p => (p.pnl || 0) > 0).length;
     const losses = positions.filter(p => (p.pnl || 0) < 0).length;
-    const winRate = positions.length > 0 ? (wins / positions.length) * 100 : 0;
+    // Use Adjusted Win Rate formula: (Wins + 2) / (Wins + Losses + 4)
+    const adjustedWinRate = calculateAdjustedWinRate(wins, losses);
     const avgPnl = positions.length > 0 ? total / positions.length : 0;
     const bestTrade = pnlValues.length > 0 ? Math.max(...pnlValues) : 0;
     const worstTrade = pnlValues.length > 0 ? Math.min(...pnlValues) : 0;
     
-    return { totalPnL: total, wins, losses, winRate, avgPnl, bestTrade, worstTrade };
+    return { totalPnL: total, wins, losses, winRate: adjustedWinRate, avgPnl, bestTrade, worstTrade };
   }, [positions]);
 
   // Calculate streak metrics
@@ -447,8 +448,10 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
                   <p className="text-sm text-muted-foreground">Net P/L</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-3xl font-bold">{overallMetrics.winRate.toFixed(1)}%</p>
-                  <p className="text-sm text-muted-foreground">Win Rate</p>
+                  <p className={cn("text-3xl font-bold", overallMetrics.winRate >= 50 ? "text-green-500" : "text-red-500")}>
+                    {overallMetrics.winRate.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">Adj. Win Rate</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
                   <p className={`text-3xl font-bold ${overallMetrics.avgPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
