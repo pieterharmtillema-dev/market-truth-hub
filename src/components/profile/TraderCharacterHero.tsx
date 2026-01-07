@@ -179,8 +179,8 @@ export function TraderCharacterHero({
     return totalPnlPct / closedTrades.length;
   }, [positions]);
 
-  // Calculate time-filtered metrics
-  const timeFilteredMetrics = useMemo(() => {
+  // Get time filter start date based on timeFrame
+  const getTimeFilterStartDate = useMemo(() => {
     const now = new Date();
     let startDate = new Date();
     
@@ -201,14 +201,22 @@ export function TraderCharacterHero({
         startDate.setFullYear(now.getFullYear() - 1);
         break;
     }
+    return startDate;
+  }, [timeFrame]);
 
-    // Filter closed trades by EXIT timestamp (when P/L was realized), not entry
-    const closedTrades = positions.filter(p => {
+  // Filter positions by time frame for use in charts and metrics
+  const timeFilteredPositions = useMemo(() => {
+    return positions.filter(p => {
       if (p.open || p.pnl === null || p.pnl === 0) return false;
       const exitDate = p.exit_timestamp ? new Date(p.exit_timestamp) : null;
       if (!exitDate) return false;
-      return exitDate >= startDate;
+      return exitDate >= getTimeFilterStartDate;
     });
+  }, [positions, getTimeFilterStartDate]);
+
+  // Calculate time-filtered metrics
+  const timeFilteredMetrics = useMemo(() => {
+    const closedTrades = timeFilteredPositions;
     const totalPnl = closedTrades.reduce((sum, p) => sum + (p.pnl || 0), 0);
     const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
     const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
@@ -218,7 +226,7 @@ export function TraderCharacterHero({
     let currentStreak = 0;
     let lastResult: 'win' | 'loss' | null = null;
 
-    const sortedClosed = closedTrades.sort((a, b) =>
+    const sortedClosed = [...closedTrades].sort((a, b) =>
       new Date(a.entry_timestamp).getTime() - new Date(b.entry_timestamp).getTime()
     );
 
@@ -247,7 +255,7 @@ export function TraderCharacterHero({
       bestStreak: longestWin,
       totalTrades: closedTrades.length,
     };
-  }, [positions, timeFrame]);
+  }, [timeFilteredPositions]);
 
   // Real data from metrics
   const accuracy = metrics?.accuracy_score || 0;
@@ -739,7 +747,7 @@ export function TraderCharacterHero({
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                 <p className="text-[8px] sm:text-[9px] text-muted-foreground mb-1 text-center">Performance</p>
                 <div className="h-12 sm:h-14">
-                  <PerformanceTrend positions={positions} compact isPublic={false} />
+                  <PerformanceTrend positions={timeFilteredPositions} compact isPublic={false} />
                 </div>
               </div>
 
