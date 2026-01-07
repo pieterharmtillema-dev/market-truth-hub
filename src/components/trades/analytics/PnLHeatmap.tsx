@@ -7,14 +7,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-type ChartTimeFrame = '7d' | '30d' | '90d' | '1y' | 'all';
+type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-const timeFrameOptions: { value: ChartTimeFrame; label: string }[] = [
-  { value: '7d', label: '7 Days' },
-  { value: '30d', label: '30 Days' },
-  { value: '90d', label: '90 Days' },
-  { value: '1y', label: '1 Year' },
-  { value: 'all', label: 'All Time' },
+const viewModeOptions: { value: ViewMode; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
 ];
 
 interface Position {
@@ -24,11 +23,8 @@ interface Position {
   open: boolean;
 }
 
-type TimeFrame = 'today' | 'this_week' | 'this_month' | '30_days' | '90_days' | 'this_year' | 'all_time' | 'custom';
-
 interface PnLHeatmapProps {
   positions: Position[];
-  timeFrame?: TimeFrame; // Now optional, used for heatmap granularity hint
   onPeriodClick?: (date: Date) => void;
 }
 
@@ -43,22 +39,6 @@ interface PeriodData {
   winRate: number;
 }
 
-type ViewMode = 'daily' | 'weekly' | 'monthly';
-
-function getViewModeFromChartTimeFrame(tf: ChartTimeFrame): ViewMode {
-  switch (tf) {
-    case '7d':
-    case '30d':
-      return 'daily';
-    case '90d':
-      return 'weekly';
-    case '1y':
-    case 'all':
-    default:
-      return 'monthly';
-  }
-}
-
 function getTitle(viewMode: ViewMode): string {
   switch (viewMode) {
     case 'daily':
@@ -67,6 +47,8 @@ function getTitle(viewMode: ViewMode): string {
       return 'Weekly P&L Heatmap';
     case 'monthly':
       return 'Monthly P&L Heatmap';
+    case 'yearly':
+      return 'Yearly P&L Heatmap';
   }
 }
 
@@ -92,8 +74,7 @@ function getHeatmapColor(pnl: number, maxAbsPnl: number, hasTrades: boolean): st
 }
 
 export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
-  const [chartTimeFrame, setChartTimeFrame] = useState<ChartTimeFrame>('all');
-  const viewMode = getViewModeFromChartTimeFrame(chartTimeFrame);
+  const [viewMode, setViewMode] = useState<ViewMode>('monthly');
 
   const heatmapData = useMemo(() => {
     const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
@@ -110,8 +91,11 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
         periodKey = format(exitDate, 'yyyy-MM-dd');
       } else if (viewMode === 'weekly') {
         periodKey = format(startOfWeek(exitDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      } else {
+      } else if (viewMode === 'monthly') {
         periodKey = format(exitDate, 'yyyy-MM');
+      } else {
+        // yearly
+        periodKey = format(exitDate, 'yyyy');
       }
       
       if (!byPeriod[periodKey]) byPeriod[periodKey] = { pnl: 0, trades: 0, wins: 0 };
@@ -120,13 +104,13 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
       if ((p.pnl || 0) > 0) byPeriod[periodKey].wins += 1;
     });
 
-    // Generate periods based on view mode and chartTimeFrame
+    // Generate periods based on view mode
     const periods: PeriodData[] = [];
 
     if (viewMode === 'daily') {
-      const daysCount = chartTimeFrame === '7d' ? 7 : 30;
+      // Show last 30 days
       const days = eachDayOfInterval({
-        start: subDays(now, daysCount - 1),
+        start: subDays(now, 29),
         end: now
       });
       
@@ -165,8 +149,8 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
           winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0
         });
       });
-    } else {
-      // Monthly - show last 12 months
+    } else if (viewMode === 'monthly') {
+      // Show last 12 months
       for (let i = 11; i >= 0; i--) {
         const monthDate = startOfMonth(subMonths(now, i));
         const key = format(monthDate, 'yyyy-MM');
@@ -183,10 +167,27 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
           winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0
         });
       }
+    } else {
+      // Yearly - show last 5 years
+      for (let i = 4; i >= 0; i--) {
+        const yearDate = new Date(now.getFullYear() - i, 0, 1);
+        const key = format(yearDate, 'yyyy');
+        const data = byPeriod[key] || { pnl: 0, trades: 0, wins: 0 };
+        
+        periods.push({
+          date: yearDate,
+          key,
+          displayLabel: format(yearDate, 'yyyy'),
+          pnl: data.pnl,
+          trades: data.trades,
+          wins: data.wins,
+          winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0
+        });
+      }
     }
 
     return periods;
-  }, [positions, viewMode, chartTimeFrame]);
+  }, [positions, viewMode]);
 
   if (heatmapData.every(p => p.trades === 0)) {
     return null;
@@ -199,9 +200,11 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
     ? 'grid-cols-7' 
     : viewMode === 'weekly' 
       ? 'grid-cols-4 md:grid-cols-6' 
-      : 'grid-cols-4 md:grid-cols-6 lg:grid-cols-12';
+      : viewMode === 'yearly'
+        ? 'grid-cols-5'
+        : 'grid-cols-4 md:grid-cols-6 lg:grid-cols-12';
 
-  const selectedTimeFrameLabel = timeFrameOptions.find(o => o.value === chartTimeFrame)?.label || 'All Time';
+  const selectedViewModeLabel = viewModeOptions.find(o => o.value === viewMode)?.label || 'Monthly';
 
   return (
     <Card className="border-border/50 bg-card/50">
@@ -223,16 +226,16 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  {selectedTimeFrameLabel}
+                  {selectedViewModeLabel}
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {timeFrameOptions.map((option) => (
+                {viewModeOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
-                    onClick={() => setChartTimeFrame(option.value)}
-                    className={cn(chartTimeFrame === option.value && 'bg-accent')}
+                    onClick={() => setViewMode(option.value)}
+                    className={cn(viewMode === option.value && 'bg-accent')}
                   >
                     {option.label}
                   </DropdownMenuItem>
@@ -275,6 +278,7 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
                     {viewMode === 'daily' && format(period.date, 'EEEE, MMM d, yyyy')}
                     {viewMode === 'weekly' && `Week of ${format(period.date, 'MMM d, yyyy')}`}
                     {viewMode === 'monthly' && format(period.date, 'MMMM yyyy')}
+                    {viewMode === 'yearly' && format(period.date, 'yyyy')}
                   </p>
                   {period.trades > 0 ? (
                     <>
