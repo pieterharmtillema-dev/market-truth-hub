@@ -1,8 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format, startOfMonth, subMonths, startOfWeek, subWeeks, subDays, eachDayOfInterval, eachWeekOfInterval, startOfDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, HelpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CalendarDays, HelpCircle, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+
+type ChartTimeFrame = '7d' | '30d' | '90d' | '1y' | 'all';
+
+const timeFrameOptions: { value: ChartTimeFrame; label: string }[] = [
+  { value: '7d', label: '7 Days' },
+  { value: '30d', label: '30 Days' },
+  { value: '90d', label: '90 Days' },
+  { value: '1y', label: '1 Year' },
+  { value: 'all', label: 'All Time' },
+];
 
 interface Position {
   id: number;
@@ -15,7 +28,7 @@ type TimeFrame = 'today' | 'this_week' | 'this_month' | '30_days' | '90_days' | 
 
 interface PnLHeatmapProps {
   positions: Position[];
-  timeFrame: TimeFrame;
+  timeFrame?: TimeFrame; // Now optional, used for heatmap granularity hint
   onPeriodClick?: (date: Date) => void;
 }
 
@@ -32,18 +45,15 @@ interface PeriodData {
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
-function getViewMode(timeFrame: TimeFrame): ViewMode {
-  switch (timeFrame) {
-    case 'today':
-    case 'this_week':
-    case '30_days':
+function getViewModeFromChartTimeFrame(tf: ChartTimeFrame): ViewMode {
+  switch (tf) {
+    case '7d':
+    case '30d':
       return 'daily';
-    case 'this_month':
-    case '90_days':
+    case '90d':
       return 'weekly';
-    case 'this_year':
-    case 'all_time':
-    case 'custom':
+    case '1y':
+    case 'all':
     default:
       return 'monthly';
   }
@@ -81,8 +91,9 @@ function getHeatmapColor(pnl: number, maxAbsPnl: number, hasTrades: boolean): st
   }
 }
 
-export function PnLHeatmap({ positions, timeFrame, onPeriodClick }: PnLHeatmapProps) {
-  const viewMode = getViewMode(timeFrame);
+export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
+  const [chartTimeFrame, setChartTimeFrame] = useState<ChartTimeFrame>('all');
+  const viewMode = getViewModeFromChartTimeFrame(chartTimeFrame);
 
   const heatmapData = useMemo(() => {
     const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
@@ -109,12 +120,11 @@ export function PnLHeatmap({ positions, timeFrame, onPeriodClick }: PnLHeatmapPr
       if ((p.pnl || 0) > 0) byPeriod[periodKey].wins += 1;
     });
 
-    // Generate periods based on view mode
+    // Generate periods based on view mode and chartTimeFrame
     const periods: PeriodData[] = [];
 
     if (viewMode === 'daily') {
-      // Show last 14-30 days depending on timeframe
-      const daysCount = timeFrame === 'today' ? 7 : timeFrame === 'this_week' ? 7 : 30;
+      const daysCount = chartTimeFrame === '7d' ? 7 : 30;
       const days = eachDayOfInterval({
         start: subDays(now, daysCount - 1),
         end: now
@@ -176,7 +186,7 @@ export function PnLHeatmap({ positions, timeFrame, onPeriodClick }: PnLHeatmapPr
     }
 
     return periods;
-  }, [positions, viewMode, timeFrame]);
+  }, [positions, viewMode, chartTimeFrame]);
 
   if (heatmapData.every(p => p.trades === 0)) {
     return null;
@@ -190,6 +200,8 @@ export function PnLHeatmap({ positions, timeFrame, onPeriodClick }: PnLHeatmapPr
     : viewMode === 'weekly' 
       ? 'grid-cols-4 md:grid-cols-6' 
       : 'grid-cols-4 md:grid-cols-6 lg:grid-cols-12';
+
+  const selectedTimeFrameLabel = timeFrameOptions.find(o => o.value === chartTimeFrame)?.label || 'All Time';
 
   return (
     <Card className="border-border/50 bg-card/50">
@@ -207,6 +219,27 @@ export function PnLHeatmap({ positions, timeFrame, onPeriodClick }: PnLHeatmapPr
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  {selectedTimeFrameLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {timeFrameOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setChartTimeFrame(option.value)}
+                    className={cn(chartTimeFrame === option.value && 'bg-accent')}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
