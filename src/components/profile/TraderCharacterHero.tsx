@@ -183,10 +183,13 @@ export function TraderCharacterHero({
   const timeFilteredMetrics = useMemo(() => {
     const now = new Date();
     let startDate = new Date();
+    
+    // Reset to start of day for accurate "today" filtering
+    startDate.setHours(0, 0, 0, 0);
 
     switch (timeFrame) {
       case 'daily':
-        startDate.setDate(now.getDate() - 1);
+        // Today: start of current day (already set above)
         break;
       case 'weekly':
         startDate.setDate(now.getDate() - 7);
@@ -199,12 +202,13 @@ export function TraderCharacterHero({
         break;
     }
 
-    const filteredPositions = positions.filter(p => {
-      const entryDate = new Date(p.entry_timestamp);
-      return entryDate >= startDate;
+    // Filter closed trades by EXIT timestamp (when P/L was realized), not entry
+    const closedTrades = positions.filter(p => {
+      if (p.open || p.pnl === null || p.pnl === 0) return false;
+      const exitDate = p.exit_timestamp ? new Date(p.exit_timestamp) : null;
+      if (!exitDate) return false;
+      return exitDate >= startDate;
     });
-
-    const closedTrades = filteredPositions.filter(p => !p.open && p.pnl !== null && p.pnl !== 0);
     const totalPnl = closedTrades.reduce((sum, p) => sum + (p.pnl || 0), 0);
     const wins = closedTrades.filter(p => (p.pnl || 0) > 0).length;
     const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
