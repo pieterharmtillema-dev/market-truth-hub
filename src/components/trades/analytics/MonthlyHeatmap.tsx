@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, subMonths } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,7 +27,8 @@ interface MonthData {
   winRate: number;
 }
 
-function getHeatmapColor(pnl: number, maxAbsPnl: number): string {
+function getHeatmapColor(pnl: number, maxAbsPnl: number, hasTrades: boolean): string {
+  if (!hasTrades) return 'bg-muted/30';
   if (maxAbsPnl === 0) return 'bg-muted/50';
   
   const intensity = Math.min(Math.abs(pnl) / maxAbsPnl, 1);
@@ -35,13 +36,11 @@ function getHeatmapColor(pnl: number, maxAbsPnl: number): string {
   if (pnl === 0) return 'bg-muted/50';
   
   if (pnl > 0) {
-    // Green scale
     if (intensity > 0.75) return 'bg-green-500/80';
     if (intensity > 0.5) return 'bg-green-500/60';
     if (intensity > 0.25) return 'bg-green-500/40';
     return 'bg-green-500/20';
   } else {
-    // Red scale
     if (intensity > 0.75) return 'bg-red-500/80';
     if (intensity > 0.5) return 'bg-red-500/60';
     if (intensity > 0.25) return 'bg-red-500/40';
@@ -52,45 +51,47 @@ function getHeatmapColor(pnl: number, maxAbsPnl: number): string {
 export function MonthlyHeatmap({ positions, onMonthClick }: MonthlyHeatmapProps) {
   const monthlyData = useMemo(() => {
     const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
-    
-    if (closedPositions.length === 0) return [];
 
-    // Group by month - only months with actual trades from filtered positions
-    const byMonth: Record<string, { pnl: number; trades: number; wins: number; date: Date }> = {};
+    // Group by month
+    const byMonth: Record<string, { pnl: number; trades: number; wins: number }> = {};
     
     closedPositions.forEach(p => {
-      const exitDate = new Date(p.exit_timestamp!);
-      const monthKey = format(exitDate, 'yyyy-MM');
-      if (!byMonth[monthKey]) {
-        byMonth[monthKey] = { pnl: 0, trades: 0, wins: 0, date: startOfMonth(exitDate) };
-      }
+      const monthKey = format(new Date(p.exit_timestamp!), 'yyyy-MM');
+      if (!byMonth[monthKey]) byMonth[monthKey] = { pnl: 0, trades: 0, wins: 0 };
       byMonth[monthKey].pnl += p.pnl || 0;
       byMonth[monthKey].trades += 1;
       if ((p.pnl || 0) > 0) byMonth[monthKey].wins += 1;
     });
 
-    // Only include months that have trades (respects the time period filter)
-    const months: MonthData[] = Object.entries(byMonth)
-      .map(([monthKey, data]) => ({
-        date: data.date,
+    // Always show last 12 months
+    const months: MonthData[] = [];
+    const now = new Date();
+    
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = startOfMonth(subMonths(now, i));
+      const monthKey = format(monthDate, 'yyyy-MM');
+      const data = byMonth[monthKey] || { pnl: 0, trades: 0, wins: 0 };
+      
+      months.push({
+        date: monthDate,
         monthKey,
-        displayMonth: format(data.date, 'MMM'),
-        displayYear: format(data.date, 'yyyy'),
+        displayMonth: format(monthDate, 'MMM'),
+        displayYear: format(monthDate, 'yyyy'),
         pnl: data.pnl,
         trades: data.trades,
         wins: data.wins,
         winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0
-      }))
-      .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+      });
+    }
 
     return months;
   }, [positions]);
 
-  if (monthlyData.length === 0) {
+  if (monthlyData.every(m => m.trades === 0)) {
     return null;
   }
 
-  const maxAbsPnl = Math.max(...monthlyData.map(m => Math.abs(m.pnl)));
+  const maxAbsPnl = Math.max(...monthlyData.filter(m => m.trades > 0).map(m => Math.abs(m.pnl)), 1);
 
   return (
     <Card className="border-border/50 bg-card/50">
@@ -111,26 +112,29 @@ export function MonthlyHeatmap({ positions, onMonthClick }: MonthlyHeatmapProps)
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Heatmap grid - adapts to filtered data */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+        {/* Heatmap grid - always shows 12 months */}
+        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
           {monthlyData.map((month) => (
             <TooltipProvider key={month.monthKey}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => onMonthClick?.(month.date)}
+                    onClick={() => month.trades > 0 && onMonthClick?.(month.date)}
                     className={`
                       rounded-lg p-3 text-center transition-all
-                      hover:ring-2 hover:ring-primary/50
-                      ${getHeatmapColor(month.pnl, maxAbsPnl)}
-                      ${onMonthClick ? 'cursor-pointer' : 'cursor-default'}
+                      ${month.trades > 0 ? 'hover:ring-2 hover:ring-primary/50' : ''}
+                      ${getHeatmapColor(month.pnl, maxAbsPnl, month.trades > 0)}
+                      ${month.trades > 0 && onMonthClick ? 'cursor-pointer' : 'cursor-default'}
                     `}
                   >
                     <p className="text-xs font-medium">{month.displayMonth}</p>
-                    <p className="text-[10px] text-muted-foreground">{month.displayYear}</p>
-                    <p className={`text-xs font-bold ${month.pnl >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                      {month.pnl >= 0 ? '+' : ''}${month.pnl.toFixed(0)}
-                    </p>
+                    {month.trades > 0 ? (
+                      <p className={`text-xs font-bold ${month.pnl >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        {month.pnl >= 0 ? '+' : ''}${month.pnl.toFixed(0)}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">—</p>
+                    )}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="space-y-1">
