@@ -13,17 +13,12 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encryptToken } from '../_shared/crypto.ts';
 import { getAccount, type AlpacaEnvironment } from '../_shared/alpaca-api.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest, jsonResponse, errorResponse } from '../_shared/cors.ts';
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest(req);
   }
 
   try {
@@ -34,25 +29,13 @@ serve(async (req) => {
 
     if (!encryptionKey) {
       console.error('EXCHANGE_ENCRYPTION_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Server configuration error', 500);
     }
 
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Missing authorization header', 401);
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -64,13 +47,7 @@ serve(async (req) => {
 
     if (authError || !user) {
       console.error('Authentication failed:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid authentication' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Invalid authentication', 401);
     }
 
     // Parse request body
@@ -79,41 +56,17 @@ serve(async (req) => {
 
     // Validate inputs (never log secrets!)
     if (!environment || !apiKeyId || !apiSecret) {
-      return new Response(
-        JSON.stringify({
-          error: 'Missing required fields: environment, apiKeyId, apiSecret',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Missing required fields: environment, apiKeyId, apiSecret', 400);
     }
 
     // Validate environment
     if (environment !== 'paper' && environment !== 'live') {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid environment. Must be "paper" or "live".',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Invalid environment. Must be "paper" or "live".', 400);
     }
 
     // Validate API key format (basic check)
     if (apiKeyId.length < 10 || apiSecret.length < 10) {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid API key format. Keys appear too short.',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Invalid API key format. Keys appear too short.', 400);
     }
 
     console.log(
@@ -129,21 +82,8 @@ serve(async (req) => {
 
     if (validationError || !account) {
       console.log(`Alpaca validation failed: ${validationError}`);
-      return new Response(
-        JSON.stringify({
-          error: validationError || 'Failed to validate Alpaca credentials',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, validationError || 'Failed to validate Alpaca credentials', 400);
     }
-
-    // Check for read-only keys (we don't want trading permissions for safety)
-    // Note: Alpaca doesn't expose permissions in account endpoint directly
-    // This is a trade-off - we could make a test trade attempt, but that's risky
-    // Users should create read-only keys for security
 
     console.log(
       `Alpaca credentials validated successfully. Account status: ${account.status}`
@@ -176,53 +116,38 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('Database error:', dbError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to save connection' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return errorResponse(req, 'Failed to save connection', 500);
     }
 
     console.log(`Successfully connected Alpaca ${environment} for user ${user.id}`);
 
     // Return success (never include secrets in response!)
-    return new Response(
-      JSON.stringify({
-        connected: true,
-        environment,
-        account: {
-          id: account.id,
-          account_number: account.account_number,
-          status: account.status,
-          currency: account.currency,
-          buying_power: account.buying_power,
-          portfolio_value: account.portfolio_value,
-          pattern_day_trader: account.pattern_day_trader,
-        },
-        connection: {
-          id: data.id,
-          exchange: data.exchange,
-          status: data.status,
-          last_sync_at: data.last_sync_at,
-        },
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return jsonResponse(req, {
+      connected: true,
+      environment,
+      account: {
+        id: account.id,
+        account_number: account.account_number,
+        status: account.status,
+        currency: account.currency,
+        buying_power: account.buying_power,
+        portfolio_value: account.portfolio_value,
+        pattern_day_trader: account.pattern_day_trader,
+      },
+      connection: {
+        id: data.id,
+        exchange: data.exchange,
+        status: data.status,
+        last_sync_at: data.last_sync_at,
+      },
+    });
   } catch (error) {
     console.error('Alpaca connect error:', error);
-    return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+    return errorResponse(
+      req,
+      'Internal server error',
+      500,
+      error instanceof Error ? error.message : 'Unknown error'
     );
   }
 });
