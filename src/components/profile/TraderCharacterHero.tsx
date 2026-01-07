@@ -859,7 +859,6 @@ export function TraderCharacterHero({
                 />
               </div>
             </div>
-          </div>
 
           {/* Main Hero Area with Character and Trading Metrics */}
           <div className="relative flex flex-row items-center justify-center gap-2 sm:gap-4 md:gap-6 px-2 sm:px-4 md:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
@@ -1019,7 +1018,7 @@ export function TraderCharacterHero({
               </div>
             </div>
           </div>
-
+          </div>
         </div>
       </div>
 
