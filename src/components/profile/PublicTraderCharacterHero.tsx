@@ -682,26 +682,22 @@ export function PublicTraderCharacterHero({
                 </div>
               </div>
 
-              {/* Win Rate (raw) */}
+              {/* Best Streak (All-Time) */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Win Rate</span>
-                  <span className={cn(
-                    "text-sm sm:text-base md:text-lg font-bold",
-                    winRate >= 50 ? "text-primary" : "text-destructive"
-                  )}>
-                    {winRate.toFixed(0)}%
+                  <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Best Streak</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-amber-400">
+                    {totalTrades === 0 ? '--' : bestStreak}
                   </span>
                 </div>
-                <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-500",
-                      winRate >= 50 ? "bg-primary" : "bg-destructive"
-                    )}
-                    style={{ width: `${winRate}%` }}
-                  />
-                </div>
+                {totalTrades > 0 && (
+                  <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(bestStreak * 10, 100)}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
