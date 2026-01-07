@@ -311,7 +311,7 @@ export function TraderCharacterHero({
         // Fetch trading stats from positions
         const { data: positionsData } = await supabase
           .from("positions")
-          .select("id, pnl, pnl_pct, open, entry_timestamp, exchange_source, is_exchange_verified")
+          .select("id, pnl, pnl_pct, open, entry_timestamp, exit_timestamp, exchange_source, is_exchange_verified")
           .eq("user_id", userId);
 
         if (positionsData) {
