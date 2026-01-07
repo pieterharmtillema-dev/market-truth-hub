@@ -1,23 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// XOR-based decryption (must match exchange-connect encryption)
-function decryptCredential(encrypted: string, key: string): string {
-  const encryptedBytes = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
-  const keyBytes = new TextEncoder().encode(key);
-  const decrypted = new Uint8Array(encryptedBytes.length);
-  
-  for (let i = 0; i < encryptedBytes.length; i++) {
-    decrypted[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  return new TextDecoder().decode(decrypted);
-}
 
 // Create HMAC signature
 async function createHmacSignature(message: string, secret: string): Promise<string> {
@@ -420,9 +408,9 @@ serve(async (req) => {
 
     for (const connection of connections) {
       try {
-        // Decrypt credentials
-        const apiKey = decryptCredential(connection.api_key_encrypted, encryptionKey);
-        const apiSecret = decryptCredential(connection.api_secret_encrypted, encryptionKey);
+        // Decrypt credentials using AES-256-GCM
+        const apiKey = await decryptToken(connection.api_key_encrypted, encryptionKey);
+        const apiSecret = await decryptToken(connection.api_secret_encrypted, encryptionKey);
         
         let fetchResult: { trades: any[]; newCursor?: string; error?: string };
         

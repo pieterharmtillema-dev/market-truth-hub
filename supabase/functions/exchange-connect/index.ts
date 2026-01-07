@@ -1,36 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Simple XOR-based encryption with Base64 encoding for credential storage
-// In production, consider using a proper encryption library
-function encryptCredential(text: string, key: string): string {
-  const textBytes = new TextEncoder().encode(text);
-  const keyBytes = new TextEncoder().encode(key);
-  const encrypted = new Uint8Array(textBytes.length);
-  
-  for (let i = 0; i < textBytes.length; i++) {
-    encrypted[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  return btoa(String.fromCharCode(...encrypted));
-}
-
-function decryptCredential(encrypted: string, key: string): string {
-  const encryptedBytes = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
-  const keyBytes = new TextEncoder().encode(key);
-  const decrypted = new Uint8Array(encryptedBytes.length);
-  
-  for (let i = 0; i < encryptedBytes.length; i++) {
-    decrypted[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  return new TextDecoder().decode(decrypted);
-}
 
 // Validate API credentials by making a test request to the exchange
 async function validateExchangeCredentials(
@@ -274,9 +249,9 @@ serve(async (req) => {
         );
       }
 
-      // Encrypt credentials
-      const encryptedApiKey = encryptCredential(apiKey, encryptionKey);
-      const encryptedApiSecret = encryptCredential(apiSecret, encryptionKey);
+      // Encrypt credentials using AES-256-GCM
+      const encryptedApiKey = await encryptToken(apiKey, encryptionKey);
+      const encryptedApiSecret = await encryptToken(apiSecret, encryptionKey);
 
       // Store in database (upsert to handle reconnection)
       const { data, error } = await supabase
