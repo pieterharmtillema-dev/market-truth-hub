@@ -743,12 +743,9 @@ export function TraderCharacterHero({
                 </div>
               </div>
 
-              {/* Performance Trend under P/L */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
-                <p className="text-[8px] sm:text-[9px] text-muted-foreground mb-1 text-center">Performance</p>
-                <div className="h-12 sm:h-14">
-                  <PerformanceTrend positions={timeFilteredPositions} compact isPublic={false} />
-                </div>
+              {/* Performance Trend - Full Hero Card */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg overflow-hidden aspect-square">
+                <PerformanceTrend positions={timeFilteredPositions} hero isPublic={false} />
               </div>
 
               {/* Best Streak Card */}

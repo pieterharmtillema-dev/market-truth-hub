@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { TrendingUp, HelpCircle, Lock } from 'lucide-react';
-import { LineChart, Line, XAxis, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { TrendingUp, TrendingDown, HelpCircle, Lock, ArrowUp, ArrowDown } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Area, AreaChart, Tooltip } from 'recharts';
+import { cn } from '@/lib/utils';
 
 interface Position {
   pnl: number | null;
@@ -17,27 +18,52 @@ interface PerformanceTrendProps {
   isPublic?: boolean; // If true, hide numeric values
   showCard?: boolean;
   compact?: boolean; // For mini version in hero
+  hero?: boolean; // Full hero card with more info
 }
 
 const MINIMUM_TRADES_FOR_TREND = 10;
 
-export function PerformanceTrend({ positions, isPublic = true, showCard = true, compact = false }: PerformanceTrendProps) {
+export function PerformanceTrend({ positions, isPublic = true, showCard = true, compact = false, hero = false }: PerformanceTrendProps) {
   const chartData = useMemo(() => {
     const closedTrades = positions
       .filter(p => !p.open && p.pnl !== null && p.exit_timestamp)
       .sort((a, b) => new Date(a.exit_timestamp!).getTime() - new Date(b.exit_timestamp!).getTime());
     
     let cumulative = 0;
+    let maxEquity = 0;
     return closedTrades.map((trade, index) => {
       cumulative += trade.pnl || 0;
+      maxEquity = Math.max(maxEquity, cumulative);
+      const drawdown = maxEquity > 0 ? ((maxEquity - cumulative) / maxEquity) * 100 : 0;
       return {
         index: index + 1,
         date: trade.exit_timestamp,
         pnl: trade.pnl,
         cumulative,
+        maxEquity,
+        drawdown,
       };
     });
   }, [positions]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    if (chartData.length === 0) return null;
+    
+    const finalValue = chartData[chartData.length - 1].cumulative;
+    const highWaterMark = Math.max(...chartData.map(d => d.cumulative));
+    const maxDrawdown = Math.max(...chartData.map(d => d.drawdown));
+    const winningTrades = chartData.filter(d => (d.pnl || 0) > 0).length;
+    const winRate = (winningTrades / chartData.length) * 100;
+    
+    return {
+      finalValue,
+      highWaterMark,
+      maxDrawdown,
+      winRate,
+      totalTrades: chartData.length,
+    };
+  }, [chartData]);
 
   const meetsMinimum = chartData.length >= MINIMUM_TRADES_FOR_TREND;
   const isPositive = chartData.length > 0 && chartData[chartData.length - 1].cumulative >= 0;
@@ -65,6 +91,101 @@ export function PerformanceTrend({ positions, isPublic = true, showCard = true, 
       </p>
     </div>
   );
+
+  // Hero version - full card with stats and full-size chart
+  if (hero) {
+    if (!meetsMinimum) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center text-center p-3">
+          <Lock className="h-6 w-6 text-muted-foreground mb-2" />
+          <p className="text-xs text-muted-foreground">
+            {chartData.length}/{MINIMUM_TRADES_FOR_TREND} trades
+          </p>
+          <div className="w-full max-w-24 bg-muted/50 rounded-full h-1.5 mt-2">
+            <div 
+              className="bg-primary h-1.5 rounded-full transition-all"
+              style={{ width: `${Math.min((chartData.length / MINIMUM_TRADES_FOR_TREND) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full h-full flex flex-col">
+        {/* Stats row at top */}
+        <div className="flex items-center justify-between px-2 py-1.5 gap-2">
+          {/* Net P/L */}
+          <div className="flex items-center gap-1">
+            {isPositive ? (
+              <ArrowUp className="h-3 w-3 text-primary" />
+            ) : (
+              <ArrowDown className="h-3 w-3 text-destructive" />
+            )}
+            <span className={cn(
+              "text-xs font-semibold",
+              isPositive ? "text-primary" : "text-destructive"
+            )}>
+              {isPublic ? (isPositive ? '+' : '-') : `${isPositive ? '+' : ''}$${stats?.finalValue.toFixed(0)}`}
+            </span>
+          </div>
+
+          {/* Max Drawdown */}
+          {stats && stats.maxDrawdown > 0 && (
+            <div className="flex items-center gap-1">
+              <TrendingDown className="h-3 w-3 text-destructive/70" />
+              <span className="text-[10px] text-muted-foreground">
+                {stats.maxDrawdown.toFixed(0)}% DD
+              </span>
+            </div>
+          )}
+
+          {/* Trade count */}
+          <span className="text-[10px] text-muted-foreground">
+            {chartData.length} trades
+          </span>
+        </div>
+
+        {/* Full chart area */}
+        <div className="flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+              <defs>
+                <linearGradient id="heroGradientPositive" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--gain))" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="hsl(var(--gain))" stopOpacity={0.05} />
+                </linearGradient>
+                <linearGradient id="heroGradientNegative" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--loss))" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="hsl(var(--loss))" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 2" strokeOpacity={0.3} />
+              <Area 
+                type="monotone" 
+                dataKey="cumulative" 
+                stroke={isPositive ? 'hsl(var(--gain))' : 'hsl(var(--loss))'} 
+                strokeWidth={2}
+                fill={isPositive ? 'url(#heroGradientPositive)' : 'url(#heroGradientNegative)'}
+              />
+              {!isPublic && (
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                  }}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'P/L']}
+                  labelFormatter={(label) => `Trade #${label}`}
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
 
   // Mini version for hero card
   if (compact) {
