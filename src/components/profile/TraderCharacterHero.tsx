@@ -29,6 +29,7 @@ import {
   Clock,
   Shield,
   ArrowUp,
+  ChevronDown,
   Users,
   Share2,
   Settings,
@@ -218,6 +219,7 @@ export function TraderCharacterHero({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [levelingExpanded, setLevelingExpanded] = useState(false);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('weekly');
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { toast } = useToast();
@@ -303,6 +305,7 @@ export function TraderCharacterHero({
       .sort((a, b) => b.progress - a.progress)
       .slice(0, 3);
   }, [environmentUnlocks, totalTrades, winRate, bestStreak]);
+  const nextUnlock = upcomingUnlocks[0];
 
   // Get time filter start date based on timeFrame
   const getTimeFilterStartDate = useMemo(() => {
@@ -1014,69 +1017,87 @@ export function TraderCharacterHero({
 
           {/* Leveling and unlocks */}
           <div className="px-3 sm:px-4 md:px-6 pb-4">
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 sm:p-4">
-              <div className="grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Level Up</p>
-                      <p className="text-sm sm:text-base font-semibold text-foreground">Level {level}</p>
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground text-right">
-                      {nextLevelTrades} trade{nextLevelTrades === 1 ? "" : "s"} to Level {level + 1}
-                    </div>
-                  </div>
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-2 sm:p-3">
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => setLevelingExpanded((prev) => !prev)}
+                aria-expanded={levelingExpanded}
+              >
+                <div className="flex items-start justify-between gap-2">
                   <div>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Level Up</p>
+                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                      Level {level} • {levelProgress}/{TRADES_PER_LEVEL} trades
+                    </p>
+                    {nextUnlock ? (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Next unlock: {nextUnlock.label} ({nextUnlock.remainingText})
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">All unlocks earned.</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span>{nextLevelTrades} to Level {level + 1}</span>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", levelingExpanded && "rotate-180")} />
+                  </div>
+                </div>
+                <div className="mt-2 h-1.5 bg-border/40 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${levelProgressPercent}%` }}
+                  />
+                </div>
+              </button>
+
+              {levelingExpanded && (
+                <div className="mt-3 grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
                       <span>{levelProgress} / {TRADES_PER_LEVEL} trades</span>
                       <span>{Math.round(levelProgressPercent)}% complete</span>
                     </div>
-                    <div className="mt-1 h-2 bg-border/40 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{ width: `${levelProgressPercent}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       Level up every {TRADES_PER_LEVEL} trades tracked on your profile.
                     </p>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Next Unlocks</p>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">
-                      {unlocksEarned}/{totalUnlocks} unlocked
-                    </span>
-                  </div>
                   <div className="space-y-2">
-                    {upcomingUnlocks.length === 0 ? (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">All unlocks earned. New rewards coming soon.</p>
-                    ) : (
-                      upcomingUnlocks.map((unlock) => (
-                        <div key={unlock.key} className="space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-xs font-semibold text-foreground">{unlock.label}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {formatRequirementText(unlock.requirements)}
-                              </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Next Unlocks</p>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">
+                        {unlocksEarned}/{totalUnlocks} unlocked
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {upcomingUnlocks.length === 0 ? (
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">All unlocks earned. New rewards coming soon.</p>
+                      ) : (
+                        upcomingUnlocks.map((unlock) => (
+                          <div key={unlock.key} className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs font-semibold text-foreground">{unlock.label}</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {formatRequirementText(unlock.requirements)}
+                                </p>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground text-right">{unlock.remainingText}</p>
                             </div>
-                            <p className="text-[10px] text-muted-foreground text-right">{unlock.remainingText}</p>
+                            <div className="h-1 bg-border/40 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary/70 rounded-full transition-all duration-500"
+                                style={{ width: `${Math.round(unlock.progress * 100)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1 bg-border/40 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary/70 rounded-full transition-all duration-500"
-                              style={{ width: `${Math.round(unlock.progress * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
