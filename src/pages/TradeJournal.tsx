@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Upload, BarChart3, Lock } from "lucide-react";
@@ -8,9 +9,22 @@ import { TradeJournalSummary } from "@/components/trades/TradeJournalSummary";
 
 export default function TradeJournal() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const dateFrom = searchParams.get('from') || undefined;
+  const dateTo = searchParams.get('to') || undefined;
+  
+  // Default to journal tab when date params are present
+  const [activeTab, setActiveTab] = useState(() => {
+    return dateFrom || dateTo ? 'journal' : 'journal';
+  });
 
   const handleImportComplete = () => {
     setRefreshTrigger(prev => prev + 1);
+  };
+  
+  const handleClearDateFilter = () => {
+    setSearchParams({});
   };
 
   return (
@@ -23,7 +37,7 @@ export default function TradeJournal() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="journal" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full bg-card border border-border">
             <TabsTrigger value="journal" className="flex-1 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               <BookOpen className="w-4 h-4" />
@@ -40,7 +54,12 @@ export default function TradeJournal() {
           </TabsList>
 
           <TabsContent value="journal" className="mt-4 space-y-4">
-            <TradeJournalList refreshTrigger={refreshTrigger} />
+            <TradeJournalList 
+              refreshTrigger={refreshTrigger} 
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onClearDateFilter={handleClearDateFilter}
+            />
           </TabsContent>
 
           <TabsContent value="import" className="mt-4">

@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subWeeks, subDays, eachDayOfInterval, eachWeekOfInterval, startOfDay, endOfDay, startOfYear, endOfYear } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { format, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subWeeks, subDays, eachDayOfInterval, eachWeekOfInterval, startOfYear, endOfYear } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, HelpCircle, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
+import { CalendarDays, HelpCircle, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -84,7 +82,7 @@ function getHeatmapColor(pnl: number, maxAbsPnl: number, hasTrades: boolean): st
 
 export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
-  const [selectedPeriod, setSelectedPeriod] = useState<{ date: Date; label: string } | null>(null);
+  const navigate = useNavigate();
 
   const heatmapData = useMemo(() => {
     const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
@@ -199,48 +197,34 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
     return periods;
   }, [positions, viewMode]);
 
-  // Get trades for the selected period
-  const periodTrades = useMemo(() => {
-    if (!selectedPeriod) return [];
-    
-    const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
-    
-    return closedPositions.filter(p => {
-      const exitDate = new Date(p.exit_timestamp!);
-      
-      if (viewMode === 'daily') {
-        return format(exitDate, 'yyyy-MM-dd') === format(selectedPeriod.date, 'yyyy-MM-dd');
-      } else if (viewMode === 'weekly') {
-        const weekStart = startOfWeek(selectedPeriod.date, { weekStartsOn: 1 });
-        const weekEnd = endOfWeek(selectedPeriod.date, { weekStartsOn: 1 });
-        return exitDate >= weekStart && exitDate <= weekEnd;
-      } else if (viewMode === 'monthly') {
-        const monthStart = startOfMonth(selectedPeriod.date);
-        const monthEnd = endOfMonth(selectedPeriod.date);
-        return exitDate >= monthStart && exitDate <= monthEnd;
-      } else {
-        const yearStart = startOfYear(selectedPeriod.date);
-        const yearEnd = endOfYear(selectedPeriod.date);
-        return exitDate >= yearStart && exitDate <= yearEnd;
-      }
-    }).sort((a, b) => new Date(b.exit_timestamp!).getTime() - new Date(a.exit_timestamp!).getTime());
-  }, [selectedPeriod, positions, viewMode]);
-
   const handlePeriodClick = (period: PeriodData) => {
     if (period.trades === 0) return;
     
-    let label = '';
+    // Build date range based on view mode
+    let startDate: string;
+    let endDate: string;
+    
     if (viewMode === 'daily') {
-      label = format(period.date, 'EEEE, MMM d, yyyy');
+      startDate = format(period.date, 'yyyy-MM-dd');
+      endDate = format(period.date, 'yyyy-MM-dd');
     } else if (viewMode === 'weekly') {
-      label = `Week of ${format(period.date, 'MMM d, yyyy')}`;
+      const weekStart = startOfWeek(period.date, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(period.date, { weekStartsOn: 1 });
+      startDate = format(weekStart, 'yyyy-MM-dd');
+      endDate = format(weekEnd, 'yyyy-MM-dd');
     } else if (viewMode === 'monthly') {
-      label = format(period.date, 'MMMM yyyy');
+      const monthStart = startOfMonth(period.date);
+      const monthEnd = endOfMonth(period.date);
+      startDate = format(monthStart, 'yyyy-MM-dd');
+      endDate = format(monthEnd, 'yyyy-MM-dd');
     } else {
-      label = format(period.date, 'yyyy');
+      const yearStart = startOfYear(period.date);
+      const yearEnd = endOfYear(period.date);
+      startDate = format(yearStart, 'yyyy-MM-dd');
+      endDate = format(yearEnd, 'yyyy-MM-dd');
     }
     
-    setSelectedPeriod({ date: period.date, label });
+    navigate(`/trade-journal?from=${startDate}&to=${endDate}`);
     onPeriodClick?.(period.date);
   };
 
@@ -261,21 +245,8 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
 
   const selectedViewModeLabel = viewModeOptions.find(o => o.value === viewMode)?.label || 'Monthly';
 
-  const periodSummary = useMemo(() => {
-    if (periodTrades.length === 0) return null;
-    const totalPnl = periodTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const wins = periodTrades.filter(t => (t.pnl || 0) > 0).length;
-    return {
-      totalPnl,
-      wins,
-      losses: periodTrades.length - wins,
-      winRate: (wins / periodTrades.length) * 100
-    };
-  }, [periodTrades]);
-
   return (
-    <>
-      <Card className="border-border/50 bg-card/50">
+    <Card className="border-border/50 bg-card/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
@@ -389,89 +360,5 @@ export function PnLHeatmap({ positions, onPeriodClick }: PnLHeatmapProps) {
           </p>
         </CardContent>
       </Card>
-
-      {/* Trades Dialog */}
-      <Dialog open={!!selectedPeriod} onOpenChange={(open) => !open && setSelectedPeriod(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" />
-              Trades for {selectedPeriod?.label}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {periodSummary && (
-            <div className="grid grid-cols-4 gap-3 mb-4">
-              <div className="bg-muted/50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold">{periodTrades.length}</p>
-                <p className="text-xs text-muted-foreground">Trades</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3 text-center">
-                <p className={cn("text-2xl font-bold", periodSummary.totalPnl >= 0 ? "text-green-500" : "text-red-500")}>
-                  {periodSummary.totalPnl >= 0 ? '+' : ''}${periodSummary.totalPnl.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total P/L</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold">{periodSummary.winRate.toFixed(0)}%</p>
-                <p className="text-xs text-muted-foreground">Win Rate</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-green-500">{periodSummary.wins}</p>
-                <p className="text-xs text-muted-foreground">Wins</p>
-              </div>
-            </div>
-          )}
-
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-2">
-              {periodTrades.map((trade) => (
-                <div 
-                  key={trade.id} 
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "p-1.5 rounded-full",
-                      trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' 
-                        ? "bg-green-500/20" 
-                        : "bg-red-500/20"
-                    )}>
-                      {trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' ? (
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-red-500" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{trade.symbol}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {trade.side.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(trade.exit_timestamp!), 'MMM d, h:mm a')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "font-bold",
-                      (trade.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      ${trade.entry_price.toFixed(2)} → ${trade.exit_price?.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+    );
 }
