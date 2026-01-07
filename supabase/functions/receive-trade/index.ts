@@ -905,17 +905,19 @@ async function handleUserActivity(
 /**
  * Normalizes event type based on platform-specific rules.
  *
- * For Alpaca: Alpaca sends all fills as TRADE_ENTRY. We need to detect when
+ * For Alpaca webhooks: Alpaca sends all fills as TRADE_ENTRY. We need to detect when
  * a fill should actually close an existing opposite position (FIFO logic).
  *
+ * IMPORTANT: Alpaca supports BOTH long and short positions!
+ * 
  * Logic:
- * - If TRADE_ENTRY from Alpaca with a "sell"/"short" side
- * - AND there's an open "long" position for the same symbol
- * - Then treat as TRADE_EXIT to trigger FIFO close logic
+ * - If TRADE_ENTRY from Alpaca with "buy"/"long" side
+ *   AND there's an open "short" position for the same symbol
+ *   -> Treat as TRADE_EXIT to close the short (BUY closes SHORT)
  *
- * - If TRADE_ENTRY from Alpaca with a "buy"/"long" side
- * - AND there's an open "short" position for the same symbol
- * - Then treat as TRADE_EXIT to trigger FIFO close logic
+ * - If TRADE_ENTRY from Alpaca with "sell"/"short" side
+ *   AND there's an open "long" position for the same symbol
+ *   -> Treat as TRADE_EXIT to close the long (SELL closes LONG)
  *
  * @returns The normalized event type ("TRADE_ENTRY" or "TRADE_EXIT")
  */
@@ -940,12 +942,16 @@ async function normalizeEventTypeForPlatform(
     return eventType;
   }
 
-  console.log(`[Alpaca] Checking if ${payload.side} fill should close opposite position for ${payload.symbol}...`);
+  // Determine which side to close based on incoming order side
+  // BUY/long order -> close SHORT positions
+  // SELL/short order -> close LONG positions
+  const oppositeSide = payload.side === "long" ? "short" : "long";
+
+  console.log(`[Alpaca Webhook] Checking if ${payload.side} fill should close ${oppositeSide} position for ${payload.symbol}...`);
 
   try {
-    const oppositeSide = payload.side === "long" ? "short" : "long";
-
     // Query for open positions with opposite side
+    // IMPORTANT: Only match Alpaca positions (platform filter) and same simulation mode
     const { data: openPositions, error: checkError } = await serviceClient
       .from("positions")
       .select("id, side, quantity")
@@ -954,23 +960,24 @@ async function normalizeEventTypeForPlatform(
       .eq("side", oppositeSide)
       .eq("open", true)
       .eq("is_simulation", payload.isSimulation)
-      .ilike("platform", payload.platform)
+      .ilike("platform", "%alpaca%")
       .order("entry_timestamp", { ascending: true });
 
     if (checkError) {
-      console.error("[Alpaca] Error checking open positions:", checkError);
+      console.error("[Alpaca Webhook] Error checking open positions:", checkError);
       return eventType; // Fall back to original type on error
     }
 
     if (!openPositions || openPositions.length === 0) {
-      console.log(`[Alpaca] No opposite open positions found, treating as genuine entry`);
+      console.log(`[Alpaca Webhook] No ${oppositeSide} positions to close, treating as genuine ${payload.side} entry`);
       return eventType;
     }
 
-    console.log(`[Alpaca] Found opposite open position - converting to TRADE_EXIT`);
+    const totalOpenQty = openPositions.reduce((sum, p) => sum + Number(p.quantity), 0);
+    console.log(`[Alpaca Webhook] Found ${openPositions.length} ${oppositeSide} position(s) (total qty: ${totalOpenQty}) - converting to TRADE_EXIT`);
     return "TRADE_EXIT";
   } catch (error) {
-    console.error("[Alpaca] Error in normalizeEventTypeForPlatform:", error);
+    console.error("[Alpaca Webhook] Error in normalizeEventTypeForPlatform:", error);
     return eventType; // Fall back to original type on error
   }
 }
