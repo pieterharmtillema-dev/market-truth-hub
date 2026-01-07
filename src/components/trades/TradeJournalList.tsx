@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save, Plug, Chrome, Shield, X, CalendarDays } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Loader2, BookOpen, Camera, Save, Plug, Chrome, Shield, X, CalendarDays, FileText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
   const [loading, setLoading] = useState(true);
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
+  const [filterTradeType, setFilterTradeType] = useState<'all' | 'verified' | 'paper'>(verifiedOnly ? 'verified' : 'all');
   const [attachments, setAttachments] = useState<Record<number, Attachment[]>>({});
   const [editingTags, setEditingTags] = useState<Record<number, string[]>>({});
   const [savingTags, setSavingTags] = useState<number | null>(null);
@@ -144,13 +145,14 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
   // Get unique symbols for filter
   const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Filter positions by date range (if provided), symbol, and verified status
+  // Filter positions by date range (if provided), symbol, and trade type
   const filteredPositions = positions.filter(p => {
     // Symbol filter
     if (filterSymbol !== 'all' && p.symbol !== filterSymbol) return false;
     
-    // Verified only filter (non-simulation trades)
-    if (verifiedOnly && p.is_simulation) return false;
+    // Trade type filter (local filter takes precedence over URL param)
+    if (filterTradeType === 'verified' && p.is_simulation) return false;
+    if (filterTradeType === 'paper' && !p.is_simulation) return false;
     
     // Date filter - use exit_timestamp for closed trades, entry_timestamp for open
     if (dateFrom || dateTo) {
@@ -257,8 +259,8 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-3 items-center">
+      {/* Filters */}
+      <div className="flex gap-3 items-center flex-wrap">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <Select value={filterSymbol} onValueChange={setFilterSymbol}>
           <SelectTrigger className="w-[140px]">
@@ -269,6 +271,27 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
             {symbols.map(s => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        
+        <Select value={filterTradeType} onValueChange={(v) => setFilterTradeType(v as 'all' | 'verified' | 'paper')}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="All Trades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Trades</SelectItem>
+            <SelectItem value="verified">
+              <span className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-green-500" />
+                Verified Only
+              </span>
+            </SelectItem>
+            <SelectItem value="paper">
+              <span className="flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                Paper Only
+              </span>
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -323,6 +346,12 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
                             <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-500">
                               <Shield className="h-2.5 w-2.5" />
                               Verified
+                            </Badge>
+                          )}
+                          {position.is_simulation && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/50 text-amber-500">
+                              <FileText className="h-2.5 w-2.5" />
+                              Paper
                             </Badge>
                           )}
                           {hasAttachments(position.id) && (
