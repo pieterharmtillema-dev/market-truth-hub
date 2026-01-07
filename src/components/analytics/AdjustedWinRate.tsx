@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Target, HelpCircle, Lock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Position {
   pnl: number | null;
@@ -91,17 +92,17 @@ export function AdjustedWinRate({ positions, traderCategory, showCard = true }: 
     </div>
   );
 
+  // Compact view for hero card integration
   if (!showCard) {
-    // Compact display for hero card
     return (
-      <div className="flex items-center gap-2">
-        {metrics.meetsMinimum ? (
-          <>
-            <span className="text-2xl font-bold">{metrics.adjustedWinRate.toFixed(1)}%</span>
+      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Win Rate</span>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-5 w-5">
-                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                  <HelpCircle className="h-2.5 w-2.5 text-muted-foreground/60" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -111,14 +112,41 @@ export function AdjustedWinRate({ positions, traderCategory, showCard = true }: 
                 <ExplanationContent />
               </DialogContent>
             </Dialog>
-          </>
-        ) : (
-          <>
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {metrics.totalClosed}/{metrics.minimumTrades} trades
+          </div>
+          {metrics.meetsMinimum ? (
+            <span className={cn(
+              "text-sm sm:text-base md:text-lg font-bold",
+              metrics.adjustedWinRate >= 50 ? "text-primary" : "text-destructive"
+            )}>
+              {metrics.adjustedWinRate.toFixed(1)}%
             </span>
-          </>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Lock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">
+                {metrics.totalClosed}/{metrics.minimumTrades}
+              </span>
+            </div>
+          )}
+        </div>
+        {metrics.meetsMinimum && (
+          <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                metrics.adjustedWinRate >= 50 ? "bg-primary" : "bg-destructive"
+              )}
+              style={{ width: `${metrics.adjustedWinRate}%` }}
+            />
+          </div>
+        )}
+        {!metrics.meetsMinimum && (
+          <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-muted-foreground/30 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min((metrics.totalClosed / metrics.minimumTrades) * 100, 100)}%` }}
+            />
+          </div>
         )}
       </div>
     );

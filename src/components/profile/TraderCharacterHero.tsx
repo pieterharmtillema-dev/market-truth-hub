@@ -8,6 +8,9 @@ import { AvatarDisplay } from "./AvatarDisplay";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
+import { AdjustedWinRate, calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics/AdjustedWinRate";
+import { WinLossSizeRatio, calculateNormalizedReturn } from "@/components/analytics/WinLossSizeRatio";
+import { PerformanceTrend } from "@/components/analytics/PerformanceTrend";
 import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
@@ -728,6 +731,14 @@ export function TraderCharacterHero({
                 </div>
               </div>
 
+              {/* Performance Trend under P/L */}
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground mb-1 text-center">Performance</p>
+                <div className="h-12 sm:h-14">
+                  <PerformanceTrend positions={positions} compact isPublic={false} />
+                </div>
+              </div>
+
               {/* Best Streak Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
                 <div className="flex items-center justify-between">
@@ -793,29 +804,12 @@ export function TraderCharacterHero({
                 <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">All-Time</span>
               </div>
 
-              {/* Win Rate Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Win Rate</span>
-                  <span className={cn(
-                    "text-sm sm:text-base md:text-lg font-bold",
-                    winRate >= 50 ? "text-primary" : "text-destructive"
-                  )}>
-                    {totalTrades === 0 ? '--' : `${winRate.toFixed(1)}%`}
-                  </span>
-                </div>
-                {totalTrades > 0 && (
-                  <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        winRate >= 50 ? "bg-primary" : "bg-destructive"
-                      )}
-                      style={{ width: `${winRate}%` }}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Adjusted Win Rate Card */}
+              <AdjustedWinRate 
+                positions={positions} 
+                traderCategory={traderProfile?.trader_category}
+                showCard={false}
+              />
 
               {/* All-Time Stats */}
               <div className="space-y-1.5 sm:space-y-2">
@@ -835,27 +829,8 @@ export function TraderCharacterHero({
                   </div>
                 </div>
 
-                {/* Average R */}
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">Average R</span>
-                    <span className={cn(
-                      "text-sm sm:text-base md:text-lg font-bold",
-                      (metrics?.average_r || 0) >= 0 ? "text-primary" : "text-destructive"
-                    )}>
-                      {metrics?.average_r ? `${metrics.average_r >= 0 ? '+' : ''}${metrics.average_r.toFixed(1)}R` : '0R'}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        (metrics?.average_r || 0) >= 0 ? "bg-primary" : "bg-destructive"
-                      )}
-                      style={{ width: `${Math.min(Math.abs(metrics?.average_r || 0) * 20, 100)}%` }}
-                    />
-                  </div>
-                </div>
+                {/* Win/Loss Size Ratio */}
+                <WinLossSizeRatio positions={positions} showCard={false} />
 
                 {/* Avg Return */}
                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
