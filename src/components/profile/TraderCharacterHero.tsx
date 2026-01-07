@@ -744,7 +744,7 @@ export function TraderCharacterHero({
               </div>
 
               {/* Performance Trend - Full Hero Card */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg overflow-hidden aspect-square">
+              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg overflow-hidden h-20 sm:h-24">
                 <PerformanceTrend positions={timeFilteredPositions} hero isPublic={false} />
               </div>
 
