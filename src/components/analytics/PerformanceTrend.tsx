@@ -118,14 +118,14 @@ export function PerformanceTrend({ positions, isPublic = true, showCard = true, 
           {/* Net P/L */}
           <div className="flex items-center gap-1">
             {isPositive ? (
-              <ArrowUp className="h-3 w-3 text-primary" />
+              <ArrowUp className="h-3 w-3" style={{ color: 'hsl(var(--gain))' }} />
             ) : (
-              <ArrowDown className="h-3 w-3 text-destructive" />
+              <ArrowDown className="h-3 w-3" style={{ color: 'hsl(var(--loss))' }} />
             )}
-            <span className={cn(
-              "text-xs font-semibold",
-              isPositive ? "text-primary" : "text-destructive"
-            )}>
+            <span 
+              className="text-xs font-semibold"
+              style={{ color: isPositive ? 'hsl(var(--gain))' : 'hsl(var(--loss))' }}
+            >
               {isPublic ? (isPositive ? '+' : '-') : `${isPositive ? '+' : ''}$${stats?.finalValue.toFixed(0)}`}
             </span>
           </div>
