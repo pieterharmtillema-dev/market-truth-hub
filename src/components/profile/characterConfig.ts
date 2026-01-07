@@ -138,6 +138,11 @@ export interface CharacterConfig {
     aura?: 'none' | 'green' | 'red' | 'gold'; // based on performance
     stance?: 'standing' | 'confident' | 'relaxed';
   };
+
+  // Hero environment preferences
+  environment?: {
+    lamborghini?: boolean;
+  };
 }
 
 export const DEFAULT_CHARACTER_CONFIG: CharacterConfig = {
@@ -201,6 +206,9 @@ export const DEFAULT_CHARACTER_CONFIG: CharacterConfig = {
     color: '#000000',
   },
   accessories: {},
+  environment: {
+    lamborghini: true,
+  },
 };
 
 // Encoding functions

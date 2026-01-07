@@ -27,6 +27,10 @@ export interface EnvironmentConfig {
   theme: 'day' | 'night' | 'sunset';
 }
 
+export interface EnvironmentPreferences {
+  lamborghini?: boolean;
+}
+
 // Calculate unlocks based on trading stats
 export function calculateUnlocks(
   totalTrades: number,
@@ -63,10 +67,11 @@ export function calculateUnlocks(
 interface HeroEnvironmentProps {
   unlocks: EnvironmentUnlocks;
   theme?: 'day' | 'night' | 'sunset' | 'asian' | 'london' | 'newyork';
+  preferences?: EnvironmentPreferences;
   className?: string;
 }
 
-export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: HeroEnvironmentProps) {
+export function HeroEnvironment({ unlocks, theme = 'night', preferences, className = '' }: HeroEnvironmentProps) {
   const backgroundImage = useMemo(() => {
     switch (theme) {
       case 'asian':
@@ -243,7 +248,7 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
       )}
 
       {/* Lamborghini */}
-      {unlocks.lamborghini && (
+      {unlocks.lamborghini && (preferences?.lamborghini ?? true) && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 sm:w-64 opacity-90 pointer-events-none mix-blend-screen">
           <img
             src="/images/hero/Lambo.png"

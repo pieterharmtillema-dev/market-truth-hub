@@ -355,6 +355,7 @@ export function PublicTraderCharacterHero({
           <HeroEnvironment
             unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
             theme={environmentTheme}
+            preferences={characterConfig.environment}
           />
         </div>
 

@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { CharacterConfig, CHARACTER_PRESETS, checkUnlocks } from "./characterConfig";
+import { calculateUnlocks } from "./HeroEnvironment";
 import { CharacterRenderer } from "./CharacterRenderer";
 import { RotateCw, User, Shirt, Watch, Sparkles, LayoutGrid, Lock, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ interface CharacterCustomizerProps {
   totalTrades?: number;
   winRate?: number;
   streak?: number;
+  userEmail?: string | null;
 }
 
 const SKIN_TONES = [
@@ -154,6 +156,7 @@ export function CharacterCustomizer({
   totalTrades = 0,
   winRate = 0,
   streak = 0,
+  userEmail = null,
 }: CharacterCustomizerProps) {
   const [previewConfig, setPreviewConfig] = useState<CharacterConfig>(config);
   const [saving, setSaving] = useState(false);
@@ -162,6 +165,7 @@ export function CharacterCustomizer({
   const { toast } = useToast();
 
   const unlocks = checkUnlocks(totalTrades, winRate, streak);
+  const environmentUnlocks = calculateUnlocks(totalTrades, winRate, streak, undefined, userEmail ?? undefined);
 
   // Sync preview config when the config prop changes
   useEffect(() => {
@@ -1465,6 +1469,16 @@ export function CharacterCustomizer({
                   enabled={previewConfig.special?.chartHat || false}
                   onToggle={(enabled) => updateConfig({
                     special: { ...previewConfig.special, chartHat: enabled }
+                  })}
+                />
+
+                <SpecialItemCard
+                  title="Lambo Background"
+                  description="50 trades + 50% win rate"
+                  unlocked={environmentUnlocks.lamborghini}
+                  enabled={environmentUnlocks.lamborghini && (previewConfig.environment?.lamborghini ?? true)}
+                  onToggle={(enabled) => updateConfig({
+                    environment: { ...previewConfig.environment, lamborghini: enabled }
                   })}
                 />
               </TabsContent>

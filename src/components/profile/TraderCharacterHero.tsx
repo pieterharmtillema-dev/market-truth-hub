@@ -474,6 +474,7 @@ export function TraderCharacterHero({
           <HeroEnvironment
             unlocks={environmentUnlocks}
             theme={environmentTheme}
+            preferences={characterConfig.environment}
           />
         </div>
         
@@ -913,6 +914,7 @@ export function TraderCharacterHero({
         totalTrades={totalTrades}
         winRate={winRate}
         streak={bestStreak}
+        userEmail={userEmail}
       />
     </>
   );
