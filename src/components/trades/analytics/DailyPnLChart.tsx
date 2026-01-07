@@ -1,15 +1,27 @@
 import { useMemo, useState } from 'react';
-import { format } from 'date-fns';
+import { format, subDays, subMonths } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, HelpCircle } from 'lucide-react';
+import { BarChart3, HelpCircle, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { cn } from '@/lib/utils';
+
+type ChartTimeFrame = '7d' | '30d' | '90d' | '1y' | 'all';
+
+const timeFrameOptions: { value: ChartTimeFrame; label: string }[] = [
+  { value: '7d', label: '7 Days' },
+  { value: '30d', label: '30 Days' },
+  { value: '90d', label: '90 Days' },
+  { value: '1y', label: '1 Year' },
+  { value: 'all', label: 'All Time' },
+];
 
 interface Position {
   id: number;
@@ -25,11 +37,28 @@ interface DailyPnLChartProps {
 
 type ViewMode = 'absolute' | 'cumulative';
 
+const getTimeFilterStartDate = (tf: ChartTimeFrame): Date | null => {
+  const now = new Date();
+  switch (tf) {
+    case '7d': return subDays(now, 7);
+    case '30d': return subDays(now, 30);
+    case '90d': return subDays(now, 90);
+    case '1y': return subMonths(now, 12);
+    case 'all': return null;
+  }
+};
+
 export function DailyPnLChart({ positions }: DailyPnLChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('absolute');
+  const [chartTimeFrame, setChartTimeFrame] = useState<ChartTimeFrame>('all');
 
   const chartData = useMemo(() => {
-    const closedPositions = positions.filter(p => !p.open && p.exit_timestamp);
+    const startDate = getTimeFilterStartDate(chartTimeFrame);
+    const closedPositions = positions.filter(p => {
+      if (p.open || !p.exit_timestamp) return false;
+      if (startDate && new Date(p.exit_timestamp) < startDate) return false;
+      return true;
+    });
     
     if (closedPositions.length === 0) return [];
 
@@ -63,7 +92,7 @@ export function DailyPnLChart({ positions }: DailyPnLChartProps) {
     }
 
     return sorted;
-  }, [positions, viewMode]);
+  }, [positions, viewMode, chartTimeFrame]);
 
   if (chartData.length === 0) {
     return null;
@@ -79,6 +108,8 @@ export function DailyPnLChart({ positions }: DailyPnLChartProps) {
   const yAxisDomain = viewMode === 'cumulative' 
     ? [Math.min(...chartData.map(d => d.pnl), 0), Math.max(...chartData.map(d => d.pnl), 0)]
     : [-maxValue * 1.1, maxValue * 1.1];
+
+  const selectedTimeFrameLabel = timeFrameOptions.find(o => o.value === chartTimeFrame)?.label || 'All Time';
 
   return (
     <Card className="border-border/50 bg-card/50">
@@ -97,6 +128,25 @@ export function DailyPnLChart({ positions }: DailyPnLChartProps) {
             </Tooltip>
           </TooltipProvider>
           <div className="ml-auto flex gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  {selectedTimeFrameLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {timeFrameOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setChartTimeFrame(option.value)}
+                    className={cn(chartTimeFrame === option.value && 'bg-accent')}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant={viewMode === 'absolute' ? 'default' : 'outline'}
               size="sm"

@@ -467,8 +467,8 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
           {/* Daily P/L Chart */}
           <DailyPnLChart positions={positions} />
 
-          {/* P&L Heatmap - adapts to time period */}
-          <PnLHeatmap positions={positions} timeFrame={timeFrame} onPeriodClick={handlePeriodClick} />
+          {/* P&L Heatmap - has its own independent time filter */}
+          <PnLHeatmap positions={positions} onPeriodClick={handlePeriodClick} />
 
           {/* Streaks */}
           {(streakMetrics.longestWinStreak > 0 || streakMetrics.longestLossStreak > 0) && (

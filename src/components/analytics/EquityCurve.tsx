@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { LineChart as LineChartIcon, HelpCircle } from 'lucide-react';
+import { LineChart as LineChartIcon, HelpCircle, ChevronDown } from 'lucide-react';
 import { 
   LineChart, 
   Line, 
@@ -14,8 +14,19 @@ import {
   Area,
   ComposedChart
 } from 'recharts';
-import { format } from 'date-fns';
+import { format, subDays, subMonths, startOfYear } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+type ChartTimeFrame = '7d' | '30d' | '90d' | '1y' | 'all';
+
+const timeFrameOptions: { value: ChartTimeFrame; label: string }[] = [
+  { value: '7d', label: '7 Days' },
+  { value: '30d', label: '30 Days' },
+  { value: '90d', label: '90 Days' },
+  { value: '1y', label: '1 Year' },
+  { value: 'all', label: 'All Time' },
+];
 
 interface Position {
   pnl: number | null;
@@ -31,10 +42,27 @@ interface EquityCurveProps {
 
 export function EquityCurve({ positions, currency = '€' }: EquityCurveProps) {
   const [viewMode, setViewMode] = useState<'line' | 'area'>('area');
+  const [chartTimeFrame, setChartTimeFrame] = useState<ChartTimeFrame>('all');
+
+  const getTimeFilterStartDate = (tf: ChartTimeFrame): Date | null => {
+    const now = new Date();
+    switch (tf) {
+      case '7d': return subDays(now, 7);
+      case '30d': return subDays(now, 30);
+      case '90d': return subDays(now, 90);
+      case '1y': return subMonths(now, 12);
+      case 'all': return null;
+    }
+  };
   
   const chartData = useMemo(() => {
+    const startDate = getTimeFilterStartDate(chartTimeFrame);
     const closedTrades = positions
-      .filter(p => !p.open && p.pnl !== null && p.exit_timestamp)
+      .filter(p => {
+        if (p.open || p.pnl === null || !p.exit_timestamp) return false;
+        if (startDate && new Date(p.exit_timestamp) < startDate) return false;
+        return true;
+      })
       .sort((a, b) => new Date(a.exit_timestamp!).getTime() - new Date(b.exit_timestamp!).getTime());
     
     let cumulative = 0;
@@ -56,7 +84,7 @@ export function EquityCurve({ positions, currency = '€' }: EquityCurveProps) {
         drawdown,
       };
     });
-  }, [positions]);
+  }, [positions, chartTimeFrame]);
 
   const stats = useMemo(() => {
     if (chartData.length === 0) return null;
@@ -114,6 +142,8 @@ export function EquityCurve({ positions, currency = '€' }: EquityCurveProps) {
     );
   }
 
+  const selectedTimeFrameLabel = timeFrameOptions.find(o => o.value === chartTimeFrame)?.label || 'All Time';
+
   return (
     <Card className="border-border/50 bg-card/50">
       <CardHeader className="pb-2">
@@ -121,6 +151,25 @@ export function EquityCurve({ positions, currency = '€' }: EquityCurveProps) {
           <LineChartIcon className="h-5 w-5 text-primary" />
           Equity Curve
           <div className="flex items-center gap-1 ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  {selectedTimeFrameLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {timeFrameOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setChartTimeFrame(option.value)}
+                    className={cn(chartTimeFrame === option.value && 'bg-accent')}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant={viewMode === 'area' ? 'default' : 'outline'}
               size="sm"
