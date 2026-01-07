@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Scale, HelpCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Position {
   side: string;
@@ -96,26 +97,47 @@ export function WinLossSizeRatio({ positions, showCard = true }: WinLossSizeRati
     </div>
   );
 
+  // Compact view for hero card integration  
   if (!showCard) {
-    // Compact display
     return (
-      <div className="flex items-center gap-2">
-        <span className={`text-2xl font-bold ${metrics.ratio >= 1 ? 'text-green-500' : 'text-yellow-500'}`}>
-          {metrics.hasData ? `${metrics.ratio.toFixed(2)}x` : '—'}
-        </span>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-5 w-5">
-              <HelpCircle className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Win / Loss Size Ratio</DialogTitle>
-            </DialogHeader>
-            <ExplanationContent />
-          </DialogContent>
-        </Dialog>
+      <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground">W/L Ratio</span>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-4 w-4 p-0">
+                  <HelpCircle className="h-2.5 w-2.5 text-muted-foreground/60" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Win / Loss Size Ratio</DialogTitle>
+                </DialogHeader>
+                <ExplanationContent />
+              </DialogContent>
+            </Dialog>
+          </div>
+          <span className={cn(
+            "text-sm sm:text-base md:text-lg font-bold",
+            metrics.hasData 
+              ? metrics.ratio >= 1 ? "text-primary" : "text-amber-400"
+              : "text-muted-foreground"
+          )}>
+            {metrics.hasData ? `${metrics.ratio.toFixed(2)}x` : '—'}
+          </span>
+        </div>
+        {metrics.hasData && (
+          <div className="mt-1 h-0.5 bg-border/30 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                metrics.ratio >= 1 ? "bg-primary" : "bg-amber-400"
+              )}
+              style={{ width: `${Math.min(metrics.ratio * 33, 100)}%` }}
+            />
+          </div>
+        )}
       </div>
     );
   }
