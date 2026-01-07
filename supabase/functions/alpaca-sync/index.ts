@@ -67,7 +67,8 @@ async function closeOppositePositions(
   exitPrice: number,
   exitQuantity: number,
   exitTimestamp: string,
-  closeSide: 'long' | 'short'
+  closeSide: 'long' | 'short',
+  isPaperTrading: boolean
 ): Promise<{ closed: number; remaining: number; error?: string }> {
   console.log(`  [FIFO] Looking for ${closeSide.toUpperCase()} positions to close for ${symbol} (qty: ${exitQuantity})`);
   
@@ -172,7 +173,7 @@ async function closeOppositePositions(
           pnl_pct,
           open: false,
           is_exchange_verified: true,
-          is_simulation: false,
+          is_simulation: isPaperTrading,
           exchange_source: 'alpaca',
           trade_source: 'api',
           platform: 'Alpaca',
@@ -315,6 +316,7 @@ serve(async (req) => {
       encryptionKey
     );
     const environment = (connection.label ?? connection.environment) as AlpacaEnvironment;
+    const isPaperTrading = environment === 'paper';
 
     if (!environment) {
       console.error('No environment specified in connection');
@@ -328,6 +330,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log(`Environment: ${environment} (isPaperTrading: ${isPaperTrading})`);
 
     // Get last sync cursor (ISO timestamp)
     const lastSyncCursor = connection.last_sync_cursor;
@@ -431,7 +435,8 @@ serve(async (req) => {
         avgPrice,
         quantity,
         timestamp,
-        closeSide
+        closeSide,
+        isPaperTrading
       );
 
       if (closeError && closeError !== 'no_open_positions') {
@@ -492,7 +497,7 @@ serve(async (req) => {
         entry_timestamp: timestamp,
         open: true,
         is_exchange_verified: true,
-        is_simulation: false,
+        is_simulation: isPaperTrading,
         exchange_source: 'alpaca',
         trade_source: 'api',
         fees_total: 0,
