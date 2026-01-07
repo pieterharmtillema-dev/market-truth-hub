@@ -77,7 +77,7 @@ export default function Auth() {
 
         // Prepare welcome animation data
         const welcomeAnimationData: WelcomeAnimationData = {
-          isFirstTime: !traderProfile?.onboarding_completed,
+          isFirstTime: false,
           displayName: userProfile?.display_name || null,
           currentStreak: userProfile?.current_streak || 0,
           streakType: (userProfile?.streak_type as 'hit' | 'miss' | 'none') || 'none',
