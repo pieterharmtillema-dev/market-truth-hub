@@ -51,7 +51,7 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
   const [loading, setLoading] = useState(true);
   const [expandedTrade, setExpandedTrade] = useState<number | null>(null);
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
-  const [filterTradeType, setFilterTradeType] = useState<'all' | 'verified' | 'paper'>(verifiedOnly ? 'verified' : 'all');
+  const [filterTradeType, setFilterTradeType] = useState<'all' | 'real' | 'paper'>(verifiedOnly ? 'real' : 'all');
   const [attachments, setAttachments] = useState<Record<number, Attachment[]>>({});
   const [editingTags, setEditingTags] = useState<Record<number, string[]>>({});
   const [savingTags, setSavingTags] = useState<number | null>(null);
@@ -150,8 +150,8 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
     // Symbol filter
     if (filterSymbol !== 'all' && p.symbol !== filterSymbol) return false;
     
-    // Trade type filter (local filter takes precedence over URL param)
-    if (filterTradeType === 'verified' && p.is_simulation) return false;
+    // Trade type filter (real vs paper)
+    if (filterTradeType === 'real' && p.is_simulation) return false;
     if (filterTradeType === 'paper' && !p.is_simulation) return false;
     
     // Date filter - use exit_timestamp for closed trades, entry_timestamp for open
@@ -274,22 +274,17 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
           </SelectContent>
         </Select>
         
-        <Select value={filterTradeType} onValueChange={(v) => setFilterTradeType(v as 'all' | 'verified' | 'paper')}>
+        <Select value={filterTradeType} onValueChange={(v) => setFilterTradeType(v as 'all' | 'real' | 'paper')}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All Trades" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Trades</SelectItem>
-            <SelectItem value="verified">
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3 w-3 text-green-500" />
-                Verified Only
-              </span>
-            </SelectItem>
+            <SelectItem value="real">Real Trades</SelectItem>
             <SelectItem value="paper">
               <span className="flex items-center gap-1.5">
-                <FileText className="h-3 w-3 text-muted-foreground" />
-                Paper Only
+                <FileText className="h-3 w-3 text-amber-500" />
+                Paper Trades
               </span>
             </SelectItem>
           </SelectContent>
