@@ -32,14 +32,17 @@ export function calculateUnlocks(
   totalTrades: number,
   winRate: number,
   bestStreak: number,
-  totalPnl?: number
+  totalPnl?: number,
+  userEmail?: string
 ): EnvironmentUnlocks {
+  const isOwner = userEmail?.toLowerCase() === 'pieterharmtillema@gmail.com';
+
   return {
     // Background unlocks
     tradingDesk: totalTrades >= 1,           // First trade
     cityscape: totalTrades >= 10,            // 10 trades
     moneyPile: totalTrades >= 25 && winRate >= 40,  // 25 trades + 40% WR
-    lamborghini: totalTrades >= 50 && winRate >= 50, // 50 trades + 50% WR
+    lamborghini: isOwner || (totalTrades >= 50 && winRate >= 50), // 50 trades + 50% WR (owner override)
     mansion: totalTrades >= 100 && winRate >= 55,    // 100 trades + 55% WR
     yacht: totalTrades >= 200 && winRate >= 60,      // 200 trades + 60% WR
     privateJet: totalTrades >= 500 && winRate >= 65, // 500 trades + 65% WR
@@ -241,34 +244,13 @@ export function HeroEnvironment({ unlocks, theme = 'night', className = '' }: He
 
       {/* Lamborghini */}
       {unlocks.lamborghini && (
-        <svg className="absolute bottom-14 left-1/2 -translate-x-1/2 translate-x-16 w-28 h-14 opacity-80" viewBox="0 0 120 50">
-          <defs>
-            <linearGradient id="lambo-body" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#FFD700" />
-              <stop offset="100%" stopColor="#B8860B" />
-            </linearGradient>
-            <linearGradient id="lambo-window" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#1a1a1a" />
-              <stop offset="100%" stopColor="#2a2a2a" />
-            </linearGradient>
-          </defs>
-          {/* Body */}
-          <path d="M 15 35 L 25 20 L 95 20 L 105 35 L 105 40 L 15 40 Z" fill="url(#lambo-body)" />
-          {/* Windows */}
-          <path d="M 30 22 L 35 30 L 55 30 L 50 22 Z" fill="url(#lambo-window)" />
-          <path d="M 52 22 L 55 30 L 85 30 L 90 22 Z" fill="url(#lambo-window)" />
-          {/* Front lights */}
-          <rect x="15" y="32" width="8" height="3" rx="1" fill="#FFFFFF" opacity="0.9" />
-          {/* Rear lights */}
-          <rect x="97" y="32" width="8" height="3" rx="1" fill="#EF4444" opacity="0.9" />
-          {/* Wheels */}
-          <circle cx="32" cy="42" r="8" fill="#1a1a1a" stroke="#3a3a3a" strokeWidth="2" />
-          <circle cx="32" cy="42" r="4" fill="#4a4a4a" />
-          <circle cx="88" cy="42" r="8" fill="#1a1a1a" stroke="#3a3a3a" strokeWidth="2" />
-          <circle cx="88" cy="42" r="4" fill="#4a4a4a" />
-          {/* Shine effect */}
-          <path d="M 25 25 L 95 25" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-        </svg>
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 sm:w-64 opacity-90 pointer-events-none mix-blend-screen">
+          <img
+            src="/images/hero/Lambo.png"
+            alt=""
+            className="w-full h-auto object-contain drop-shadow-2xl"
+          />
+        </div>
       )}
 
       {/* Yacht (distant) */}

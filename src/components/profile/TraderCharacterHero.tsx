@@ -131,6 +131,7 @@ export function TraderCharacterHero({
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('weekly');
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Get real trading metrics
@@ -178,6 +179,11 @@ export function TraderCharacterHero({
     const totalPnlPct = closedTrades.reduce((sum, p) => sum + (p.pnl_pct || 0), 0);
     return totalPnlPct / closedTrades.length;
   }, [positions]);
+
+  const environmentUnlocks = useMemo(
+    () => calculateUnlocks(totalTrades, winRate, bestStreak, undefined, userEmail ?? undefined),
+    [totalTrades, winRate, bestStreak, userEmail]
+  );
 
   // Get time filter start date based on timeFrame
   const getTimeFilterStartDate = useMemo(() => {
@@ -280,6 +286,9 @@ export function TraderCharacterHero({
     const fetchData = async () => {
       try {
         setLoading(true);
+
+        const { data: authData } = await supabase.auth.getUser();
+        setUserEmail(authData.user?.email ?? null);
 
         // Fetch profile data
         const { data: profileData } = await supabase
@@ -463,7 +472,7 @@ export function TraderCharacterHero({
         {/* Full-bleed Environment Background */}
         <div className="absolute inset-0 w-full h-full">
           <HeroEnvironment
-            unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)}
+            unlocks={environmentUnlocks}
             theme={environmentTheme}
           />
         </div>
@@ -783,7 +792,7 @@ export function TraderCharacterHero({
                     />
                     {/* Unlockable accessories overlay */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 192">
-                      <CharacterAccessories unlocks={calculateUnlocks(totalTrades, winRate, bestStreak)} />
+                      <CharacterAccessories unlocks={environmentUnlocks} />
                     </svg>
                   </div>
                 </div>
@@ -885,7 +894,7 @@ export function TraderCharacterHero({
             <div className="flex justify-center pb-4">
               <div className="bg-background/60 backdrop-blur-sm border border-border/30 rounded-full px-4 py-1.5">
                 <span className="text-xs text-muted-foreground">
-                  🏆 {Object.values(calculateUnlocks(totalTrades, winRate, bestStreak)).filter(Boolean).length} unlocks earned
+                  🏆 {Object.values(environmentUnlocks).filter(Boolean).length} unlocks earned
                 </span>
               </div>
             </div>
