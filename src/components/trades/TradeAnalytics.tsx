@@ -72,7 +72,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [showTimeFrameDropdown, setShowTimeFrameDropdown] = useState(false);
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isDeveloper } = useUserRole();
 
   // Handler for heatmap period click - sets custom date range
   const handlePeriodClick = useCallback((date: Date) => {
@@ -129,8 +129,8 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         .eq('user_id', user.id)
         .eq('open', false);
       
-      // Filter out simulation trades unless admin
-      if (!isAdmin) {
+      // Filter out simulation trades unless developer/admin
+      if (!isDeveloper) {
         closedQuery = closedQuery.eq('is_simulation', false);
       }
       
@@ -147,7 +147,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         .eq('user_id', user.id)
         .eq('open', true);
       
-      if (!isAdmin) {
+      if (!isDeveloper) {
         openQuery = openQuery.eq('is_simulation', false);
       }
       
@@ -170,7 +170,7 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
     } finally {
       setLoading(false);
     }
-  }, [timeFrame, getDateRange, isAdmin]);
+  }, [timeFrame, getDateRange, isDeveloper]);
 
   useEffect(() => {
     fetchPositions();
@@ -381,10 +381,10 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-primary" />
           <span className="text-primary">
-            {isAdmin ? 'Showing all trades (admin view)' : 'Analytics show verified trades only'}
+            {isDeveloper ? 'Showing all trades (including paper)' : 'Analytics show verified trades only'}
           </span>
         </div>
-        {!isAdmin && (
+        {!isDeveloper && (
           <Link to="/journal" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
             <BookOpen className="h-3.5 w-3.5" />
             <span className="text-xs">Paper trades in Journal</span>
