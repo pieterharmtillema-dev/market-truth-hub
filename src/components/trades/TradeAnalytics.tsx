@@ -122,7 +122,8 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
 
       const { from, to } = getDateRange(timeFrame);
       
-      let query = supabase
+      // Fetch closed positions (filtered by exit_timestamp)
+      let closedQuery = supabase
         .from('positions')
         .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags, is_simulation')
         .eq('user_id', user.id)
@@ -130,19 +131,40 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
       
       // Filter out simulation trades unless admin
       if (!isAdmin) {
-        query = query.eq('is_simulation', false);
+        closedQuery = closedQuery.eq('is_simulation', false);
       }
       
       if (from) {
-        query = query.gte('exit_timestamp', from.toISOString());
+        closedQuery = closedQuery.gte('exit_timestamp', from.toISOString());
       }
-      query = query.lte('exit_timestamp', to.toISOString());
-      query = query.order('exit_timestamp', { ascending: false });
+      closedQuery = closedQuery.lte('exit_timestamp', to.toISOString());
+      closedQuery = closedQuery.order('exit_timestamp', { ascending: false });
 
-      const { data, error } = await query;
+      // Fetch open positions (filtered by entry_timestamp for the selected period)
+      let openQuery = supabase
+        .from('positions')
+        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags, is_simulation')
+        .eq('user_id', user.id)
+        .eq('open', true);
+      
+      if (!isAdmin) {
+        openQuery = openQuery.eq('is_simulation', false);
+      }
+      
+      if (from) {
+        openQuery = openQuery.gte('entry_timestamp', from.toISOString());
+      }
+      openQuery = openQuery.lte('entry_timestamp', to.toISOString());
+      openQuery = openQuery.order('entry_timestamp', { ascending: false });
 
-      if (error) throw error;
-      setPositions(data || []);
+      const [closedResult, openResult] = await Promise.all([closedQuery, openQuery]);
+
+      if (closedResult.error) throw closedResult.error;
+      if (openResult.error) throw openResult.error;
+      
+      // Combine closed and open positions
+      const allPositions = [...(closedResult.data || []), ...(openResult.data || [])];
+      setPositions(allPositions);
     } catch (error) {
       console.error('Failed to fetch positions', error);
     } finally {
