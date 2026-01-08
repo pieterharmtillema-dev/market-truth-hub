@@ -6,6 +6,8 @@ import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
 import { TraderCharacterHero } from "@/components/profile/TraderCharacterHero";
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog";
 import { TraderProfileSection } from "@/components/profile/TraderProfileSection";
+import { LevelUpPanel } from "@/components/profile/LevelUpPanel";
+import type { LevelUpPanelData } from "@/components/profile/LevelUpPanel";
 import { StreakBadge, TraderStats } from "@/components/profile/StreakBadge";
 import { PublicPredictionCard } from "@/components/predictions/PublicPredictionCard";
 import { ExplanationDialog } from "@/components/predictions/ExplanationDialog";
@@ -102,6 +104,7 @@ const Profile = () => {
   const { connections, loading: loadingExchanges, syncTrades, syncing } = useExchangeConnections();
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
   const [positions, setPositions] = useState<any[]>([]);
+  const [levelUpData, setLevelUpData] = useState<LevelUpPanelData | null>(null);
   const connectedExchangeIds = useMemo(
     () => connections.filter((c) => c.status === "connected").map((c) => c.exchange),
     [connections]
@@ -280,6 +283,7 @@ const Profile = () => {
             onSocialClick={() => setShowSocialDialog(true)}
             followersCount={followers.length}
             followingCount={following.length}
+            onLevelUpData={setLevelUpData}
           />
         )}
 
@@ -343,6 +347,8 @@ const Profile = () => {
             />
           </Card>
         )}
+
+        <LevelUpPanel data={levelUpData} />
 
         {/* Trader Profile Section - Let users update their trading profile */}
         {userId && <TraderProfileSection userId={userId} />}

@@ -16,6 +16,7 @@ import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
 import { useToast } from "@/hooks/use-toast";
 import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroEnvironment";
+import type { LevelUpPanelData } from "./LevelUpPanel";
 import type { EnvironmentUnlocks } from "./HeroEnvironment";
 import { formatExchangeName } from "@/lib/exchangeUtils";
 import {
@@ -58,6 +59,7 @@ interface TraderCharacterHeroProps {
   onSocialClick?: () => void;
   followersCount?: number;
   followingCount?: number;
+  onLevelUpData?: (data: LevelUpPanelData) => void;
 }
 
 // Map holding_time to trading class
@@ -206,7 +208,8 @@ export function TraderCharacterHero({
   onProfileUpdated,
   onSocialClick,
   followersCount = 0,
-  followingCount = 0
+  followingCount = 0,
+  onLevelUpData,
 }: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
@@ -298,6 +301,7 @@ export function TraderCharacterHero({
           ...unlock,
           progress,
           remainingText,
+          requirementsText: formatRequirementText(unlock.requirements),
         };
       })
       .sort((a, b) => b.progress - a.progress)
@@ -404,6 +408,31 @@ export function TraderCharacterHero({
   const nextLevelTrades = TRADES_PER_LEVEL - levelProgress;
   const levelProgressPercent = Math.min((levelProgress / TRADES_PER_LEVEL) * 100, 100);
 
+  const levelUpData = useMemo<LevelUpPanelData>(() => ({
+    level,
+    levelProgress,
+    levelProgressPercent,
+    nextLevelTrades,
+    tradesPerLevel: TRADES_PER_LEVEL,
+    unlocksEarned,
+    totalUnlocks,
+    upcomingUnlocks: upcomingUnlocks.map((unlock) => ({
+      key: unlock.key,
+      label: unlock.label,
+      requirementsText: unlock.requirementsText,
+      remainingText: unlock.remainingText,
+      progress: unlock.progress,
+    })),
+  }), [
+    level,
+    levelProgress,
+    levelProgressPercent,
+    nextLevelTrades,
+    unlocksEarned,
+    totalUnlocks,
+    upcomingUnlocks,
+  ]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -504,6 +533,11 @@ export function TraderCharacterHero({
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  useEffect(() => {
+    if (!onLevelUpData || loading) return;
+    onLevelUpData(levelUpData);
+  }, [levelUpData, loading, onLevelUpData]);
 
   const handleProfileUpdate = (data: { display_name: string; avatar_url: string; bio: string }) => {
     setProfile(prev => prev ? { ...prev, ...data } : null);
@@ -1012,73 +1046,6 @@ export function TraderCharacterHero({
             </div>
           </div>
 
-          {/* Leveling and unlocks */}
-          <div className="px-3 sm:px-4 md:px-6 pb-4">
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-3 sm:p-4">
-              <div className="grid gap-3 sm:gap-4 md:grid-cols-[1.1fr_1fr]">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Level Up</p>
-                      <p className="text-sm sm:text-base font-semibold text-foreground">Level {level}</p>
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground text-right">
-                      {nextLevelTrades} trade{nextLevelTrades === 1 ? "" : "s"} to Level {level + 1}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
-                      <span>{levelProgress} / {TRADES_PER_LEVEL} trades</span>
-                      <span>{Math.round(levelProgressPercent)}% complete</span>
-                    </div>
-                    <div className="mt-1 h-2 bg-border/40 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{ width: `${levelProgressPercent}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[10px] sm:text-xs text-muted-foreground">
-                      Level up every {TRADES_PER_LEVEL} trades tracked on your profile.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Next Unlocks</p>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">
-                      {unlocksEarned}/{totalUnlocks} unlocked
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {upcomingUnlocks.length === 0 ? (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">All unlocks earned. New rewards coming soon.</p>
-                    ) : (
-                      upcomingUnlocks.map((unlock) => (
-                        <div key={unlock.key} className="space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-xs font-semibold text-foreground">{unlock.label}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {formatRequirementText(unlock.requirements)}
-                              </p>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground text-right">{unlock.remainingText}</p>
-                          </div>
-                          <div className="h-1 bg-border/40 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary/70 rounded-full transition-all duration-500"
-                              style={{ width: `${Math.round(unlock.progress * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
