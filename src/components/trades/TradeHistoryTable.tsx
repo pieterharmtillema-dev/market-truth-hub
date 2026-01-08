@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, Trash2, ChevronDown, ChevronUp, Filter, Shield, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Shield, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { useTradeVerification } from '@/hooks/useTradeVerification';
 import { TradeVerificationBadge, VerificationSummaryCard } from './TradeVerificationBadge';
 import { TradeToVerify } from '@/lib/tradeVerification';
+import { BracketDetailsPanel, BracketData } from './BracketDetailsPanel';
 
 interface Position {
   id: number;
@@ -27,6 +28,22 @@ interface Position {
   pnl: number | null;
   platform: string | null;
   open: boolean;
+  exchange_source?: string | null;
+}
+
+// Alpaca order with bracket data
+interface AlpacaOrderWithBracket {
+  id: string;
+  order_id: string;
+  symbol: string;
+  side: string;
+  qty: number;
+  filled_qty: number;
+  filled_avg_price: number | null;
+  order_class: string | null;
+  status: string;
+  submitted_at: string;
+  bracket_data: BracketData | null;
 }
 
 interface TradeHistoryTableProps {
@@ -35,6 +52,7 @@ interface TradeHistoryTableProps {
 
 export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   const [positions, setPositions] = useState<Position[]>([]);
+  const [alpacaOrders, setAlpacaOrders] = useState<Map<string, AlpacaOrderWithBracket>>(new Map());
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
@@ -50,6 +68,48 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     verifyAllTrades, 
     getTradeVerification 
   } = useTradeVerification();
+
+  // Fetch Alpaca orders with bracket data for expansion
+  const fetchAlpacaOrders = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('alpaca_orders')
+        .select('id, order_id, symbol, side, qty, filled_qty, filled_avg_price, order_class, status, submitted_at, bracket_data')
+        .eq('user_id', userId)
+        .order('submitted_at', { ascending: false })
+        .limit(200);
+
+      if (error) {
+        console.warn('Failed to fetch Alpaca orders:', error);
+        return;
+      }
+
+      const ordersMap = new Map<string, AlpacaOrderWithBracket>();
+      for (const order of data || []) {
+        // Parse bracket_data from JSON
+        const bracketData = order.bracket_data 
+          ? (order.bracket_data as unknown as BracketData)
+          : null;
+        
+        // Key by symbol for easy lookup (most recent order per symbol)
+        const key = `${order.symbol}-${order.side}`;
+        if (!ordersMap.has(key)) {
+          ordersMap.set(key, {
+            ...order,
+            bracket_data: bracketData,
+          });
+        }
+        // Also key by order_id for direct lookup
+        ordersMap.set(order.order_id, {
+          ...order,
+          bracket_data: bracketData,
+        });
+      }
+      setAlpacaOrders(ordersMap);
+    } catch (err) {
+      console.warn('Error fetching Alpaca orders:', err);
+    }
+  };
 
   const fetchPositions = async () => {
     setLoading(true);
@@ -71,11 +131,33 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
       if (error) throw error;
       setPositions(data || []);
+      
+      // Also fetch Alpaca orders for bracket data
+      if (user?.id) {
+        await fetchAlpacaOrders(user.id);
+      }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to fetch positions', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get bracket data for a position (if it's from Alpaca)
+  const getBracketDataForPosition = (position: Position): { bracketData: BracketData | null; orderClass: string | null } => {
+    if (position.platform !== 'Alpaca' && position.exchange_source !== 'alpaca') {
+      return { bracketData: null, orderClass: null };
+    }
+    
+    // Try to find matching order by symbol and side
+    const key = `${position.symbol}-${position.side === 'long' ? 'buy' : 'sell'}`;
+    const order = alpacaOrders.get(key);
+    
+    if (order) {
+      return { bracketData: order.bracket_data, orderClass: order.order_class };
+    }
+    
+    return { bracketData: null, orderClass: null };
   };
 
   useEffect(() => {
@@ -317,18 +399,28 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30">
                       <TableCell colSpan={9} className="py-3">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          {position.platform && (
-                            <div>
-                              <span className="text-muted-foreground">Platform:</span>{' '}
-                              <span className="font-medium">{position.platform}</span>
-                            </div>
-                          )}
-                          {position.exit_timestamp && (
-                            <div>
-                              <span className="text-muted-foreground">Exit Time:</span>{' '}
-                              <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
-                            </div>
+                        <div className="space-y-3">
+                          {/* Basic position info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            {position.platform && (
+                              <div>
+                                <span className="text-muted-foreground">Platform:</span>{' '}
+                                <span className="font-medium">{position.platform}</span>
+                              </div>
+                            )}
+                            {position.exit_timestamp && (
+                              <div>
+                                <span className="text-muted-foreground">Exit Time:</span>{' '}
+                                <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Bracket Details (for Alpaca orders) */}
+                          {(position.platform === 'Alpaca' || position.exchange_source === 'alpaca') && (
+                            <BracketDetailsPanel 
+                              {...getBracketDataForPosition(position)} 
+                            />
                           )}
                         </div>
                       </TableCell>

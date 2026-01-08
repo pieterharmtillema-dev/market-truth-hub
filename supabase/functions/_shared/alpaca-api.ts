@@ -29,6 +29,32 @@ export interface AlpacaAccount {
   created_at: string;
 }
 
+export interface AlpacaOrderLeg {
+  id: string;
+  client_order_id: string;
+  created_at: string;
+  updated_at: string;
+  submitted_at: string;
+  filled_at: string | null;
+  expired_at: string | null;
+  canceled_at: string | null;
+  failed_at: string | null;
+  replaced_at: string | null;
+  asset_id: string;
+  symbol: string;
+  asset_class: string;
+  qty: string | null;
+  filled_qty: string;
+  filled_avg_price: string | null;
+  order_type: string;
+  type: string;
+  side: 'buy' | 'sell';
+  time_in_force: string;
+  limit_price: string | null;
+  stop_price: string | null;
+  status: string;
+}
+
 export interface AlpacaOrder {
   id: string;
   client_order_id: string;
@@ -40,6 +66,8 @@ export interface AlpacaOrder {
   canceled_at: string | null;
   failed_at: string | null;
   replaced_at: string | null;
+  replaced_by: string | null;
+  replaces: string | null;
   asset_id: string;
   symbol: string;
   asset_class: string;
@@ -56,10 +84,79 @@ export interface AlpacaOrder {
   stop_price: string | null;
   status: string;
   extended_hours: boolean;
-  legs: any[] | null;
+  legs: AlpacaOrderLeg[] | null;
   trail_percent: string | null;
   trail_price: string | null;
   hwm: string | null;
+}
+
+/**
+ * Extract bracket data from order legs for R:R calculation
+ */
+export interface BracketData {
+  entry_side: 'buy' | 'sell';
+  entry_filled_avg_price: number | null;
+  qty: number;
+  take_profit?: {
+    limit_price: number;
+    status: string;
+    filled_qty: number;
+    filled_avg_price: number | null;
+  };
+  stop_loss?: {
+    stop_price: number;
+    limit_price?: number;
+    status: string;
+    filled_qty: number;
+    filled_avg_price: number | null;
+  };
+}
+
+/**
+ * Parse bracket order legs and extract TP/SL data
+ */
+export function extractBracketData(order: AlpacaOrder): BracketData | null {
+  if (order.order_class !== 'bracket' && order.order_class !== 'oto' && order.order_class !== 'oco') {
+    if (!order.legs || order.legs.length === 0) {
+      return null;
+    }
+  }
+
+  const bracketData: BracketData = {
+    entry_side: order.side,
+    entry_filled_avg_price: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+    qty: parseFloat(order.qty || order.filled_qty || '0'),
+  };
+
+  if (!order.legs) return bracketData;
+
+  for (const leg of order.legs) {
+    const legQty = parseFloat(leg.qty || '0');
+    const filledQty = parseFloat(leg.filled_qty || '0');
+    const filledAvgPrice = leg.filled_avg_price ? parseFloat(leg.filled_avg_price) : null;
+
+    // Identify take-profit leg: has limit_price but NO stop_price
+    if (leg.limit_price && !leg.stop_price) {
+      bracketData.take_profit = {
+        limit_price: parseFloat(leg.limit_price),
+        status: leg.status,
+        filled_qty: filledQty,
+        filled_avg_price: filledAvgPrice,
+      };
+    }
+    // Identify stop-loss leg: has stop_price (with optional limit_price for stop-limit)
+    else if (leg.stop_price) {
+      bracketData.stop_loss = {
+        stop_price: parseFloat(leg.stop_price),
+        limit_price: leg.limit_price ? parseFloat(leg.limit_price) : undefined,
+        status: leg.status,
+        filled_qty: filledQty,
+        filled_avg_price: filledAvgPrice,
+      };
+    }
+  }
+
+  return bracketData;
 }
 
 export interface AlpacaActivity {
@@ -225,6 +322,7 @@ export async function getOrders(
     until?: string; // RFC3339 timestamp
     limit?: number;
     direction?: 'asc' | 'desc';
+    nested?: boolean; // Include bracket order legs
   } = {}
 ): Promise<{ orders?: AlpacaOrder[]; error?: string }> {
   // Default to filled orders only
@@ -232,6 +330,7 @@ export async function getOrders(
     status: params.status || 'filled',
     limit: (params.limit || 500).toString(),
     direction: params.direction || 'desc',
+    nested: (params.nested ?? true).toString(), // Enable nested legs by default
   });
 
   if (params.after) {

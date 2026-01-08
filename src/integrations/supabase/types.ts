@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      alpaca_orders: {
+        Row: {
+          asset_class: string | null
+          bracket_data: Json | null
+          canceled_at: string | null
+          client_order_id: string | null
+          created_at: string
+          environment: string | null
+          expired_at: string | null
+          extended_hours: boolean | null
+          filled_at: string | null
+          filled_avg_price: number | null
+          filled_qty: number
+          id: string
+          limit_price: number | null
+          order_class: string | null
+          order_id: string
+          order_type: string
+          parent_order_id: string | null
+          qty: number
+          raw: Json | null
+          replaced_at: string | null
+          replaced_by: string | null
+          replaces: string | null
+          side: string
+          status: string
+          stop_price: number | null
+          submitted_at: string
+          symbol: string
+          time_in_force: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_class?: string | null
+          bracket_data?: Json | null
+          canceled_at?: string | null
+          client_order_id?: string | null
+          created_at?: string
+          environment?: string | null
+          expired_at?: string | null
+          extended_hours?: boolean | null
+          filled_at?: string | null
+          filled_avg_price?: number | null
+          filled_qty?: number
+          id?: string
+          limit_price?: number | null
+          order_class?: string | null
+          order_id: string
+          order_type: string
+          parent_order_id?: string | null
+          qty: number
+          raw?: Json | null
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replaces?: string | null
+          side: string
+          status: string
+          stop_price?: number | null
+          submitted_at: string
+          symbol: string
+          time_in_force?: string | null
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          asset_class?: string | null
+          bracket_data?: Json | null
+          canceled_at?: string | null
+          client_order_id?: string | null
+          created_at?: string
+          environment?: string | null
+          expired_at?: string | null
+          extended_hours?: boolean | null
+          filled_at?: string | null
+          filled_avg_price?: number | null
+          filled_qty?: number
+          id?: string
+          limit_price?: number | null
+          order_class?: string | null
+          order_id?: string
+          order_type?: string
+          parent_order_id?: string | null
+          qty?: number
+          raw?: Json | null
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replaces?: string | null
+          side?: string
+          status?: string
+          stop_price?: number | null
+          submitted_at?: string
+          symbol?: string
+          time_in_force?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exchange_connections: {
         Row: {
           api_key_encrypted: string
