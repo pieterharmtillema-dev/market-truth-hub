@@ -1,12 +1,13 @@
-import { Home, TrendingUp, Trophy, User, ClipboardList } from "lucide-react";
+import { Home, TrendingUp, Trophy, Users, User, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import traxLogo from "@/assets/trax-logo.png";
 import { TrexWalker } from "./TrexWalker";
 
 const navItems = [
   { icon: Home, label: "Feed", path: "/" },
   { icon: TrendingUp, label: "Markets", path: "/markets" },
-  { icon: ClipboardList, label: "Orders", path: "/orders" },
+  { icon: History, label: "Trades", path: "/past-trades" },
   { icon: Trophy, label: "Leaders", path: "/leaderboard" },
   { icon: User, label: "Profile", path: "/profile" },
 ];

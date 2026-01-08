@@ -13,7 +13,6 @@ import CreatePrediction from "./pages/CreatePrediction";
 import Trades from "./pages/Trades";
 import TradeJournal from "./pages/TradeJournal";
 import PastTrades from "./pages/PastTrades";
-import Orders from "./pages/Orders";
 import TraderProfile from "./pages/TraderProfile";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -38,7 +37,6 @@ function RouterContent() {
       <Route path="/trades" element={<Trades />} />
       <Route path="/journal" element={<TradeJournal />} />
       <Route path="/past-trades" element={<PastTrades />} />
-      <Route path="/orders" element={<Orders />} />
       <Route path="/create-prediction" element={<CreatePrediction />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/onboarding" element={<Onboarding />} />
