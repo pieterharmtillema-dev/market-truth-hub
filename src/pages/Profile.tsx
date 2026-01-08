@@ -301,27 +301,22 @@ const Profile = () => {
       <div className="px-4 py-4 space-y-4">
         {/* Trader Character Hero - New Game-Style Profile Header */}
         {userId && (
-          <div>
-            <TraderCharacterHero
-              userId={userId}
-              connectedExchanges={connectedExchangeIds}
-              onProfileUpdated={handleProfileUpdated}
-              onSocialClick={() => setShowSocialDialog(true)}
-              followersCount={followers.length}
-              followingCount={following.length}
-              onLevelUpData={setLevelUpData}
-              footerPadding={levelUpHeight}
-            />
-            <div
-              ref={levelUpPanelRef}
-              className="relative z-10"
-              style={levelUpHeight ? { marginTop: -levelUpHeight } : undefined}
-            >
-              <LevelUpPanel data={levelUpData} />
-            </div>
-          </div>
+          <TraderCharacterHero
+            userId={userId}
+            connectedExchanges={connectedExchangeIds}
+            onProfileUpdated={handleProfileUpdated}
+            onSocialClick={() => setShowSocialDialog(true)}
+            followersCount={followers.length}
+            followingCount={following.length}
+            onLevelUpData={setLevelUpData}
+            footerPadding={levelUpHeight}
+          />
         )}
 
+        <div
+          className="space-y-4"
+          style={levelUpHeight ? { marginTop: -levelUpHeight } : undefined}
+        >
         {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
@@ -385,6 +380,10 @@ const Profile = () => {
 
         {/* Trader Profile Section - Let users update their trading profile */}
         {userId && <TraderProfileSection userId={userId} />}
+
+        <div ref={levelUpPanelRef}>
+          <LevelUpPanel data={levelUpData} />
+        </div>
 
         {/* Exchange Connections */}
         {userId && (
@@ -594,6 +593,7 @@ const Profile = () => {
           onOpenChange={(open) => !open && setExplanationPredictionId(null)}
           onSaved={() => window.location.reload()}
         />
+        </div>
       </div>
     </AppLayout>
   );
