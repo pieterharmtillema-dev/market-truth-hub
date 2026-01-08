@@ -60,6 +60,8 @@ interface TraderCharacterHeroProps {
   followersCount?: number;
   followingCount?: number;
   onLevelUpData?: (data: LevelUpPanelData) => void;
+  containerClassName?: string;
+  footerPadding?: number;
 }
 
 // Map holding_time to trading class
@@ -210,6 +212,8 @@ export function TraderCharacterHero({
   followersCount = 0,
   followingCount = 0,
   onLevelUpData,
+  containerClassName,
+  footerPadding,
 }: TraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
@@ -624,7 +628,13 @@ export function TraderCharacterHero({
         }
       `}</style>
 
-      <div className="relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0 min-h-[500px] sm:min-h-[600px]">
+      <div
+        className={cn(
+          "relative overflow-hidden sm:rounded-2xl -mx-4 sm:mx-0 min-h-[500px] sm:min-h-[600px]",
+          containerClassName
+        )}
+        style={footerPadding ? { paddingBottom: footerPadding } : undefined}
+      >
         {/* Full-bleed Environment Background */}
         <div className="absolute inset-0 w-full h-full">
           <HeroEnvironment
