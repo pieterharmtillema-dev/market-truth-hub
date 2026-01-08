@@ -409,97 +409,99 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
         )}
       </div>
 
-      {/* Time Frame Selector */}
-      <Card className="border-border/50 bg-card/50">
-        <CardContent className="py-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Time Period:</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Quick select buttons */}
-              <div className="flex gap-1 flex-wrap">
-                {timeFrameOptions.slice(0, 6).map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={timeFrame === option.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTimeFrame(option.value)}
-                    className="text-xs"
-                  >
-                    {option.label}
-                  </Button>
-                ))}
+      {/* Time Frame Selector - Only show for performance view */}
+      {analyticsView === 'performance' && (
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Time Period:</span>
               </div>
-              
-              {/* All Time button */}
-              <Button
-                variant={timeFrame === 'all_time' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setTimeFrame('all_time')}
-                className="text-xs"
-              >
-                All Time
-              </Button>
-
-              {/* Custom date range */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant={timeFrame === 'custom' ? 'default' : 'outline'} 
-                    size="sm" 
-                    className="text-xs gap-1"
-                  >
-                    Custom
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="end">
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">From</p>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="w-full justify-start text-xs">
-                              {customDateFrom ? format(customDateFrom, 'MMM d, yyyy') : 'Start date'}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">To</p>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="w-full justify-start text-xs">
-                              {customDateTo ? format(customDateTo, 'MMM d, yyyy') : 'End date'}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="w-full" 
-                      onClick={() => setTimeFrame('custom')}
-                      disabled={!customDateFrom}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Quick select buttons */}
+                <div className="flex gap-1 flex-wrap">
+                  {timeFrameOptions.slice(0, 6).map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={timeFrame === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeFrame(option.value)}
+                      className="text-xs"
                     >
-                      Apply Custom Range
+                      {option.label}
                     </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  ))}
+                </div>
+
+                {/* All Time button */}
+                <Button
+                  variant={timeFrame === 'all_time' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeFrame('all_time')}
+                  className="text-xs"
+                >
+                  All Time
+                </Button>
+
+                {/* Custom date range */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={timeFrame === 'custom' ? 'default' : 'outline'}
+                      size="sm"
+                      className="text-xs gap-1"
+                    >
+                      Custom
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="end">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">From</p>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+                                {customDateFrom ? format(customDateFrom, 'MMM d, yyyy') : 'Start date'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">To</p>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+                                {customDateTo ? format(customDateTo, 'MMM d, yyyy') : 'End date'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setTimeFrame('custom')}
+                        disabled={!customDateFrom}
+                      >
+                        Apply Custom Range
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Analytics View Selector */}
       <Card className="border-border/50 bg-card/50">
