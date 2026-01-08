@@ -326,33 +326,33 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
             <CardTitle className="text-lg">Choose Analytics View</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Button
                 variant="outline"
-                className="h-auto w-full justify-start p-4 text-left"
+                className="h-auto min-h-[120px] w-full justify-start p-5 text-left whitespace-normal"
                 onClick={() => setAnalyticsView('performance')}
               >
-                <div className="space-y-2">
+                <div className="space-y-2 w-full overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" />
                     <span className="text-base font-semibold">Performance</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     Overall performance, average hold time, streaks, daily performance, and performance by symbol.
                   </p>
                 </div>
               </Button>
               <Button
                 variant="outline"
-                className="h-auto w-full justify-start p-4 text-left"
+                className="h-auto min-h-[120px] w-full justify-start p-5 text-left whitespace-normal"
                 onClick={() => setAnalyticsView('graphs')}
               >
-                <div className="space-y-2">
+                <div className="space-y-2 w-full overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <BarChart3 className="h-5 w-5 text-primary flex-shrink-0" />
                     <span className="text-base font-semibold">Graphs</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     Daily profit & loss, equity curve, and the monthly P&L heatmap.
                   </p>
                 </div>
