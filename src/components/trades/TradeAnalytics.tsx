@@ -66,6 +66,7 @@ const timeFrameOptions: { value: TimeFrame; label: string }[] = [
 
 export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
   const [positions, setPositions] = useState<Position[]>([]);
+  const [allPositions, setAllPositions] = useState<Position[]>([]); // Unfiltered for charts
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('30_days');
   const [analyticsView, setAnalyticsView] = useState<'performance' | 'graphs' | null>(null);
@@ -117,12 +118,24 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setPositions([]);
+        setAllPositions([]);
         return;
       }
 
       const { from, to } = getDateRange(timeFrame);
       
-      // Fetch closed positions (filtered by exit_timestamp)
+      // Fetch ALL positions (unfiltered for charts - they have their own filters)
+      let allQuery = supabase
+        .from('positions')
+        .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags, is_simulation')
+        .eq('user_id', user.id);
+      
+      if (!isDeveloper) {
+        allQuery = allQuery.eq('is_simulation', false);
+      }
+      allQuery = allQuery.order('entry_timestamp', { ascending: false });
+      
+      // Fetch closed positions (filtered by exit_timestamp for performance view)
       let closedQuery = supabase
         .from('positions')
         .select('id, symbol, side, entry_price, exit_price, entry_timestamp, exit_timestamp, pnl, open, tags, is_simulation')
@@ -157,14 +170,18 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
       openQuery = openQuery.lte('entry_timestamp', to.toISOString());
       openQuery = openQuery.order('entry_timestamp', { ascending: false });
 
-      const [closedResult, openResult] = await Promise.all([closedQuery, openQuery]);
+      const [allResult, closedResult, openResult] = await Promise.all([allQuery, closedQuery, openQuery]);
 
+      if (allResult.error) throw allResult.error;
       if (closedResult.error) throw closedResult.error;
       if (openResult.error) throw openResult.error;
       
-      // Combine closed and open positions
-      const allPositions = [...(closedResult.data || []), ...(openResult.data || [])];
-      setPositions(allPositions);
+      // All positions for charts (unfiltered by time)
+      setAllPositions(allResult.data || []);
+      
+      // Filtered positions for performance view
+      const filteredPositions = [...(closedResult.data || []), ...(openResult.data || [])];
+      setPositions(filteredPositions);
     } catch (error) {
       console.error('Failed to fetch positions', error);
     } finally {
@@ -776,14 +793,14 @@ export function TradeAnalytics({ refreshTrigger }: TradeAnalyticsProps) {
             </>
           ) : (
             <>
-              {/* Daily P/L Chart */}
-              <DailyPnLChart positions={positions} />
+              {/* Daily P/L Chart - uses all positions, has its own time filter */}
+              <DailyPnLChart positions={allPositions} />
 
-              {/* Private Equity Curve - Shows numeric PnL values */}
-              <EquityCurve positions={positions} currency="$" />
+              {/* Private Equity Curve - uses all positions, has its own time filter */}
+              <EquityCurve positions={allPositions} currency="$" />
 
-              {/* P&L Heatmap - has its own independent time filter */}
-              <PnLHeatmap positions={positions} onPeriodClick={handlePeriodClick} />
+              {/* P&L Heatmap - uses all positions, has its own independent time filter */}
+              <PnLHeatmap positions={allPositions} onPeriodClick={handlePeriodClick} />
             </>
           )}
         </>
