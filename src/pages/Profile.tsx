@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DefaultStatsGrid } from "@/components/profile/StatsGrid";
@@ -105,8 +105,6 @@ const Profile = () => {
   const { metrics, loading: loadingMetrics, calculating, recalculate } = useTradingMetrics();
   const [positions, setPositions] = useState<any[]>([]);
   const [levelUpData, setLevelUpData] = useState<LevelUpPanelData | null>(null);
-  const [levelUpHeight, setLevelUpHeight] = useState(0);
-  const levelUpPanelRef = useRef<HTMLDivElement | null>(null);
   const connectedExchangeIds = useMemo(
     () => connections.filter((c) => c.status === "connected").map((c) => c.exchange),
     [connections]
@@ -236,29 +234,6 @@ const Profile = () => {
     fetchUserData();
   }, []);
 
-  useLayoutEffect(() => {
-    const element = levelUpPanelRef.current;
-    if (!element || !levelUpData) {
-      setLevelUpHeight(0);
-      return;
-    }
-
-    const updateHeight = () => {
-      setLevelUpHeight(element.offsetHeight);
-    };
-
-    updateHeight();
-
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-
-    const observer = new ResizeObserver(() => updateHeight());
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, [levelUpData]);
-
   const getInitials = (name: string | null) => {
     if (!name) return "";
     return name
@@ -309,14 +284,9 @@ const Profile = () => {
             followersCount={followers.length}
             followingCount={following.length}
             onLevelUpData={setLevelUpData}
-            footerPadding={levelUpHeight}
           />
         )}
 
-        <div
-          className="space-y-4"
-          style={levelUpHeight ? { marginTop: -levelUpHeight } : undefined}
-        >
         {/* Social Dialog - Preserved from original */}
         <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
@@ -378,12 +348,10 @@ const Profile = () => {
           </Card>
         )}
 
+        <LevelUpPanel data={levelUpData} />
+
         {/* Trader Profile Section - Let users update their trading profile */}
         {userId && <TraderProfileSection userId={userId} />}
-
-        <div ref={levelUpPanelRef}>
-          <LevelUpPanel data={levelUpData} />
-        </div>
 
         {/* Exchange Connections */}
         {userId && (
@@ -593,7 +561,6 @@ const Profile = () => {
           onOpenChange={(open) => !open && setExplanationPredictionId(null)}
           onSaved={() => window.location.reload()}
         />
-        </div>
       </div>
     </AppLayout>
   );
