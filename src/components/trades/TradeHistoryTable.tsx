@@ -290,7 +290,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
       {/* Table */}
       <div className="rounded-lg border border-border overflow-hidden bg-card">
-        <div className="overflow-x-auto">
+        <ScrollArea className="h-[calc(100vh-32rem)] min-h-[400px]">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
               <TableRow className="border-b border-border hover:bg-transparent">
@@ -304,10 +304,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                 <TableHead className="min-w-[140px]">Date</TableHead>
               </TableRow>
             </TableHeader>
-          </Table>
-        </div>
-        <ScrollArea className="h-[calc(100vh-32rem)] min-h-[400px]">
-          <Table>
             <TableBody>
               {filteredPositions.map((position) => (
                 <Collapsible key={position.id} open={expandedRow === position.id} onOpenChange={(open) => setExpandedRow(open ? position.id : null)}>
