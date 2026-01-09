@@ -102,13 +102,23 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
           bracket_data: bracketData,
         };
 
-        // Key by symbol and side for easy lookup
-        const key = `${order.symbol}-${order.side}`;
-        if (!ordersMap.has(key)) {
-          ordersMap.set(key, orderWithBracket);
-        }
-        // Also key by order_id for direct lookup
+        // Key by order_id for direct lookup
         ordersMap.set(order.order_id, orderWithBracket);
+        
+        // Key by symbol + side + timestamp for position matching
+        // Format: SYMBOL-buy-2024-01-09T18:00:00Z (truncated to hour for window matching)
+        if (order.filled_at) {
+          const timestamp = new Date(order.filled_at);
+          const hourKey = `${order.symbol}-${order.side}-${timestamp.toISOString().slice(0, 13)}`;
+          ordersMap.set(hourKey, orderWithBracket);
+        }
+        
+        // Also key by symbol-side for fallback
+        const symbolSideKey = `${order.symbol}-${order.side}`;
+        // Only use symbol-side if no better match exists
+        if (!ordersMap.has(symbolSideKey)) {
+          ordersMap.set(symbolSideKey, orderWithBracket);
+        }
       }
       setAlpacaOrders(ordersMap);
     } catch (err) {
@@ -158,28 +168,45 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       return { bracketData: null, orderClass: null, entryOrder: null };
     }
     
-    // Try to find matching order by symbol and side
-    const key = `${position.symbol}-${position.side === 'long' ? 'buy' : 'sell'}`;
-    const order = alpacaOrders.get(key);
+    // Determine the alpaca order side for entry (long = buy, short = sell)
+    const entrySide = position.side === 'long' ? 'buy' : 'sell';
     
+    // Try to find matching order by timestamp window first (most accurate)
+    if (position.entry_timestamp) {
+      const timestamp = new Date(position.entry_timestamp);
+      const hourKey = `${position.symbol}-${entrySide}-${timestamp.toISOString().slice(0, 13)}`;
+      const order = alpacaOrders.get(hourKey);
+      if (order) {
+        return buildOrderDetails(order);
+      }
+    }
+    
+    // Fallback to symbol + side
+    const symbolSideKey = `${position.symbol}-${entrySide}`;
+    const order = alpacaOrders.get(symbolSideKey);
     if (order) {
-      const entryOrder: OrderDetails = {
-        order_id: order.order_id,
-        order_type: order.order_type,
-        status: order.status,
-        submitted_at: order.submitted_at,
-        filled_at: order.filled_at,
-        canceled_at: order.canceled_at,
-        limit_price: order.limit_price,
-        stop_price: order.stop_price,
-        filled_avg_price: order.filled_avg_price,
-        qty: order.qty,
-        filled_qty: order.filled_qty,
-      };
-      return { bracketData: order.bracket_data, orderClass: order.order_class, entryOrder };
+      return buildOrderDetails(order);
     }
     
     return { bracketData: null, orderClass: null, entryOrder: null };
+  };
+  
+  // Helper to build order details from an Alpaca order
+  const buildOrderDetails = (order: AlpacaOrderWithBracket) => {
+    const entryOrder: OrderDetails = {
+      order_id: order.order_id,
+      order_type: order.order_type,
+      status: order.status,
+      submitted_at: order.submitted_at,
+      filled_at: order.filled_at,
+      canceled_at: order.canceled_at,
+      limit_price: order.limit_price,
+      stop_price: order.stop_price,
+      filled_avg_price: order.filled_avg_price,
+      qty: order.qty,
+      filled_qty: order.filled_qty,
+    };
+    return { bracketData: order.bracket_data, orderClass: order.order_class, entryOrder };
   };
 
   useEffect(() => {
@@ -448,6 +475,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                             <BracketDetailsPanel 
                               {...getAlpacaDataForPosition(position)}
                               exitReason={position.exit_reason}
+                              isAlpacaTrade={true}
                             />
                           )}
                         </div>
