@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, Shield, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
-import { useTradeVerification } from '@/hooks/useTradeVerification';
-import { TradeVerificationBadge, VerificationSummaryCard } from './TradeVerificationBadge';
-import { TradeToVerify } from '@/lib/tradeVerification';
 import { BracketDetailsPanel, BracketData, ExitReasonBadge, OrderDetails } from './BracketDetailsPanel';
 
 interface Position {
@@ -65,15 +61,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   const [filterSymbol, setFilterSymbol] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const { toast } = useToast();
-  
-  const { 
-    verificationResults, 
-    summary: verificationSummary, 
-    isVerifying, 
-    progress, 
-    verifyAllTrades, 
-    getTradeVerification 
-  } = useTradeVerification();
 
   // Fetch Alpaca orders with bracket data for expansion
   const fetchAlpacaOrders = async (userId: string) => {
@@ -227,33 +214,9 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   // Calculate summary stats
   const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
   const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
-  const winRate = filteredPositions.filter(p => !p.open).length > 0 
-    ? (wins / filteredPositions.filter(p => !p.open).length) * 100 
+  const winRate = filteredPositions.filter(p => !p.open).length > 0
+    ? (wins / filteredPositions.filter(p => !p.open).length) * 100
     : 0;
-  
-  // Convert positions to verification format
-  const tradesToVerify: TradeToVerify[] = useMemo(() => {
-    return filteredPositions.filter(p => !p.open).map(position => ({
-      id: String(position.id),
-      symbol: position.symbol,
-      side: position.side,
-      entry_fill_price: position.entry_price,
-      exit_fill_price: position.exit_price,
-      entry_timestamp: new Date(position.entry_timestamp),
-      exit_timestamp: position.exit_timestamp ? new Date(position.exit_timestamp) : null,
-      quantity: position.quantity,
-    }));
-  }, [filteredPositions]);
-  
-  // Handle verify button click
-  const handleVerifyTrades = () => {
-    if (tradesToVerify.length === 0) return;
-    verifyAllTrades(tradesToVerify);
-    toast({
-      title: 'Verification started',
-      description: `Verifying ${tradesToVerify.length} trades against market data...`
-    });
-  };
 
   if (loading) {
     return (
@@ -299,28 +262,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
         </div>
       </div>
 
-      {/* Verification Summary */}
-      {verificationSummary && (
-        <VerificationSummaryCard
-          total={verificationSummary.total_trades}
-          verified={verificationSummary.verified_trades}
-          impossible={verificationSummary.impossible_trades}
-          suspicious={verificationSummary.suspicious_trades}
-          averageScore={verificationSummary.average_score}
-        />
-      )}
-      
-      {/* Verification Progress */}
-      {isVerifying && (
-        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Verifying trades... {progress.completed}/{progress.total}</span>
-          </div>
-          <Progress value={(progress.completed / progress.total) * 100} className="h-2" />
-        </div>
-      )}
-      
       {/* Filters */}
       <div className="flex gap-3 items-center flex-wrap">
         <Filter className="h-4 w-4 text-muted-foreground" />
@@ -345,23 +286,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
-        
-        <div className="ml-auto">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleVerifyTrades}
-            disabled={isVerifying || tradesToVerify.length === 0}
-            className="gap-2"
-          >
-            {isVerifying ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Shield className="h-4 w-4" />
-            )}
-            Verify Trades
-          </Button>
-        </div>
       </div>
 
       {/* Table */}
@@ -377,7 +301,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                 <TableHead className="min-w-[100px] text-right">Exit</TableHead>
                 <TableHead className="min-w-[70px] text-right">Qty</TableHead>
                 <TableHead className="min-w-[100px] text-right">P/L</TableHead>
-                <TableHead className="min-w-[80px]">Verify</TableHead>
                 <TableHead className="min-w-[140px]">Date</TableHead>
               </TableRow>
             </TableHeader>
@@ -442,28 +365,13 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         '—'
                       )}
                     </TableCell>
-                    <TableCell className="min-w-[80px]">
-                      {(() => {
-                        const verification = getTradeVerification(String(position.id));
-                        if (!verification) return <span className="text-muted-foreground text-xs">—</span>;
-                        return (
-                          <TradeVerificationBadge
-                            verified={verification.verified}
-                            authenticity_score={verification.authenticity_score}
-                            suspicious_flag={verification.suspicious_flag}
-                            impossible_flag={verification.impossible_flag}
-                            verification_notes={verification.verification_notes}
-                          />
-                        );
-                      })()}
-                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm min-w-[140px]">
                       {format(new Date(position.entry_timestamp), 'MMM d, yy HH:mm')}
                     </TableCell>
                   </TableRow>
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={9} className="py-4 px-6">
+                      <TableCell colSpan={8} className="py-4 px-6">
                         <div className="space-y-4 max-w-5xl">
                           {/* Basic position info */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
