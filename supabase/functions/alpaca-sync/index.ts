@@ -438,8 +438,13 @@ serve(async (req) => {
       error_message: null,
     };
 
-    if (newCursor) {
+    // Only update cursor if we got new orders after the ORIGINAL cursor (not adjusted)
+    // This prevents the lookback window from resetting progress
+    if (newCursor && (!lastSyncCursor || newCursor > lastSyncCursor)) {
       updateData.last_sync_cursor = newCursor;
+      console.log(`Updating cursor from ${lastSyncCursor} to ${newCursor}`);
+    } else if (lastSyncCursor) {
+      console.log(`Keeping cursor at ${lastSyncCursor} (no new orders beyond current cursor)`);
     }
 
     await supabase
