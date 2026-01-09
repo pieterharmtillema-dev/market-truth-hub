@@ -86,6 +86,64 @@ export default function PastTrades() {
     }
   }, [user, currentPage, symbolFilter, sideFilter, platformFilter, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
 
+  // fetchPositions function - defined before it's used in useEffect
+  const fetchPositions = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    let query = supabase
+      .from('positions')
+      .select('*', { count: 'exact' })
+      .eq('user_id', user.id);
+
+    // Apply filters
+    if (symbolFilter) {
+      query = query.ilike('symbol', `%${symbolFilter}%`);
+    }
+    if (sideFilter !== 'all') {
+      query = query.eq('side', sideFilter);
+    }
+    if (platformFilter !== 'all') {
+      query = query.eq('platform', platformFilter);
+    }
+    if (statusFilter === 'open') {
+      query = query.eq('open', true);
+    } else if (statusFilter === 'closed') {
+      query = query.eq('open', false);
+    }
+    if (dateFrom) {
+      query = query.gte('entry_timestamp', dateFrom.toISOString());
+    }
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      query = query.lte('entry_timestamp', endOfDay.toISOString());
+    }
+
+    // Apply sorting
+    if (sortField === 'pnl') {
+      query = query.order('pnl', { ascending: sortDirection === 'asc', nullsFirst: false });
+    } else {
+      query = query.order(sortField, { ascending: sortDirection === 'asc' });
+    }
+
+    // Pagination
+    const from = (currentPage - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      console.error('Error fetching positions:', error);
+    } else {
+      setPositions(data || []);
+      setTotalCount(count || 0);
+    }
+
+    setLoading(false);
+  };
+
   // Subscribe to real-time position updates
   useEffect(() => {
     if (!user) return;
@@ -146,7 +204,7 @@ export default function PastTrades() {
       console.log('[Realtime] Unsubscribing from position updates');
       supabase.removeChannel(channel);
     };
-  }, [user, fetchPositions]);
+  }, [user]);
 
   const fetchUserRole = async () => {
     const { data } = await supabase.rpc('get_user_role', { _user_id: user!.id });
@@ -164,62 +222,6 @@ export default function PastTrades() {
       const uniquePlatforms = [...new Set(data.map(t => t.platform).filter(Boolean))] as string[];
       setPlatforms(uniquePlatforms);
     }
-  };
-
-  const fetchPositions = async () => {
-    setLoading(true);
-
-    let query = supabase
-      .from('positions')
-      .select('*', { count: 'exact' })
-      .eq('user_id', user!.id);
-
-    // Apply filters
-    if (symbolFilter) {
-      query = query.ilike('symbol', `%${symbolFilter}%`);
-    }
-    if (sideFilter !== 'all') {
-      query = query.eq('side', sideFilter);
-    }
-    if (platformFilter !== 'all') {
-      query = query.eq('platform', platformFilter);
-    }
-    if (statusFilter === 'open') {
-      query = query.eq('open', true);
-    } else if (statusFilter === 'closed') {
-      query = query.eq('open', false);
-    }
-    if (dateFrom) {
-      query = query.gte('entry_timestamp', dateFrom.toISOString());
-    }
-    if (dateTo) {
-      const endOfDay = new Date(dateTo);
-      endOfDay.setHours(23, 59, 59, 999);
-      query = query.lte('entry_timestamp', endOfDay.toISOString());
-    }
-
-    // Apply sorting
-    if (sortField === 'pnl') {
-      query = query.order('pnl', { ascending: sortDirection === 'asc', nullsFirst: false });
-    } else {
-      query = query.order(sortField, { ascending: sortDirection === 'asc' });
-    }
-
-    // Pagination
-    const from = (currentPage - 1) * ITEMS_PER_PAGE;
-    const to = from + ITEMS_PER_PAGE - 1;
-    query = query.range(from, to);
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error('Error fetching positions:', error);
-    } else {
-      setPositions(data || []);
-      setTotalCount(count || 0);
-    }
-
-    setLoading(false);
   };
 
   const handleSort = (field: SortField) => {
