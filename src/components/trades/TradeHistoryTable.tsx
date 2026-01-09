@@ -276,24 +276,26 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   return (
     <div className="space-y-4">
       {/* Summary Stats */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Total P/L</p>
-          <p className={`text-lg font-bold ${totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            ${totalPnL.toFixed(2)}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total P/L</p>
+          <p className={`text-2xl font-bold tabular-nums ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
           </p>
         </div>
-        <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Win Rate</p>
-          <p className="text-lg font-bold">{winRate.toFixed(1)}%</p>
+        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Win Rate</p>
+          <p className={`text-2xl font-bold tabular-nums ${winRate >= 50 ? 'text-green-400' : 'text-amber-400'}`}>
+            {winRate.toFixed(1)}%
+          </p>
         </div>
-        <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Positions</p>
-          <p className="text-lg font-bold">{filteredPositions.length}</p>
+        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Positions</p>
+          <p className="text-2xl font-bold tabular-nums text-primary">{filteredPositions.length}</p>
         </div>
-        <div className="bg-card/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-xs text-muted-foreground">Open</p>
-          <p className="text-lg font-bold text-amber-500">{filteredPositions.filter(p => p.open).length}</p>
+        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Open</p>
+          <p className="text-2xl font-bold tabular-nums text-amber-400">{filteredPositions.filter(p => p.open).length}</p>
         </div>
       </div>
 
@@ -363,43 +365,47 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <ScrollArea className="h-[500px]">
+      <div className="rounded-lg border border-border overflow-hidden bg-card">
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-8"></TableHead>
-                <TableHead>Symbol</TableHead>
-                <TableHead>Side</TableHead>
-                <TableHead>Entry</TableHead>
-                <TableHead>Exit</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>P/L</TableHead>
-                <TableHead>Verify</TableHead>
-                <TableHead>Date</TableHead>
+            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="w-10 pl-4"></TableHead>
+                <TableHead className="min-w-[120px]">Symbol</TableHead>
+                <TableHead className="min-w-[80px]">Side</TableHead>
+                <TableHead className="min-w-[100px] text-right">Entry</TableHead>
+                <TableHead className="min-w-[100px] text-right">Exit</TableHead>
+                <TableHead className="min-w-[70px] text-right">Qty</TableHead>
+                <TableHead className="min-w-[100px] text-right">P/L</TableHead>
+                <TableHead className="min-w-[80px]">Verify</TableHead>
+                <TableHead className="min-w-[140px]">Date</TableHead>
               </TableRow>
             </TableHeader>
+          </Table>
+        </div>
+        <ScrollArea className="h-[calc(100vh-32rem)] min-h-[400px]">
+          <Table>
             <TableBody>
               {filteredPositions.map((position) => (
                 <Collapsible key={position.id} open={expandedRow === position.id} onOpenChange={(open) => setExpandedRow(open ? position.id : null)}>
-                  <TableRow className="group">
-                    <TableCell>
+                  <TableRow className="group hover:bg-muted/50 transition-colors">
+                    <TableCell className="w-10 pl-4">
                       <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10">
                           {expandedRow === position.id ? (
-                            <ChevronUp className="h-3 w-3" />
+                            <ChevronUp className="h-4 w-4" />
                           ) : (
-                            <ChevronDown className="h-3 w-3" />
+                            <ChevronDown className="h-4 w-4" />
                           )}
                         </Button>
                       </CollapsibleTrigger>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
+                    <TableCell className="min-w-[120px]">
+                      <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-medium">{position.symbol}</span>
+                          <span className="font-mono font-semibold text-base">{position.symbol}</span>
                           {position.open && (
-                            <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
+                            <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400 bg-amber-500/10 px-1.5 py-0">OPEN</Badge>
                           )}
                         </div>
                         {!position.open && position.exit_reason && (
@@ -407,31 +413,36 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={position.side === 'long' ? 'default' : 'destructive'} className="gap-1">
+                    <TableCell className="min-w-[80px]">
+                      <Badge
+                        variant={position.side === 'long' ? 'default' : 'destructive'}
+                        className={`gap-1 ${position.side === 'long' ? 'bg-green-500/15 text-green-400 hover:bg-green-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/20'}`}
+                      >
                         {position.side === 'long' ? (
                           <ArrowUpRight className="h-3 w-3" />
                         ) : (
                           <ArrowDownRight className="h-3 w-3" />
                         )}
-                        {position.side}
+                        {position.side.toUpperCase()}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono">${position.entry_price.toLocaleString()}</TableCell>
-                    <TableCell className="font-mono">
-                      {position.exit_price ? `$${position.exit_price.toLocaleString()}` : '—'}
+                    <TableCell className="font-mono text-sm text-right min-w-[100px]">
+                      ${position.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell>{position.quantity}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-mono text-sm text-right min-w-[100px]">
+                      {position.exit_price ? `$${position.exit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium min-w-[70px]">{position.quantity}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold min-w-[100px]">
                       {position.pnl != null ? (
-                        <span className={position.pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
-                          {position.pnl >= 0 ? '+' : ''}${position.pnl.toLocaleString()}
+                        <span className={`${position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {position.pnl >= 0 ? '+' : ''}${Math.abs(position.pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       ) : (
                         '—'
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[80px]">
                       {(() => {
                         const verification = getTradeVerification(String(position.id));
                         if (!verification) return <span className="text-muted-foreground text-xs">—</span>;
@@ -446,33 +457,33 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm min-w-[140px]">
                       {format(new Date(position.entry_timestamp), 'MMM d, yy HH:mm')}
                     </TableCell>
                   </TableRow>
                   <CollapsibleContent asChild>
-                    <TableRow className="bg-muted/30">
-                      <TableCell colSpan={9} className="py-3">
-                        <div className="space-y-3">
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={9} className="py-4 px-6">
+                        <div className="space-y-4 max-w-5xl">
                           {/* Basic position info */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                             {position.platform && (
-                              <div>
-                                <span className="text-muted-foreground">Platform:</span>{' '}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-muted-foreground text-xs">Platform</span>
                                 <span className="font-medium">{position.platform}</span>
                               </div>
                             )}
                             {position.exit_timestamp && (
-                              <div>
-                                <span className="text-muted-foreground">Exit Time:</span>{' '}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-muted-foreground text-xs">Exit Time</span>
                                 <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Bracket Details (for Alpaca orders) */}
                           {(position.platform === 'Alpaca' || position.exchange_source === 'alpaca') && (
-                            <BracketDetailsPanel 
+                            <BracketDetailsPanel
                               {...getAlpacaDataForPosition(position)}
                               exitReason={position.exit_reason}
                               isAlpacaTrade={true}
