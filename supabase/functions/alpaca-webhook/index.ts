@@ -125,7 +125,7 @@ async function verifyWebhookSignature(
  * Process a single order update event
  */
 async function processOrderUpdate(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   event: AlpacaWebhookEvent,
   userId: string,
   environment: AlpacaEnvironment,
