@@ -413,52 +413,56 @@ serve(async (req) => {
       console.log(`  Order Class: ${order.order_class || 'simple'}`);
       console.log(`  Timestamp: ${timestamp}`);
 
-      // Extract and store bracket data if this is a bracket order
+      // Extract bracket data if this is a bracket order
       const bracketData = extractBracketData(order);
       if (bracketData) {
         console.log(`  [BRACKET] Found bracket data:`, JSON.stringify(bracketData));
-        
-        // Upsert order to alpaca_orders table with bracket_data
-        const { error: upsertError } = await supabase
-          .from('alpaca_orders')
-          .upsert({
-            user_id: user.id,
-            order_id: order.id,
-            client_order_id: order.client_order_id,
-            symbol: symbol,
-            side: orderSide,
-            order_type: order.order_type || order.type,
-            order_class: order.order_class,
-            limit_price: order.limit_price ? parseFloat(order.limit_price) : null,
-            stop_price: order.stop_price ? parseFloat(order.stop_price) : null,
-            qty: parseFloat(order.qty || order.filled_qty || '0'),
-            filled_qty: parseFloat(order.filled_qty || '0'),
-            filled_avg_price: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
-            status: order.status,
-            submitted_at: order.submitted_at,
-            filled_at: order.filled_at,
-            canceled_at: order.canceled_at,
-            expired_at: order.expired_at,
-            replaced_at: order.replaced_at,
-            replaced_by: order.replaced_by || null,
-            replaces: order.replaces || null,
-            time_in_force: order.time_in_force,
-            extended_hours: order.extended_hours,
-            asset_class: assetClass,
-            environment: environment,
-            bracket_data: bracketData,
-            raw: order as unknown as Record<string, unknown>,
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'order_id',
-            ignoreDuplicates: false,
-          });
+      }
+      
+      // Always store the order to alpaca_orders table (for activity feed & bracket tracking)
+      const { error: upsertError } = await supabase
+        .from('alpaca_orders')
+        .upsert({
+          user_id: user.id,
+          order_id: order.id,
+          client_order_id: order.client_order_id,
+          symbol: symbol,
+          side: orderSide,
+          order_type: order.order_type || order.type,
+          order_class: order.order_class || 'simple',
+          limit_price: order.limit_price ? parseFloat(order.limit_price) : null,
+          stop_price: order.stop_price ? parseFloat(order.stop_price) : null,
+          qty: parseFloat(order.qty || order.filled_qty || '0'),
+          filled_qty: parseFloat(order.filled_qty || '0'),
+          filled_avg_price: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+          status: order.status,
+          submitted_at: order.submitted_at,
+          filled_at: order.filled_at,
+          canceled_at: order.canceled_at,
+          expired_at: order.expired_at,
+          replaced_at: order.replaced_at,
+          replaced_by: order.replaced_by || null,
+          replaces: order.replaces || null,
+          time_in_force: order.time_in_force,
+          extended_hours: order.extended_hours,
+          asset_class: assetClass,
+          environment: environment,
+          bracket_data: bracketData, // Will be null for non-bracket orders
+          raw: order as unknown as Record<string, unknown>,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'order_id',
+          ignoreDuplicates: false,
+        });
 
-        if (upsertError) {
-          console.warn(`  [BRACKET] Failed to store bracket data:`, upsertError);
-        } else {
+      if (upsertError) {
+        console.warn(`  [ORDER] Failed to store order:`, upsertError);
+      } else {
+        if (bracketData) {
           bracketOrdersStored++;
-          console.log(`  [BRACKET] Stored bracket data for order ${order.id}`);
+          console.log(`  [BRACKET] Stored bracket order ${order.id}`);
+        } else {
+          console.log(`  [ORDER] Stored order ${order.id}`);
         }
       }
 
