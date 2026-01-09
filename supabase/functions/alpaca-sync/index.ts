@@ -144,8 +144,17 @@ serve(async (req) => {
     // Get last sync cursor (ISO timestamp)
     const lastSyncCursor = connection.last_sync_cursor;
 
+    // Add a 30-second lookback window to catch orders that filled just before the last cursor
+    // This helps catch exit orders that might have filled shortly after entry orders
+    let adjustedCursor = lastSyncCursor;
+    if (lastSyncCursor) {
+      const cursorDate = new Date(lastSyncCursor);
+      cursorDate.setSeconds(cursorDate.getSeconds() - 30);
+      adjustedCursor = cursorDate.toISOString();
+    }
+
     console.log(
-      `Fetching filled orders from Alpaca ${environment} (after: ${lastSyncCursor || 'beginning'})`
+      `Fetching filled orders from Alpaca ${environment} (after: ${lastSyncCursor || 'beginning'}, lookback: 30s)`
     );
 
     // Fetch filled orders and activities
@@ -156,7 +165,7 @@ serve(async (req) => {
           apiSecret,
           environment,
         },
-        lastSyncCursor || undefined
+        adjustedCursor || undefined
       );
 
     if (fetchError) {
