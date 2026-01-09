@@ -240,7 +240,7 @@ serve(async (req) => {
           raw: order as unknown as Record<string, unknown>,
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'order_id',
+          onConflict: 'order_id,user_id',
           ignoreDuplicates: false,
         });
 
