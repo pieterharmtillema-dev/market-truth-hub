@@ -36,6 +36,7 @@ interface Position {
   entry_timestamp: string;
   exit_price: number | null;
   exit_timestamp: string | null;
+  exit_reason: string | null;
   pnl: number | null;
   platform: string | null;
   open: boolean;
@@ -84,6 +85,68 @@ export default function PastTrades() {
       fetchPositions();
     }
   }, [user, currentPage, symbolFilter, sideFilter, platformFilter, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
+
+  // Subscribe to real-time position updates
+  useEffect(() => {
+    if (!user) return;
+
+    // Check if we're running in production (not Lovable dev server)
+    const isLovableDev = window.location.hostname.includes('lovableproject.com');
+
+    if (isLovableDev) {
+      console.log('[Realtime] Skipping subscription in Lovable dev environment');
+      console.log('[Realtime] Realtime updates will work in production deployment');
+      return;
+    }
+
+    console.log('[Realtime] Subscribing to position updates for user:', user.id);
+
+    const channel = supabase
+      .channel(`positions:user_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'positions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Position update received:', payload);
+
+          // Refetch positions when any position changes
+          // This ensures we get the full updated list with correct ordering
+          fetchPositions();
+
+          // Show toast notification for closed positions
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const position = payload.new as Position;
+            if (!position.open && position.exit_reason) {
+              const exitReasonLabels: Record<string, string> = {
+                'stop_loss': '🛑 Stop Loss Hit',
+                'take_profit': '🎯 Take Profit Hit',
+                'market': '💱 Market Exit',
+                'manual': '⏰ Manual Exit',
+              };
+              const label = exitReasonLabels[position.exit_reason] || 'Position Closed';
+              const pnlDisplay = position.pnl
+                ? `${position.pnl > 0 ? '+' : ''}$${position.pnl.toFixed(2)}`
+                : '';
+
+              toast.success(`${label}: ${position.symbol} ${pnlDisplay}`, {
+                description: `Your ${position.side} position has been closed.`,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Realtime] Unsubscribing from position updates');
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchPositions]);
 
   const fetchUserRole = async () => {
     const { data } = await supabase.rpc('get_user_role', { _user_id: user!.id });
