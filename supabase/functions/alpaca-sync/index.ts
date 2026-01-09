@@ -168,6 +168,16 @@ serve(async (req) => {
         adjustedCursor || undefined
       );
 
+    console.log(`DEBUG: orders length = ${orders.length}, allOrders length = ${allOrders.length}`);
+    console.log(`DEBUG: First few orders:`, orders.slice(0, 3).map(o => ({ 
+      id: o.id, 
+      side: o.side, 
+      symbol: o.symbol, 
+      status: o.status,
+      filled_at: o.filled_at,
+      order_class: o.order_class 
+    })));
+
     if (fetchError) {
       console.error(`Alpaca API error: ${fetchError}`);
 
