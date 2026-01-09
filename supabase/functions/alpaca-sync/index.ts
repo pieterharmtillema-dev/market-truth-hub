@@ -253,6 +253,12 @@ serve(async (req) => {
     console.log(`----------------------------------------`);
 
     for (const order of sortedOrders) {
+      // Skip replaced or canceled orders (they shouldn't be in filled orders, but just in case)
+      if (order.status === 'replaced' || order.status === 'canceled' || order.status === 'expired') {
+        console.log(`[SKIP] Order ${order.id} has status '${order.status}' - not processing`);
+        continue;
+      }
+
       // Parse quantities and prices
       const quantity = parseFloat(order.filled_qty || '0');
       const avgPrice = parseFloat(order.filled_avg_price || '0');
