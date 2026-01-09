@@ -30,6 +30,11 @@ const corsHeaders = {
 };
 
 /**
+ * Exit reason type for tracking how positions are closed
+ */
+type ExitReason = 'stop_loss' | 'take_profit' | 'market' | 'manual' | null;
+
+/**
  * Calculate PnL for a closed position
  */
 function calculatePnL(
@@ -61,6 +66,7 @@ function calculatePnL(
  * @param closeSide - The side of positions to close ('long' or 'short')
  *   - To close a SHORT position, you BUY (so closeSide = 'short')
  *   - To close a LONG position, you SELL (so closeSide = 'long')
+ * @param exitReason - How the position was closed (stop_loss, take_profit, market, manual)
  */
 async function closeOppositePositions(
   supabase: SupabaseClient,
@@ -70,7 +76,8 @@ async function closeOppositePositions(
   exitQuantity: number,
   exitTimestamp: string,
   closeSide: 'long' | 'short',
-  isPaperTrading: boolean
+  isPaperTrading: boolean,
+  exitReason: ExitReason = 'market'
 ): Promise<{ closed: number; remaining: number; error?: string }> {
   console.log(`  [FIFO] Looking for ${closeSide.toUpperCase()} positions to close for ${symbol} (qty: ${exitQuantity})`);
   
@@ -108,7 +115,7 @@ async function closeOppositePositions(
 
     console.log(`  [FIFO] Processing position ID ${position.id}: qty=${positionQty}, entry=${position.entry_price}`);
 
-    if (remainingQuantity >= positionQty) {
+      if (remainingQuantity >= positionQty) {
       // Full close
       const { pnl, pnl_pct } = calculatePnL(position.side, position.entry_price, exitPrice, positionQty);
 
@@ -120,6 +127,7 @@ async function closeOppositePositions(
           pnl,
           pnl_pct,
           open: false,
+          exit_reason: exitReason,
           updated_at: new Date().toISOString(),
         })
         .eq('id', position.id);
@@ -174,6 +182,7 @@ async function closeOppositePositions(
           pnl,
           pnl_pct,
           open: false,
+          exit_reason: exitReason,
           is_exchange_verified: true,
           is_simulation: isPaperTrading,
           exchange_source: 'alpaca',
@@ -227,6 +236,53 @@ function normalizeAlpacaSymbol(order: AlpacaOrder): { symbol: string; assetClass
   }
 
   return { symbol, assetClass };
+}
+
+/**
+ * Detect exit reason from order type and bracket data
+ * 
+ * For bracket orders, checks if:
+ * - Stop-loss leg was filled (exit_reason = 'stop_loss')
+ * - Take-profit leg was filled (exit_reason = 'take_profit')
+ * 
+ * For regular orders:
+ * - Stop orders -> 'stop_loss' 
+ * - Limit orders that close positions -> 'take_profit' or 'market'
+ */
+function detectExitReason(
+  order: AlpacaOrder,
+  bracketData: BracketData | null,
+  isClosingPosition: boolean
+): ExitReason {
+  // If this order has bracket legs, check if it's an exit order from a bracket
+  if (bracketData) {
+    // Check if take-profit was filled
+    if (bracketData.take_profit?.status === 'filled' && bracketData.take_profit.filled_qty > 0) {
+      return 'take_profit';
+    }
+    // Check if stop-loss was filled
+    if (bracketData.stop_loss?.status === 'filled' && bracketData.stop_loss.filled_qty > 0) {
+      return 'stop_loss';
+    }
+  }
+
+  // If this order itself IS a stop order (has stop_price), it's a stop-loss exit
+  if (order.stop_price && isClosingPosition) {
+    return 'stop_loss';
+  }
+
+  // If this order is a limit order closing a position, check if it could be a take-profit
+  if (order.limit_price && isClosingPosition && !order.stop_price) {
+    // This is a limit order being used to exit - likely take-profit
+    return 'take_profit';
+  }
+
+  // Default market order exit
+  if (isClosingPosition) {
+    return 'market';
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -482,7 +538,26 @@ serve(async (req) => {
       const closeSide: 'long' | 'short' = orderSide === 'buy' ? 'short' : 'long';
       const openSide: 'long' | 'short' = orderSide === 'buy' ? 'long' : 'short';
 
+      // Check if there are open positions to close (to determine if this is a closing order)
+      const { data: existingPositions } = await supabase
+        .from('positions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('symbol', symbol)
+        .eq('exchange_source', 'alpaca')
+        .eq('side', closeSide)
+        .eq('open', true)
+        .limit(1);
+
+      const hasPositionsToClose = !!(existingPositions && existingPositions.length > 0);
+      
+      // Detect exit reason for this order
+      const exitReason = detectExitReason(order, bracketData, hasPositionsToClose);
+      
       console.log(`  Action: Close ${closeSide.toUpperCase()} first, then open ${openSide.toUpperCase()} for remainder`);
+      if (exitReason) {
+        console.log(`  Exit Reason: ${exitReason}`);
+      }
 
       // Step 1: Try to close opposite-side positions
       const { closed, remaining: leftover, error: closeError } = await closeOppositePositions(
@@ -493,7 +568,8 @@ serve(async (req) => {
         quantity,
         timestamp,
         closeSide,
-        isPaperTrading
+        isPaperTrading,
+        exitReason
       );
 
       if (closeError && closeError !== 'no_open_positions') {

@@ -14,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { useTradeVerification } from '@/hooks/useTradeVerification';
 import { TradeVerificationBadge, VerificationSummaryCard } from './TradeVerificationBadge';
 import { TradeToVerify } from '@/lib/tradeVerification';
-import { BracketDetailsPanel, BracketData } from './BracketDetailsPanel';
+import { BracketDetailsPanel, BracketData, ExitReasonBadge, OrderDetails } from './BracketDetailsPanel';
 
 interface Position {
   id: number;
@@ -29,6 +29,7 @@ interface Position {
   platform: string | null;
   open: boolean;
   exchange_source?: string | null;
+  exit_reason?: string | null;
 }
 
 // Alpaca order with bracket data
@@ -37,12 +38,17 @@ interface AlpacaOrderWithBracket {
   order_id: string;
   symbol: string;
   side: string;
+  order_type: string;
   qty: number;
   filled_qty: number;
   filled_avg_price: number | null;
+  limit_price: number | null;
+  stop_price: number | null;
   order_class: string | null;
   status: string;
   submitted_at: string;
+  filled_at: string | null;
+  canceled_at: string | null;
   bracket_data: BracketData | null;
 }
 
@@ -74,10 +80,10 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     try {
       const { data, error } = await supabase
         .from('alpaca_orders')
-        .select('id, order_id, symbol, side, qty, filled_qty, filled_avg_price, order_class, status, submitted_at, bracket_data')
+        .select('id, order_id, symbol, side, order_type, qty, filled_qty, filled_avg_price, limit_price, stop_price, order_class, status, submitted_at, filled_at, canceled_at, bracket_data')
         .eq('user_id', userId)
         .order('submitted_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
       if (error) {
         console.warn('Failed to fetch Alpaca orders:', error);
@@ -91,19 +97,18 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
           ? (order.bracket_data as unknown as BracketData)
           : null;
         
-        // Key by symbol for easy lookup (most recent order per symbol)
-        const key = `${order.symbol}-${order.side}`;
-        if (!ordersMap.has(key)) {
-          ordersMap.set(key, {
-            ...order,
-            bracket_data: bracketData,
-          });
-        }
-        // Also key by order_id for direct lookup
-        ordersMap.set(order.order_id, {
+        const orderWithBracket: AlpacaOrderWithBracket = {
           ...order,
           bracket_data: bracketData,
-        });
+        };
+
+        // Key by symbol and side for easy lookup
+        const key = `${order.symbol}-${order.side}`;
+        if (!ordersMap.has(key)) {
+          ordersMap.set(key, orderWithBracket);
+        }
+        // Also key by order_id for direct lookup
+        ordersMap.set(order.order_id, orderWithBracket);
       }
       setAlpacaOrders(ordersMap);
     } catch (err) {
@@ -119,7 +124,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
       let query = supabase
         .from('positions')
-        .select('*')
+        .select('*, exit_reason')
         .order('entry_timestamp', { ascending: false })
         .limit(100);
 
@@ -143,10 +148,14 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     }
   };
 
-  // Get bracket data for a position (if it's from Alpaca)
-  const getBracketDataForPosition = (position: Position): { bracketData: BracketData | null; orderClass: string | null } => {
+  // Get bracket data and entry order for a position (if it's from Alpaca)
+  const getAlpacaDataForPosition = (position: Position): { 
+    bracketData: BracketData | null; 
+    orderClass: string | null;
+    entryOrder: OrderDetails | null;
+  } => {
     if (position.platform !== 'Alpaca' && position.exchange_source !== 'alpaca') {
-      return { bracketData: null, orderClass: null };
+      return { bracketData: null, orderClass: null, entryOrder: null };
     }
     
     // Try to find matching order by symbol and side
@@ -154,10 +163,23 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     const order = alpacaOrders.get(key);
     
     if (order) {
-      return { bracketData: order.bracket_data, orderClass: order.order_class };
+      const entryOrder: OrderDetails = {
+        order_id: order.order_id,
+        order_type: order.order_type,
+        status: order.status,
+        submitted_at: order.submitted_at,
+        filled_at: order.filled_at,
+        canceled_at: order.canceled_at,
+        limit_price: order.limit_price,
+        stop_price: order.stop_price,
+        filled_avg_price: order.filled_avg_price,
+        qty: order.qty,
+        filled_qty: order.filled_qty,
+      };
+      return { bracketData: order.bracket_data, orderClass: order.order_class, entryOrder };
     }
     
-    return { bracketData: null, orderClass: null };
+    return { bracketData: null, orderClass: null, entryOrder: null };
   };
 
   useEffect(() => {
@@ -346,10 +368,15 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                       </CollapsibleTrigger>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <span className="font-mono font-medium">{position.symbol}</span>
-                        {position.open && (
-                          <Badge variant="outline" className="ml-2 text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-medium">{position.symbol}</span>
+                          {position.open && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">OPEN</Badge>
+                          )}
+                        </div>
+                        {!position.open && position.exit_reason && (
+                          <ExitReasonBadge exitReason={position.exit_reason} />
                         )}
                       </div>
                     </TableCell>
@@ -419,7 +446,8 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                           {/* Bracket Details (for Alpaca orders) */}
                           {(position.platform === 'Alpaca' || position.exchange_source === 'alpaca') && (
                             <BracketDetailsPanel 
-                              {...getBracketDataForPosition(position)} 
+                              {...getAlpacaDataForPosition(position)}
+                              exitReason={position.exit_reason}
                             />
                           )}
                         </div>
