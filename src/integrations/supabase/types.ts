@@ -232,6 +232,7 @@ export type Database = {
           estimated_risk: number | null
           exchange_source: string | null
           exit_price: number | null
+          exit_reason: string | null
           exit_timestamp: string | null
           fees_total: number | null
           id: number
@@ -268,6 +269,7 @@ export type Database = {
           estimated_risk?: number | null
           exchange_source?: string | null
           exit_price?: number | null
+          exit_reason?: string | null
           exit_timestamp?: string | null
           fees_total?: number | null
           id?: never
@@ -304,6 +306,7 @@ export type Database = {
           estimated_risk?: number | null
           exchange_source?: string | null
           exit_price?: number | null
+          exit_reason?: string | null
           exit_timestamp?: string | null
           fees_total?: number | null
           id?: never
