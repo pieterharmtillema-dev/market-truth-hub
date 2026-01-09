@@ -12,7 +12,8 @@ export interface BracketData {
     status: string;
     filled_qty: number;
     filled_avg_price: number | null;
-    filled_at?: string;
+    filled_at?: string | null;
+    canceled_at?: string | null;
   };
   stop_loss?: {
     stop_price: number;
@@ -20,7 +21,8 @@ export interface BracketData {
     status: string;
     filled_qty: number;
     filled_avg_price: number | null;
-    filled_at?: string;
+    filled_at?: string | null;
+    canceled_at?: string | null;
   };
 }
 
@@ -44,6 +46,7 @@ interface BracketDetailsPanelProps {
   orderClass?: string | null;
   entryOrder?: OrderDetails | null;
   exitReason?: string | null;
+  isAlpacaTrade?: boolean;
 }
 
 /**
@@ -108,8 +111,9 @@ function formatTime(timestamp: string | null | undefined): string {
   }
 }
 
-export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: BracketDetailsPanelProps) {
+export function BracketDetailsPanel({ bracketData, orderClass, entryOrder, isAlpacaTrade = false }: BracketDetailsPanelProps) {
   const hasBracket = bracketData && (bracketData.take_profit || bracketData.stop_loss);
+  const showBracketSection = hasBracket || isAlpacaTrade; // Always show for Alpaca trades
 
   return (
     <div className="space-y-4 py-2">
@@ -150,8 +154,8 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
         </div>
       )}
 
-      {/* Bracket Details Header */}
-      {hasBracket && (
+      {/* Bracket Details Section */}
+      {showBracketSection && (
         <>
           <div className="flex items-center gap-2 text-sm font-medium">
             <TrendingUp className="h-4 w-4 text-primary" />
@@ -171,13 +175,13 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
                   <Target className="h-4 w-4" />
                   Take Profit
                 </div>
-                {bracketData.take_profit && (
+                {bracketData?.take_profit && (
                   <Badge variant={getStatusVariant(bracketData.take_profit.status)} className="text-[10px]">
                     {bracketData.take_profit.status}
                   </Badge>
                 )}
               </div>
-              {bracketData.take_profit ? (
+              {bracketData?.take_profit ? (
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Limit Price:</span>
@@ -196,6 +200,12 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
                       <span className="text-xs">{formatTime(bracketData.take_profit.filled_at)}</span>
                     </div>
                   )}
+                  {bracketData.take_profit.canceled_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Canceled At:</span>
+                      <span className="text-xs text-red-400">{formatTime(bracketData.take_profit.canceled_at)}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">No take profit set</div>
@@ -209,13 +219,13 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
                   <ShieldAlert className="h-4 w-4" />
                   Stop Loss
                 </div>
-                {bracketData.stop_loss && (
+                {bracketData?.stop_loss && (
                   <Badge variant={getStatusVariant(bracketData.stop_loss.status)} className="text-[10px]">
                     {bracketData.stop_loss.status}
                   </Badge>
                 )}
               </div>
-              {bracketData.stop_loss ? (
+              {bracketData?.stop_loss ? (
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Stop Price:</span>
@@ -240,6 +250,12 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
                       <span className="text-xs">{formatTime(bracketData.stop_loss.filled_at)}</span>
                     </div>
                   )}
+                  {bracketData.stop_loss.canceled_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Canceled At:</span>
+                      <span className="text-xs text-red-400">{formatTime(bracketData.stop_loss.canceled_at)}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">No stop loss set</div>
@@ -249,15 +265,15 @@ export function BracketDetailsPanel({ bracketData, orderClass, entryOrder }: Bra
         </>
       )}
 
-      {/* No bracket data message */}
-      {!hasBracket && !entryOrder && (
+      {/* No bracket data message - only show for non-Alpaca trades */}
+      {!showBracketSection && !entryOrder && (
         <div className="text-sm text-muted-foreground py-2">
           No bracket (TP/SL) attached
         </div>
       )}
 
       {/* Risk:Reward Placeholder */}
-      {hasBracket && bracketData.entry_filled_avg_price && (bracketData.take_profit || bracketData.stop_loss) && (
+      {hasBracket && bracketData?.entry_filled_avg_price && (bracketData.take_profit || bracketData.stop_loss) && (
         <>
           <Separator className="my-2" />
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

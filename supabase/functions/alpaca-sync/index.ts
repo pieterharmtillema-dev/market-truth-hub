@@ -398,8 +398,8 @@ serve(async (req) => {
       `Fetching filled orders from Alpaca ${environment} (after: ${lastSyncCursor || 'beginning'})`
     );
 
-    // Fetch filled orders and activities
-    const { orders, error: fetchError, newCursor } =
+    // Fetch filled orders and activities (also gets ALL closed orders for bracket data)
+    const { orders, allOrders, error: fetchError, newCursor } =
       await getFilledOrdersWithExecutions(
         {
           apiKeyId,
@@ -432,23 +432,87 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Fetched ${orders.length} filled orders from Alpaca`);
+    console.log(`Fetched ${orders.length} filled orders and ${allOrders.length} total closed orders from Alpaca`);
 
-    // Sort orders by filled_at timestamp (earliest first) for correct FIFO processing
+    // Build a map of all orders by ID for bracket leg lookups
+    // This helps us find TP/SL status even when the parent order was filled
+    const orderMap = new Map<string, AlpacaOrder>();
+    const parentChildMap = new Map<string, AlpacaOrder[]>(); // parent_order_id -> child orders
+    
+    for (const o of allOrders) {
+      orderMap.set(o.id, o);
+      // Also map by client_order_id if available
+      if (o.client_order_id) {
+        orderMap.set(o.client_order_id, o);
+      }
+    }
+
+    // Store ALL closed orders to alpaca_orders table for bracket data visibility
+    console.log(`Storing ${allOrders.length} orders to alpaca_orders table...`);
+    let allOrdersStored = 0;
+    
+    for (const order of allOrders) {
+      const { symbol: orderSymbol, assetClass: orderAssetClass } = normalizeAlpacaSymbol(order);
+      const bracketData = extractBracketData(order);
+      
+      const { error: upsertError } = await supabase
+        .from('alpaca_orders')
+        .upsert({
+          user_id: user.id,
+          order_id: order.id,
+          client_order_id: order.client_order_id,
+          symbol: orderSymbol,
+          side: order.side,
+          order_type: order.order_type || order.type,
+          order_class: order.order_class || 'simple',
+          limit_price: order.limit_price ? parseFloat(order.limit_price) : null,
+          stop_price: order.stop_price ? parseFloat(order.stop_price) : null,
+          qty: parseFloat(order.qty || order.filled_qty || '0'),
+          filled_qty: parseFloat(order.filled_qty || '0'),
+          filled_avg_price: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
+          status: order.status,
+          submitted_at: order.submitted_at,
+          filled_at: order.filled_at,
+          canceled_at: order.canceled_at,
+          expired_at: order.expired_at,
+          replaced_at: order.replaced_at,
+          replaced_by: order.replaced_by || null,
+          replaces: order.replaces || null,
+          time_in_force: order.time_in_force,
+          extended_hours: order.extended_hours,
+          asset_class: orderAssetClass,
+          environment: environment,
+          bracket_data: bracketData,
+          raw: order as unknown as Record<string, unknown>,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'order_id',
+          ignoreDuplicates: false,
+        });
+      
+      if (!upsertError) {
+        allOrdersStored++;
+      } else {
+        console.warn(`  [ORDER] Failed to store order ${order.id}:`, upsertError);
+      }
+    }
+    
+    console.log(`Stored ${allOrdersStored} orders to alpaca_orders table`);
+
+    // Sort FILLED orders by filled_at timestamp (earliest first) for correct FIFO processing
     const sortedOrders = orders.sort((a, b) => {
       const aTime = new Date(a.filled_at || a.updated_at).getTime();
       const bTime = new Date(b.filled_at || b.updated_at).getTime();
       return aTime - bTime;
     });
 
-    console.log(`Processing ${sortedOrders.length} orders in chronological order`);
+    console.log(`Processing ${sortedOrders.length} filled orders in chronological order`);
     console.log(`----------------------------------------`);
 
     // Process and insert orders
     let imported = 0;
     let skippedDuplicates = 0;
     let closedPositions = 0;
-    let bracketOrdersStored = 0;
 
     for (const order of sortedOrders) {
       // Parse quantities and prices
@@ -475,52 +539,7 @@ serve(async (req) => {
         console.log(`  [BRACKET] Found bracket data:`, JSON.stringify(bracketData));
       }
       
-      // Always store the order to alpaca_orders table (for activity feed & bracket tracking)
-      const { error: upsertError } = await supabase
-        .from('alpaca_orders')
-        .upsert({
-          user_id: user.id,
-          order_id: order.id,
-          client_order_id: order.client_order_id,
-          symbol: symbol,
-          side: orderSide,
-          order_type: order.order_type || order.type,
-          order_class: order.order_class || 'simple',
-          limit_price: order.limit_price ? parseFloat(order.limit_price) : null,
-          stop_price: order.stop_price ? parseFloat(order.stop_price) : null,
-          qty: parseFloat(order.qty || order.filled_qty || '0'),
-          filled_qty: parseFloat(order.filled_qty || '0'),
-          filled_avg_price: order.filled_avg_price ? parseFloat(order.filled_avg_price) : null,
-          status: order.status,
-          submitted_at: order.submitted_at,
-          filled_at: order.filled_at,
-          canceled_at: order.canceled_at,
-          expired_at: order.expired_at,
-          replaced_at: order.replaced_at,
-          replaced_by: order.replaced_by || null,
-          replaces: order.replaces || null,
-          time_in_force: order.time_in_force,
-          extended_hours: order.extended_hours,
-          asset_class: assetClass,
-          environment: environment,
-          bracket_data: bracketData, // Will be null for non-bracket orders
-          raw: order as unknown as Record<string, unknown>,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'order_id',
-          ignoreDuplicates: false,
-        });
-
-      if (upsertError) {
-        console.warn(`  [ORDER] Failed to store order:`, upsertError);
-      } else {
-        if (bracketData) {
-          bracketOrdersStored++;
-          console.log(`  [BRACKET] Stored bracket order ${order.id}`);
-        } else {
-          console.log(`  [ORDER] Stored order ${order.id}`);
-        }
-      }
+      // Note: Order already stored to alpaca_orders earlier in bulk processing
 
       // ========================================
       // CRITICAL LOGIC: Alpaca supports both longs AND shorts!
@@ -654,7 +673,7 @@ serve(async (req) => {
     console.log(`Sync complete:`);
     console.log(`  - New positions opened: ${imported}`);
     console.log(`  - Positions closed: ${closedPositions}`);
-    console.log(`  - Bracket orders stored: ${bracketOrdersStored}`);
+    console.log(`  - Total orders stored: ${allOrdersStored}`);
     console.log(`  - Duplicates skipped: ${skippedDuplicates}`);
     console.log(`========================================`);
 
@@ -679,7 +698,7 @@ serve(async (req) => {
         success: true,
         imported,
         closed: closedPositions,
-        bracket_orders_stored: bracketOrdersStored,
+        orders_stored: allOrdersStored,
         skipped_duplicates: skippedDuplicates,
         total_fetched: orders.length,
         newest_cursor: newCursor || lastSyncCursor,

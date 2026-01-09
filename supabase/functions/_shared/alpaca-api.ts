@@ -102,6 +102,8 @@ export interface BracketData {
     status: string;
     filled_qty: number;
     filled_avg_price: number | null;
+    filled_at?: string | null;
+    canceled_at?: string | null;
   };
   stop_loss?: {
     stop_price: number;
@@ -109,6 +111,8 @@ export interface BracketData {
     status: string;
     filled_qty: number;
     filled_avg_price: number | null;
+    filled_at?: string | null;
+    canceled_at?: string | null;
   };
 }
 
@@ -131,7 +135,6 @@ export function extractBracketData(order: AlpacaOrder): BracketData | null {
   if (!order.legs) return bracketData;
 
   for (const leg of order.legs) {
-    const legQty = parseFloat(leg.qty || '0');
     const filledQty = parseFloat(leg.filled_qty || '0');
     const filledAvgPrice = leg.filled_avg_price ? parseFloat(leg.filled_avg_price) : null;
 
@@ -142,6 +145,8 @@ export function extractBracketData(order: AlpacaOrder): BracketData | null {
         status: leg.status,
         filled_qty: filledQty,
         filled_avg_price: filledAvgPrice,
+        filled_at: leg.filled_at,
+        canceled_at: leg.canceled_at,
       };
     }
     // Identify stop-loss leg: has stop_price (with optional limit_price for stop-limit)
@@ -152,6 +157,8 @@ export function extractBracketData(order: AlpacaOrder): BracketData | null {
         status: leg.status,
         filled_qty: filledQty,
         filled_avg_price: filledAvgPrice,
+        filled_at: leg.filled_at,
+        canceled_at: leg.canceled_at,
       };
     }
   }
@@ -402,6 +409,7 @@ export async function getActivities(
 /**
  * Get filled orders and their executions for syncing
  * This combines orders and activities to get complete execution data
+ * Also fetches all closed orders to capture bracket leg statuses (canceled TP/SL)
  *
  * @param credentials - Alpaca API credentials
  * @param afterTimestamp - ISO timestamp to fetch orders after (for incremental sync)
@@ -411,23 +419,37 @@ export async function getFilledOrdersWithExecutions(
   afterTimestamp?: string
 ): Promise<{
   orders: AlpacaOrder[];
+  allOrders: AlpacaOrder[]; // All orders including non-filled for bracket data
   activities: AlpacaActivity[];
   error?: string;
   newCursor?: string;
 }> {
-  // Fetch filled orders
+  // Fetch filled orders for position syncing
   const ordersResult = await getOrders(credentials, {
     status: 'filled',
     after: afterTimestamp,
     limit: 500,
     direction: 'asc', // Oldest first for proper cursor tracking
+    nested: true,
   });
 
   if (ordersResult.error) {
-    return { orders: [], activities: [], error: ordersResult.error };
+    return { orders: [], allOrders: [], activities: [], error: ordersResult.error };
   }
 
   const orders = ordersResult.orders || [];
+
+  // Also fetch ALL closed orders (includes canceled, filled, expired) to capture bracket legs
+  // This ensures we get TP/SL status even when one leg was canceled
+  const allOrdersResult = await getOrders(credentials, {
+    status: 'closed', // Gets all closed orders: filled, canceled, expired
+    after: afterTimestamp,
+    limit: 500,
+    direction: 'asc',
+    nested: true,
+  });
+
+  const allOrders = allOrdersResult.orders || [];
 
   // Fetch fill activities for detailed execution data
   const activitiesResult = await getActivities(credentials, {
@@ -444,7 +466,7 @@ export async function getFilledOrdersWithExecutions(
 
   const activities = activitiesResult.activities || [];
 
-  // Calculate new cursor (latest filled_at timestamp)
+  // Calculate new cursor (latest filled_at timestamp from filled orders)
   let newCursor = afterTimestamp;
   for (const order of orders) {
     if (order.filled_at && (!newCursor || order.filled_at > newCursor)) {
@@ -454,6 +476,7 @@ export async function getFilledOrdersWithExecutions(
 
   return {
     orders,
+    allOrders,
     activities,
     newCursor: newCursor !== afterTimestamp ? newCursor : undefined,
   };
