@@ -53,6 +53,19 @@ export interface RMetrics {
   // Data quality
   verifiable: boolean; // True if we have sufficient stop data
   tradesWithStops: number;
+
+  // Risk discipline metrics (for TRAX scoring)
+  riskDiscipline: {
+    pct_below_minus_1R: number; // Percentage of trades losing >= 1R
+    pct_below_minus_2R: number; // Percentage of trades losing >= 2R
+    worst_loss_R: number; // Worst single loss in R
+  };
+
+  // Outlier metrics (for TRAX scoring)
+  outlierMetrics: {
+    top1_R_pct: number; // Largest winning trade % of total R (0-100)
+    top5_R_pct: number; // Top 5 winning trades % of total R (0-100)
+  };
 }
 
 /**
@@ -125,6 +138,15 @@ export function calculateRMetrics(trades: TradeWithRisk[]): RMetrics {
       },
       verifiable: false,
       tradesWithStops: 0,
+      riskDiscipline: {
+        pct_below_minus_1R: 0,
+        pct_below_minus_2R: 0,
+        worst_loss_R: 0,
+      },
+      outlierMetrics: {
+        top1_R_pct: 0,
+        top5_R_pct: 0,
+      },
     };
   }
 
@@ -184,6 +206,26 @@ export function calculateRMetrics(trades: TradeWithRisk[]): RMetrics {
     last: sortedByDate.length > 0 ? new Date(sortedByDate[sortedByDate.length - 1].entry_timestamp) : null,
   };
 
+  // Calculate risk discipline metrics
+  const lossesBelowMinus1R = tradesWithR.filter(({ realizedR }) => realizedR <= -1.0).length;
+  const lossesBelowMinus2R = tradesWithR.filter(({ realizedR }) => realizedR <= -2.0).length;
+  const pct_below_minus_1R = (lossesBelowMinus1R / tradesWithR.length) * 100;
+  const pct_below_minus_2R = (lossesBelowMinus2R / tradesWithR.length) * 100;
+
+  const allR = tradesWithR.map(({ realizedR }) => realizedR);
+  const worst_loss_R = Math.min(...allR, 0); // Will be negative or 0
+
+  // Calculate outlier metrics
+  const winningTradesR = tradesWithR.filter(({ realizedR }) => realizedR > 0);
+  const sortedWinsByR = [...winningTradesR].sort((a, b) => b.realizedR - a.realizedR);
+
+  const totalWinningR = totalWinR; // Already calculated above
+  const top1_R = sortedWinsByR[0]?.realizedR || 0;
+  const top5_R = sortedWinsByR.slice(0, 5).reduce((sum, { realizedR }) => sum + realizedR, 0);
+
+  const top1_R_pct = totalWinningR > 0 ? (top1_R / totalWinningR) * 100 : 0;
+  const top5_R_pct = totalWinningR > 0 ? (top5_R / totalWinningR) * 100 : 0;
+
   return {
     expectancy,
     profitFactor,
@@ -199,6 +241,15 @@ export function calculateRMetrics(trades: TradeWithRisk[]): RMetrics {
     dateRange,
     verifiable,
     tradesWithStops,
+    riskDiscipline: {
+      pct_below_minus_1R,
+      pct_below_minus_2R,
+      worst_loss_R,
+    },
+    outlierMetrics: {
+      top1_R_pct,
+      top5_R_pct,
+    },
   };
 }
 

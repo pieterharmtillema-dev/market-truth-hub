@@ -47,11 +47,22 @@ interface RatingResult {
  *
  * TRAX = TRAding eXcellence rating
  *
- * Scoring criteria:
- * - Expectancy (R/trade): 40% weight
- * - Profit Factor: 30% weight
- * - Win Rate: 20% weight
- * - Risk Management (stops respected): 10% weight
+ * NEW ROBUST SCORING ALGORITHM:
+ * - Expectancy (R/trade): 40% weight - with diminishing returns after 0.5R
+ * - Profit Factor: 30% weight - plateau after 2.5
+ * - Win Rate: 10% weight - de-emphasized, penalizes extreme win rates
+ * - Risk Management: 20% weight - loss frequency + worst loss + outlier dependency
+ *
+ * Hard Rules:
+ * - Expectancy ≤ 0 → capped at 49 (F grade)
+ * - N < 20 → N/A (insufficient data)
+ * - Outlier penalties if top1 > 30% or top5 > 60%
+ * - Risk discipline penalties for losses ≤ -2R
+ *
+ * Reliability Adjustment:
+ * - 20-49 trades: ×0.75
+ * - 50-199 trades: ×0.90
+ * - 200+ trades: ×1.00
  *
  * Grades:
  * S: 90-100 (Elite)
@@ -65,8 +76,8 @@ interface RatingResult {
 function calculateTraxRating(positions: Position[]): RatingResult {
   const closedTrades = positions.filter(p => !p.open && p.pnl !== null && p.exit_price !== null);
 
-  // Check if we have enough data
-  if (closedTrades.length === 0) {
+  // Hard Rule: N < 20 → N/A
+  if (closedTrades.length < 20) {
     return {
       grade: 'N/A',
       score: 0,
@@ -74,9 +85,11 @@ function calculateTraxRating(positions: Position[]): RatingResult {
       expectancy: 0,
       winRate: 0,
       profitFactor: 0,
-      sampleSize: 0,
+      sampleSize: closedTrades.length,
       hasStopData: false,
-      reason: 'No closed trades to analyze'
+      reason: closedTrades.length === 0
+        ? 'No closed trades to analyze'
+        : `Insufficient data (${closedTrades.length}/20 trades). Need at least 20 trades for reliable rating.`
     };
   }
 
@@ -85,23 +98,22 @@ function calculateTraxRating(positions: Position[]): RatingResult {
   const losses = closedTrades.filter(p => (p.pnl || 0) < 0);
   const winRate = (wins.length / closedTrades.length) * 100;
 
-  // Calculate profit factor (total wins / total losses)
-  const totalWinPnL = wins.reduce((sum, p) => sum + (p.pnl || 0), 0);
-  const totalLossPnL = Math.abs(losses.reduce((sum, p) => sum + (p.pnl || 0), 0));
-  const profitFactor = totalLossPnL === 0
-    ? (totalWinPnL > 0 ? 10 : 0) // Cap at 10 for no losses
-    : totalWinPnL / totalLossPnL;
-
   // Try to calculate R-based metrics if stop data is available
   const tradesWithStops = closedTrades.filter(p => p.stop_price != null);
   const hasStopData = tradesWithStops.length >= closedTrades.length * 0.5; // At least 50% have stops
 
   let expectancy = 0;
-  let riskManagementScore = 50; // Default neutral score
+  let profitFactor = 0;
+  let rValues: number[] = [];
+  let pct_below_minus_1R = 0;
+  let pct_below_minus_2R = 0;
+  let worst_loss_R = 0;
+  let top1_R_pct = 0;
+  let top5_R_pct = 0;
 
   if (hasStopData && tradesWithStops.length > 0) {
     // Calculate R-multiples
-    const rValues = tradesWithStops.map(trade => {
+    rValues = tradesWithStops.map(trade => {
       const stopDistance = Math.abs(trade.entry_price - (trade.stop_price || 0));
       const initialRisk = stopDistance * trade.quantity;
       if (initialRisk === 0) return 0;
@@ -110,16 +122,31 @@ function calculateTraxRating(positions: Position[]): RatingResult {
 
     expectancy = rValues.reduce((sum, r) => sum + r, 0) / rValues.length;
 
-    // Risk management: check if stops are respected
-    const stopsNotRespected = rValues.filter(r => r < -1.5).length;
-    const stopsRespectedRate = 1 - (stopsNotRespected / rValues.length);
-    riskManagementScore = stopsRespectedRate * 100;
-  } else {
-    // Fallback: use PnL-based expectancy
-    const avgWin = wins.length > 0 ? wins.reduce((sum, p) => sum + (p.pnl || 0), 0) / wins.length : 0;
-    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((sum, p) => sum + (p.pnl || 0), 0) / losses.length) : 0;
+    // R-based profit factor
+    const totalWinR = rValues.filter(r => r > 0).reduce((sum, r) => sum + r, 0);
+    const totalLossR = Math.abs(rValues.filter(r => r < 0).reduce((sum, r) => sum + r, 0));
+    profitFactor = totalLossR === 0 ? (totalWinR > 0 ? 10 : 0) : totalWinR / totalLossR;
 
-    // Normalize to R-like values (assume average risk is 1% of position size)
+    // Risk discipline metrics
+    pct_below_minus_1R = (rValues.filter(r => r <= -1.0).length / rValues.length) * 100;
+    pct_below_minus_2R = (rValues.filter(r => r <= -2.0).length / rValues.length) * 100;
+    worst_loss_R = Math.min(...rValues, 0);
+
+    // Outlier metrics
+    const winningR = rValues.filter(r => r > 0).sort((a, b) => b - a);
+    const totalWinningR = winningR.reduce((sum, r) => sum + r, 0);
+    const top1_R = winningR[0] || 0;
+    const top5_R = winningR.slice(0, 5).reduce((sum, r) => sum + r, 0);
+    top1_R_pct = totalWinningR > 0 ? (top1_R / totalWinningR) * 100 : 0;
+    top5_R_pct = totalWinningR > 0 ? (top5_R / totalWinningR) * 100 : 0;
+  } else {
+    // Fallback: use PnL-based metrics
+    const totalWinPnL = wins.reduce((sum, p) => sum + (p.pnl || 0), 0);
+    const totalLossPnL = Math.abs(losses.reduce((sum, p) => sum + (p.pnl || 0), 0));
+    profitFactor = totalLossPnL === 0 ? (totalWinPnL > 0 ? 10 : 0) : totalWinPnL / totalLossPnL;
+
+    const avgWin = wins.length > 0 ? totalWinPnL / wins.length : 0;
+    const avgLoss = losses.length > 0 ? totalLossPnL / losses.length : 0;
     const avgPositionSize = closedTrades.reduce((sum, p) => sum + (p.entry_price * p.quantity), 0) / closedTrades.length;
     const avgRisk = avgPositionSize * 0.01;
 
@@ -128,66 +155,131 @@ function calculateTraxRating(positions: Position[]): RatingResult {
       : 0;
   }
 
-  // Calculate component scores (0-100)
+  // ===== STEP 1: Calculate Component Subscores (0-100 each) =====
 
-  // 1. Expectancy score (40% weight)
-  // Map expectancy to 0-100 scale
-  // -0.5R or worse = 0, 0R = 50, 2R or better = 100
-  const expectancyScore = Math.max(0, Math.min(100,
-    50 + (expectancy * 25)
-  ));
+  // 1.1 Expectancy Subscore (40% weight) - Diminishing returns after 0.5R
+  let expectancyScore = 0;
+  if (expectancy <= 0) {
+    expectancyScore = 0;
+  } else if (expectancy <= 0.5) {
+    expectancyScore = (expectancy / 0.5) * 85;
+  } else {
+    // Logarithmic plateau for E > 0.5
+    expectancyScore = 85 + 15 * (1 - Math.exp(-2 * (expectancy - 0.5)));
+  }
+  expectancyScore = Math.min(100, Math.max(0, expectancyScore));
 
-  // 2. Profit Factor score (30% weight)
-  // 0 = 0, 1.0 = 50, 3.0+ = 100
-  const pfScore = Math.max(0, Math.min(100,
-    (profitFactor / 3.0) * 100
-  ));
+  // 1.2 Profit Factor Subscore (30% weight) - Plateau after 2.5
+  let pfScore = 0;
+  if (profitFactor < 1.0) {
+    pfScore = 0;
+  } else if (profitFactor <= 2.5) {
+    pfScore = ((profitFactor - 1.0) / 1.5) * 90;
+  } else {
+    // Diminishing returns
+    pfScore = 90 + 10 * (1 - Math.exp(-0.5 * (profitFactor - 2.5)));
+  }
+  pfScore = Math.min(100, Math.max(0, pfScore));
 
-  // 3. Win Rate score (20% weight)
-  // Note: win rate alone doesn't indicate profitability, but it's a factor
-  // 0% = 0, 50% = 50, 100% = 100
-  const wrScore = winRate;
+  // 1.3 Win Rate Subscore (10% weight) - De-emphasized, penalizes extremes
+  let wrScore = 0;
+  if (winRate < 30) {
+    wrScore = (winRate / 30) * 50;
+  } else if (winRate <= 65) {
+    wrScore = 50 + ((winRate - 30) / 35) * 50;
+  } else {
+    // Penalize extremely high WR
+    wrScore = 100 - ((winRate - 65) * 0.5);
+    wrScore = Math.max(70, wrScore); // Floor at 70
+  }
+  wrScore = Math.min(100, Math.max(0, wrScore));
 
-  // 4. Risk Management score (10% weight) - already calculated above
+  // 1.4 Risk Management Subscore (20% weight) - Three sub-components
 
-  // Weighted total score
-  const totalScore =
+  // A) Loss Frequency Control
+  const penalty_1R = Math.min(pct_below_minus_1R / 15, 1.0) * 30;
+  const penalty_2R = Math.min(pct_below_minus_2R / 5, 1.0) * 40;
+  const frequencyScore = 100 - penalty_1R - penalty_2R;
+
+  // B) Worst Loss Control
+  let worstLossScore = 100;
+  if (worst_loss_R >= -1.0) {
+    worstLossScore = 100;
+  } else if (worst_loss_R >= -2.0) {
+    worstLossScore = 100 - (Math.abs(worst_loss_R) - 1.0) * 40;
+  } else {
+    worstLossScore = Math.max(20 - (Math.abs(worst_loss_R) - 2.0) * 20, 0);
+  }
+
+  // C) Outlier Dependency Penalty
+  let outlierScore = 100;
+  if (top1_R_pct > 30) {
+    outlierScore -= (top1_R_pct - 30) * 1.5;
+  }
+  if (top5_R_pct > 60) {
+    outlierScore -= (top5_R_pct - 60) * 0.8;
+  }
+  outlierScore = Math.max(0, outlierScore);
+
+  const riskMgmtScore = (frequencyScore + worstLossScore + outlierScore) / 3;
+
+  // ===== STEP 2: Calculate Raw TRAX Score =====
+  let rawTraxScore =
     (expectancyScore * 0.40) +
     (pfScore * 0.30) +
-    (wrScore * 0.20) +
-    (riskManagementScore * 0.10);
+    (wrScore * 0.10) +
+    (riskMgmtScore * 0.20);
 
-  // Assign grade
-  let grade: RatingGrade;
-  if (totalScore >= 90) grade = 'S';
-  else if (totalScore >= 80) grade = 'A';
-  else if (totalScore >= 70) grade = 'B';
-  else if (totalScore >= 60) grade = 'C';
-  else if (totalScore >= 50) grade = 'D';
-  else grade = 'F';
+  // ===== STEP 3: Apply Hard Fail Rules =====
+  if (expectancy <= 0) {
+    rawTraxScore = Math.min(rawTraxScore, 49); // Force F grade
+  }
 
-  // Determine reliability based on sample size
+  // ===== STEP 4: Apply Reliability Adjustment =====
   let reliability: Reliability;
-  if (closedTrades.length >= 200) reliability = 'high';
-  else if (closedTrades.length >= 50) reliability = 'medium';
-  else if (closedTrades.length >= 20) reliability = 'low';
-  else reliability = 'insufficient';
+  let reliabilityMultiplier = 1.0;
+
+  if (closedTrades.length >= 200) {
+    reliability = 'high';
+    reliabilityMultiplier = 1.00;
+  } else if (closedTrades.length >= 50) {
+    reliability = 'medium';
+    reliabilityMultiplier = 0.90;
+  } else {
+    reliability = 'low';
+    reliabilityMultiplier = 0.75;
+  }
+
+  const finalTraxScore = rawTraxScore * reliabilityMultiplier;
+
+  // ===== STEP 5: Assign Grade =====
+  let grade: RatingGrade;
+  if (finalTraxScore >= 90) grade = 'S';
+  else if (finalTraxScore >= 80) grade = 'A';
+  else if (finalTraxScore >= 70) grade = 'B';
+  else if (finalTraxScore >= 60) grade = 'C';
+  else if (finalTraxScore >= 50) grade = 'D';
+  else grade = 'F';
 
   // Generate reason
   let reason = '';
-  if (reliability === 'insufficient') {
-    reason = `Small sample size (${closedTrades.length} trades). Rating may not be reliable.`;
-  } else if (reliability === 'low') {
-    reason = `Limited data (${closedTrades.length} trades). Rating reliability is improving.`;
+  if (reliability === 'low') {
+    reason = `Limited data (${closedTrades.length} trades). Score reduced by 25% due to sample size.`;
+  } else if (reliability === 'medium') {
+    reason = `Moderate data (${closedTrades.length} trades). Score reduced by 10% due to sample size.`;
   } else if (!hasStopData) {
-    reason = 'Rating based on PnL analysis. No stop loss data available for R-based metrics.';
+    reason = `Based on ${closedTrades.length} trades. Rating uses PnL analysis (no stop data available).`;
   } else {
     reason = `Based on ${closedTrades.length} verified trades with documented risk management.`;
   }
 
+  if (expectancy <= 0) {
+    reason += ' Warning: Negative expectancy detected.';
+  }
+
   return {
     grade,
-    score: Math.round(totalScore),
+    score: Math.round(finalTraxScore * 10) / 10, // One decimal place
     reliability,
     expectancy,
     winRate,
@@ -430,11 +522,44 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-[250px]">
-                          <p className="text-xs font-semibold mb-1">TRAding eXcellence Rating</p>
-                          <p className="text-xs text-muted-foreground">
-                            Composite score based on expectancy, profit factor, win rate, and risk management.
-                          </p>
+                        <TooltipContent className="max-w-[320px] p-4" side="bottom">
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold">What is TRAX?</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              TRAX (TRAding eXcellence) measures a trader's skill using risk-adjusted performance—not raw profits or win rate.
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Every trade is measured in <strong>R-multiples</strong> (risk units): if you risk $100 and make $300, that's +3R. This lets us compare traders fairly regardless of account size.
+                            </p>
+                            <div className="pt-1">
+                              <p className="text-xs font-semibold mb-1">What TRAX rewards:</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside leading-relaxed">
+                                <li><strong>Positive expectancy</strong> — Winning more R than you lose over many trades</li>
+                                <li><strong>Controlled losses</strong> — Cutting bad trades quickly instead of letting them balloon</li>
+                                <li><strong>Consistency</strong> — Results that don't depend on one or two lucky trades</li>
+                                <li><strong>Sample size</strong> — More trades = more confidence the score reflects true skill</li>
+                              </ul>
+                            </div>
+                            <div className="pt-1">
+                              <p className="text-xs font-semibold mb-1">What TRAX ignores:</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside leading-relaxed">
+                                <li><strong>Win rate alone</strong> — A trader can win 70% of trades and still lose money if losses are 2× the size of wins</li>
+                                <li><strong>Hot streaks</strong> — We penalize profiles where most profit came from a few outlier trades</li>
+                                <li><strong>Account size</strong> — $500 or $500,000 doesn't matter; only risk-adjusted results do</li>
+                              </ul>
+                            </div>
+                            <div className="pt-2 border-t border-border/30">
+                              <p className="text-xs font-semibold mb-1">Reliability badges:</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                                <li><strong>Low (20–49 trades):</strong> Score reduced by 25%</li>
+                                <li><strong>Medium (50–199 trades):</strong> Score reduced by 10%</li>
+                                <li><strong>High (200+ trades):</strong> Full score, strong confidence</li>
+                              </ul>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic pt-2">
+                              TRAX is educational, not a guarantee. Past performance doesn't predict future returns.
+                            </p>
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
