@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -6,8 +6,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, HelpCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Position {
   pnl: number | null;
@@ -517,52 +523,137 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       TRAX Rating
                     </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-[320px] p-4" side="bottom">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full">
+                          <HelpCircle className="h-3 w-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[360px] max-h-[80vh] overflow-y-auto" side="bottom" align="start">
+                        <div className="space-y-3">
+                          {/* Header with close button */}
+                          <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
+                            <div>
+                              <h3 className="text-sm font-bold">What is TRAX?</h3>
+                              <p className="text-xs text-muted-foreground">TRAding eXcellence Rating</p>
+                            </div>
+                          </div>
+
+                          {/* Current Rating */}
+                          <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-muted-foreground">Your Rating:</span>
+                              <div className="flex items-center gap-2">
+                                <span className={cn('text-2xl font-black', colors.text)}>{rating.grade}</span>
+                                <span className="text-sm text-muted-foreground">({rating.score}/100)</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{rating.reason}</p>
+                          </div>
+
+                          {/* How it works */}
                           <div className="space-y-2">
-                            <p className="text-xs font-bold">What is TRAX?</p>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                              TRAX (TRAding eXcellence) measures a trader's skill using risk-adjusted performance—not raw profits or win rate.
+                              TRAX measures a trader's skill using <strong>risk-adjusted performance</strong>—not raw profits or win rate.
                             </p>
                             <p className="text-xs text-muted-foreground leading-relaxed">
                               Every trade is measured in <strong>R-multiples</strong> (risk units): if you risk $100 and make $300, that's +3R. This lets us compare traders fairly regardless of account size.
                             </p>
-                            <div className="pt-1">
-                              <p className="text-xs font-semibold mb-1">What TRAX rewards:</p>
-                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside leading-relaxed">
-                                <li><strong>Positive expectancy</strong> — Winning more R than you lose over many trades</li>
-                                <li><strong>Controlled losses</strong> — Cutting bad trades quickly instead of letting them balloon</li>
-                                <li><strong>Consistency</strong> — Results that don't depend on one or two lucky trades</li>
-                                <li><strong>Sample size</strong> — More trades = more confidence the score reflects true skill</li>
-                              </ul>
+                          </div>
+
+                          {/* What TRAX rewards */}
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold">What TRAX rewards:</p>
+                            <ul className="text-xs text-muted-foreground space-y-1 pl-4">
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-green-400 mt-0.5">•</span>
+                                <span><strong>Positive expectancy</strong> — Winning more R than you lose over many trades</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-green-400 mt-0.5">•</span>
+                                <span><strong>Controlled losses</strong> — Cutting bad trades quickly instead of letting them balloon</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-green-400 mt-0.5">•</span>
+                                <span><strong>Consistency</strong> — Results that don't depend on one or two lucky trades</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-green-400 mt-0.5">•</span>
+                                <span><strong>Sample size</strong> — More trades = more confidence the score reflects true skill</span>
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* What TRAX ignores */}
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold">What TRAX ignores:</p>
+                            <ul className="text-xs text-muted-foreground space-y-1 pl-4">
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-red-400 mt-0.5">•</span>
+                                <span><strong>Win rate alone</strong> — A trader can win 70% of trades and still lose money if losses are 2× the size of wins</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-red-400 mt-0.5">•</span>
+                                <span><strong>Hot streaks</strong> — We penalize profiles where most profit came from a few outlier trades</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-red-400 mt-0.5">•</span>
+                                <span><strong>Account size</strong> — $500 or $500,000 doesn't matter; only risk-adjusted results do</span>
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* How it's calculated */}
+                          <div className="space-y-1.5 pt-2 border-t border-border">
+                            <p className="text-xs font-semibold">How it's calculated:</p>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              <div className="flex justify-between items-center">
+                                <span>Expectancy (avg R/trade)</span>
+                                <span className="font-medium">40%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span>Profit Factor (wins/losses)</span>
+                                <span className="font-medium">30%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span>Risk Management</span>
+                                <span className="font-medium">20%</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span>Win Rate</span>
+                                <span className="font-medium">10%</span>
+                              </div>
                             </div>
-                            <div className="pt-1">
-                              <p className="text-xs font-semibold mb-1">What TRAX ignores:</p>
-                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside leading-relaxed">
-                                <li><strong>Win rate alone</strong> — A trader can win 70% of trades and still lose money if losses are 2× the size of wins</li>
-                                <li><strong>Hot streaks</strong> — We penalize profiles where most profit came from a few outlier trades</li>
-                                <li><strong>Account size</strong> — $500 or $500,000 doesn't matter; only risk-adjusted results do</li>
-                              </ul>
+                          </div>
+
+                          {/* Reliability badges */}
+                          <div className="space-y-1.5 pt-2 border-t border-border">
+                            <p className="text-xs font-semibold">Reliability levels:</p>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              <div className="flex justify-between items-center">
+                                <span><strong>Low (20–49 trades):</strong></span>
+                                <span>Score ×0.75</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span><strong>Medium (50–199 trades):</strong></span>
+                                <span>Score ×0.90</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span><strong>High (200+ trades):</strong></span>
+                                <span>Full score</span>
+                              </div>
                             </div>
-                            <div className="pt-2 border-t border-border/30">
-                              <p className="text-xs font-semibold mb-1">Reliability badges:</p>
-                              <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
-                                <li><strong>Low (20–49 trades):</strong> Score reduced by 25%</li>
-                                <li><strong>Medium (50–199 trades):</strong> Score reduced by 10%</li>
-                                <li><strong>High (200+ trades):</strong> Full score, strong confidence</li>
-                              </ul>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground italic pt-2">
-                              TRAX is educational, not a guarantee. Past performance doesn't predict future returns.
+                          </div>
+
+                          {/* Disclaimer */}
+                          <div className="pt-2 border-t border-border">
+                            <p className="text-[10px] text-muted-foreground italic leading-relaxed">
+                              TRAX is educational, not a guarantee. Past performance doesn't predict future returns. Always do your own research.
                             </p>
                           </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <Badge
