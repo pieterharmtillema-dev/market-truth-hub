@@ -623,13 +623,13 @@ export function PublicTraderCharacterHero({
 
             {/* Right: Statistics Section */}
             <div className="flex-1 max-w-[140px] sm:max-w-[180px] md:max-w-[200px] space-y-1.5 sm:space-y-2">
+              {/* TRAX Rating - Compact */}
+              <TraxRating positions={positions} compact />
+
               {/* Section Header */}
               <div className="flex items-center justify-center gap-2 mb-1">
                 <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Statistics</span>
               </div>
-
-              {/* TRAX Rating - Compact */}
-              <TraxRating positions={positions} compact />
 
               {/* Total Trades Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">
