@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Filter, TrendingUp, TrendingDown, Clock, Target, DollarSign, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +27,6 @@ interface Position {
   exit_reason?: string | null;
 }
 
-// Alpaca order with bracket data
 interface AlpacaOrderWithBracket {
   id: string;
   order_id: string;
@@ -62,7 +60,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const { toast } = useToast();
 
-  // Fetch Alpaca orders with bracket data for expansion
   const fetchAlpacaOrders = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -79,7 +76,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
       const ordersMap = new Map<string, AlpacaOrderWithBracket>();
       for (const order of data || []) {
-        // Parse bracket_data from JSON
         const bracketData = order.bracket_data 
           ? (order.bracket_data as unknown as BracketData)
           : null;
@@ -89,20 +85,15 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
           bracket_data: bracketData,
         };
 
-        // Key by order_id for direct lookup
         ordersMap.set(order.order_id, orderWithBracket);
         
-        // Key by symbol + side + timestamp for position matching
-        // Format: SYMBOL-buy-2024-01-09T18:00:00Z (truncated to hour for window matching)
         if (order.filled_at) {
           const timestamp = new Date(order.filled_at);
           const hourKey = `${order.symbol}-${order.side}-${timestamp.toISOString().slice(0, 13)}`;
           ordersMap.set(hourKey, orderWithBracket);
         }
         
-        // Also key by symbol-side for fallback
         const symbolSideKey = `${order.symbol}-${order.side}`;
-        // Only use symbol-side if no better match exists
         if (!ordersMap.has(symbolSideKey)) {
           ordersMap.set(symbolSideKey, orderWithBracket);
         }
@@ -134,7 +125,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       if (error) throw error;
       setPositions(data || []);
       
-      // Also fetch Alpaca orders for bracket data
       if (user?.id) {
         await fetchAlpacaOrders(user.id);
       }
@@ -145,7 +135,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     }
   };
 
-  // Get bracket data and entry order for a position (if it's from Alpaca)
   const getAlpacaDataForPosition = (position: Position): { 
     bracketData: BracketData | null; 
     orderClass: string | null;
@@ -155,10 +144,8 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       return { bracketData: null, orderClass: null, entryOrder: null };
     }
     
-    // Determine the alpaca order side for entry (long = buy, short = sell)
     const entrySide = position.side === 'long' ? 'buy' : 'sell';
     
-    // Try to find matching order by timestamp window first (most accurate)
     if (position.entry_timestamp) {
       const timestamp = new Date(position.entry_timestamp);
       const hourKey = `${position.symbol}-${entrySide}-${timestamp.toISOString().slice(0, 13)}`;
@@ -168,7 +155,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       }
     }
     
-    // Fallback to symbol + side
     const symbolSideKey = `${position.symbol}-${entrySide}`;
     const order = alpacaOrders.get(symbolSideKey);
     if (order) {
@@ -178,7 +164,6 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     return { bracketData: null, orderClass: null, entryOrder: null };
   };
   
-  // Helper to build order details from an Alpaca order
   const buildOrderDetails = (order: AlpacaOrderWithBracket) => {
     const entryOrder: OrderDetails = {
       order_id: order.order_id,
@@ -200,10 +185,8 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     fetchPositions();
   }, [refreshTrigger]);
 
-  // Get unique symbols for filters
   const symbols = [...new Set(positions.map(p => p.symbol))].sort();
 
-  // Filter positions
   const filteredPositions = positions.filter(position => {
     if (filterSymbol !== 'all' && position.symbol !== filterSymbol) return false;
     if (filterStatus === 'open' && !position.open) return false;
@@ -211,18 +194,16 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
     return true;
   });
 
-  // Calculate summary stats
   const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0);
   const wins = filteredPositions.filter(p => (p.pnl || 0) > 0).length;
-  const winRate = filteredPositions.filter(p => !p.open).length > 0
-    ? (wins / filteredPositions.filter(p => !p.open).length) * 100
-    : 0;
+  const closedTrades = filteredPositions.filter(p => !p.open).length;
+  const winRate = closedTrades > 0 ? (wins / closedTrades) * 100 : 0;
 
   if (loading) {
     return (
       <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
+          <Skeleton key={i} className="h-20 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -230,43 +211,75 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
   if (positions.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>No positions yet. Connect your extension to start tracking.</p>
+      <div className="text-center py-16 text-muted-foreground">
+        <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-40" />
+        <p className="text-lg font-medium">No positions yet</p>
+        <p className="text-sm mt-1">Connect your exchange to start tracking trades</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total P/L</p>
-          <p className={`text-2xl font-bold tabular-nums ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-          </p>
+        <div className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-card/80 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+          <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-primary/10 to-transparent blur-2xl transition-all group-hover:scale-150" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span className="uppercase tracking-wider font-medium">Total P/L</span>
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+            </p>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Win Rate</p>
-          <p className={`text-2xl font-bold tabular-nums ${winRate >= 50 ? 'text-green-400' : 'text-amber-400'}`}>
-            {winRate.toFixed(1)}%
-          </p>
+        
+        <div className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-card/80 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+          <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-amber-500/10 to-transparent blur-2xl transition-all group-hover:scale-150" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <Target className="h-3.5 w-3.5" />
+              <span className="uppercase tracking-wider font-medium">Win Rate</span>
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${winRate >= 50 ? 'text-green-400' : 'text-amber-400'}`}>
+              {winRate.toFixed(1)}%
+            </p>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Positions</p>
-          <p className="text-2xl font-bold tabular-nums text-primary">{filteredPositions.length}</p>
+        
+        <div className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-card/80 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+          <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-blue-500/10 to-transparent blur-2xl transition-all group-hover:scale-150" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span className="uppercase tracking-wider font-medium">Positions</span>
+            </div>
+            <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">{filteredPositions.length}</p>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-card to-card/50 border border-border rounded-xl p-4 text-center hover:shadow-lg transition-shadow">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Open</p>
-          <p className="text-2xl font-bold tabular-nums text-amber-400">{filteredPositions.filter(p => p.open).length}</p>
+        
+        <div className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-card/80 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+          <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-orange-500/10 to-transparent blur-2xl transition-all group-hover:scale-150" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="uppercase tracking-wider font-medium">Open</span>
+            </div>
+            <p className="text-2xl font-bold tabular-nums tracking-tight text-amber-400">{filteredPositions.filter(p => p.open).length}</p>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 items-center flex-wrap">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          <span className="text-xs font-medium">Filters</span>
+        </div>
         <Select value={filterSymbol} onValueChange={setFilterSymbol}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px] h-9 text-sm">
             <SelectValue placeholder="All Symbols" />
           </SelectTrigger>
           <SelectContent>
@@ -277,7 +290,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px] h-9 text-sm">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
@@ -288,121 +301,173 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden bg-card">
-        <ScrollArea className="h-[calc(100vh-32rem)] min-h-[400px]">
-          <Table className="table-fixed w-full">
-            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
-              <TableRow className="border-b border-border hover:bg-transparent">
-                <TableHead className="w-10 pl-4"></TableHead>
-                <TableHead className="w-[120px]">Symbol</TableHead>
-                <TableHead className="w-[100px]">Side</TableHead>
-                <TableHead className="w-[120px] text-right">Entry</TableHead>
-                <TableHead className="w-[120px] text-right">Exit</TableHead>
-                <TableHead className="w-[80px] text-right">Qty</TableHead>
-                <TableHead className="w-[120px] text-right">P/L</TableHead>
-                <TableHead className="w-[140px]">Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPositions.map((position) => (
-                <Collapsible key={position.id} open={expandedRow === position.id} onOpenChange={(open) => setExpandedRow(open ? position.id : null)}>
-                  <TableRow className="group hover:bg-muted/50 transition-colors">
-                    <TableCell className="w-10 pl-4">
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10">
-                          {expandedRow === position.id ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                    </TableCell>
-                    <TableCell className="w-[120px]">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-semibold text-base">{position.symbol}</span>
-                          {position.open && (
-                            <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400 bg-amber-500/10 px-1.5 py-0">OPEN</Badge>
-                          )}
-                        </div>
-                        {!position.open && position.exit_reason && (
-                          <ExitReasonBadge exitReason={position.exit_reason} />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[100px]">
-                      <Badge
-                        variant={position.side === 'long' ? 'default' : 'destructive'}
-                        className={`gap-1 ${position.side === 'long' ? 'bg-green-500/15 text-green-400 hover:bg-green-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/20'}`}
-                      >
-                        {position.side === 'long' ? (
-                          <ArrowUpRight className="h-3 w-3" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3" />
-                        )}
-                        {position.side.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="w-[120px] font-mono text-sm text-right">
-                      ${position.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="w-[120px] font-mono text-sm text-right">
-                      {position.exit_price ? `$${position.exit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                    </TableCell>
-                    <TableCell className="w-[80px] text-right font-medium">{position.quantity}</TableCell>
-                    <TableCell className="w-[120px] text-right font-mono font-semibold">
-                      {position.pnl != null ? (
-                        <span className={`${position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {position.pnl >= 0 ? '+' : ''}${Math.abs(position.pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell className="w-[140px] text-muted-foreground text-sm">
-                      {format(new Date(position.entry_timestamp), 'MMM d, yy HH:mm')}
-                    </TableCell>
-                  </TableRow>
-                  <CollapsibleContent asChild>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={8} className="py-4 px-6">
-                        <div className="space-y-4 max-w-5xl">
-                          {/* Basic position info */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                            {position.platform && (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-muted-foreground text-xs">Platform</span>
-                                <span className="font-medium">{position.platform}</span>
-                              </div>
-                            )}
-                            {position.exit_timestamp && (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-muted-foreground text-xs">Exit Time</span>
-                                <span className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, yy HH:mm')}</span>
-                              </div>
+      {/* Trade Cards */}
+      <ScrollArea className="h-[calc(100vh-28rem)] min-h-[400px]">
+        <div className="space-y-2 pr-4">
+          {filteredPositions.map((position) => {
+            const isExpanded = expandedRow === position.id;
+            const pnlPositive = (position.pnl || 0) >= 0;
+            
+            return (
+              <Collapsible 
+                key={position.id} 
+                open={isExpanded} 
+                onOpenChange={(open) => setExpandedRow(open ? position.id : null)}
+              >
+                <div className={`
+                  group relative overflow-hidden rounded-xl border transition-all duration-200
+                  ${isExpanded 
+                    ? 'border-primary/40 bg-card shadow-lg shadow-primary/5' 
+                    : 'border-border bg-card/50 hover:border-border/80 hover:bg-card'}
+                `}>
+                  {/* Accent line based on P/L */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                    position.open 
+                      ? 'bg-amber-500' 
+                      : pnlPositive 
+                        ? 'bg-green-500' 
+                        : 'bg-red-500'
+                  }`} />
+                  
+                  <CollapsibleTrigger asChild>
+                    <div className="cursor-pointer p-4 pl-5">
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Left: Symbol & Side */}
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className={`
+                            flex items-center justify-center w-10 h-10 rounded-lg 
+                            ${position.side === 'long' 
+                              ? 'bg-green-500/10 text-green-400' 
+                              : 'bg-red-500/10 text-red-400'}
+                          `}>
+                            {position.side === 'long' ? (
+                              <TrendingUp className="h-5 w-5" />
+                            ) : (
+                              <TrendingDown className="h-5 w-5" />
                             )}
                           </div>
+                          
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-lg tracking-tight">{position.symbol}</span>
+                              {position.open && (
+                                <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 h-5">
+                                  OPEN
+                                </Badge>
+                              )}
+                              {!position.open && position.exit_reason && (
+                                <ExitReasonBadge exitReason={position.exit_reason} />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span className="font-medium uppercase">{position.side}</span>
+                              <span className="opacity-50">•</span>
+                              <span>{position.quantity} shares</span>
+                              <span className="opacity-50">•</span>
+                              <span>{format(new Date(position.entry_timestamp), 'MMM d, HH:mm')}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                          {/* Bracket Details (for Alpaca orders) */}
-                          {(position.platform === 'Alpaca' || position.exchange_source === 'alpaca') && (
-                            <BracketDetailsPanel
-                              {...getAlpacaDataForPosition(position)}
-                              exitReason={position.exit_reason}
-                              isAlpacaTrade={true}
-                            />
+                        {/* Center: Prices */}
+                        <div className="hidden md:flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Entry</p>
+                            <p className="font-mono font-semibold">${position.entry_price.toFixed(2)}</p>
+                          </div>
+                          <div className="text-muted-foreground/30">→</div>
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Exit</p>
+                            <p className="font-mono font-semibold">
+                              {position.exit_price ? `$${position.exit_price.toFixed(2)}` : '—'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: P/L & Expand */}
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">P/L</p>
+                            <p className={`font-mono font-bold text-lg ${
+                              position.pnl != null 
+                                ? pnlPositive ? 'text-green-400' : 'text-red-400'
+                                : 'text-muted-foreground'
+                            }`}>
+                              {position.pnl != null ? (
+                                <>
+                                  {pnlPositive ? '+' : ''}${Math.abs(position.pnl).toFixed(2)}
+                                </>
+                              ) : '—'}
+                            </p>
+                          </div>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 shrink-0 rounded-lg hover:bg-primary/10"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="border-t border-border/50 bg-muted/20 p-4 pl-5">
+                      <div className="space-y-4">
+                        {/* Mobile: Show prices here */}
+                        <div className="flex md:hidden items-center gap-4 text-sm">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Entry</p>
+                            <p className="font-mono font-semibold">${position.entry_price.toFixed(2)}</p>
+                          </div>
+                          <div className="text-muted-foreground/30">→</div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Exit</p>
+                            <p className="font-mono font-semibold">
+                              {position.exit_price ? `$${position.exit_price.toFixed(2)}` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                          {position.platform && (
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Platform</p>
+                              <p className="font-medium">{position.platform}</p>
+                            </div>
+                          )}
+                          {position.exit_timestamp && (
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Exit Time</p>
+                              <p className="font-medium">{format(new Date(position.exit_timestamp), 'MMM d, HH:mm')}</p>
+                            </div>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
+
+                        {/* Bracket Details */}
+                        {(position.platform === 'Alpaca' || position.exchange_source === 'alpaca') && (
+                          <BracketDetailsPanel
+                            {...getAlpacaDataForPosition(position)}
+                            exitReason={position.exit_reason}
+                            isAlpacaTrade={true}
+                          />
+                        )}
+                      </div>
+                    </div>
                   </CollapsibleContent>
-                </Collapsible>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </div>
+                </div>
+              </Collapsible>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
