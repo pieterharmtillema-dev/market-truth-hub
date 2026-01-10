@@ -13,6 +13,7 @@ import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroE
 import { FAKE_PROFILES, FAKE_TRADER_META } from "@/lib/fakeProfiles";
 import { calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics";
 import { PerformanceTrend } from "@/components/analytics";
+import { ProfitabilityEvidenceMini } from "./ProfitabilityEvidenceMini";
 import {
   Trophy,
   TrendingUp,
@@ -701,6 +702,11 @@ export function PublicTraderCharacterHero({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Profitability Evidence Section */}
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+            <ProfitabilityEvidenceMini positions={positions} />
           </div>
         </div>
       </div>
