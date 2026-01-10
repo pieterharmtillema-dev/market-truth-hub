@@ -13,7 +13,6 @@ import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroE
 import { FAKE_PROFILES, FAKE_TRADER_META } from "@/lib/fakeProfiles";
 import { calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics";
 import { PerformanceTrend } from "@/components/analytics";
-import { ProfitabilityEvidenceMini } from "./ProfitabilityEvidenceMini";
 import {
   Trophy,
   TrendingUp,
@@ -54,6 +53,7 @@ interface PublicTraderCharacterHeroProps {
   onFollowClick?: () => void;
   isFollowing?: boolean;
   showFollowButton?: boolean;
+  onPositionsLoaded?: (positions: any[]) => void;
 }
 
 // Map holding_time to trading class
@@ -112,7 +112,8 @@ export function PublicTraderCharacterHero({
   followersCount = 0,
   onFollowClick,
   isFollowing = false,
-  showFollowButton = true
+  showFollowButton = true,
+  onPositionsLoaded
 }: PublicTraderCharacterHeroProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [traderProfile, setTraderProfile] = useState<TraderProfile | null>(null);
@@ -213,6 +214,7 @@ export function PublicTraderCharacterHero({
           const { generateFakePositions } = await import('@/lib/fakeProfiles');
           const fakePositions = generateFakePositions(userId);
           setPositions(fakePositions);
+          onPositionsLoaded?.(fakePositions);
 
           setLoading(false);
           setTimeout(() => setStatsAnimated(true), 300);
@@ -281,6 +283,7 @@ export function PublicTraderCharacterHero({
 
         if (positionsData) {
           setPositions(positionsData);
+          onPositionsLoaded?.(positionsData);
         }
 
         setLoading(false);
@@ -702,11 +705,6 @@ export function PublicTraderCharacterHero({
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Profitability Evidence Section */}
-          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-            <ProfitabilityEvidenceMini positions={positions} />
           </div>
         </div>
       </div>

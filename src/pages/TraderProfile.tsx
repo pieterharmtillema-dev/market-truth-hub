@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useFollows } from "@/hooks/useFollows";
 import { PublicPredictionCard, PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 import { PublicTraderCharacterHero } from "@/components/profile/PublicTraderCharacterHero";
+import { ProfitabilityEvidenceMini } from "@/components/profile/ProfitabilityEvidenceMini";
 import { AvatarDisplay } from "@/components/profile/AvatarDisplay";
 import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 import { FAKE_PROFILES, FAKE_TRADER_META, PublicProfile, FakeTraderMeta } from "@/lib/fakeProfiles";
@@ -59,13 +60,14 @@ const TraderProfile = () => {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [traderMeta, setTraderMeta] = useState<FakeTraderMeta | null>(null);
   const [predictions, setPredictions] = useState<PublicPredictionData[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPredictions, setLoadingPredictions] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
-  
+
   const { following, followUser, unfollowUser, isFollowing } = useFollows(currentUserId);
   const isOwnProfile = currentUserId === userId;
   const isFollowingUser = userId ? isFollowing(userId) : false;
@@ -282,7 +284,15 @@ const TraderProfile = () => {
           onFollowClick={currentUserId && !isOwnProfile ? handleFollow : undefined}
           isFollowing={isFollowingUser}
           showFollowButton={currentUserId !== null && !isOwnProfile}
+          onPositionsLoaded={setPositions}
         />
+
+        {/* Profitability Evidence - Separate from Hero */}
+        {positions.length > 0 && (
+          <div className="mt-4">
+            <ProfitabilityEvidenceMini positions={positions} />
+          </div>
+        )}
 
         {/* Trader Profile Info */}
         {traderMeta && (
