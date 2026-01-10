@@ -299,8 +299,61 @@ serve(async (req) => {
       // Extract bracket data if this is a bracket order (already stored above)
       const bracketData = extractBracketData(order);
       if (bracketData) {
-        console.log(`  [BRACKET] Bracket data: TP=${bracketData.take_profit?.status}, SL=${bracketData.stop_loss?.status}`);
+        console.log(
+          `  [BRACKET] Bracket data: TP=${bracketData.take_profit?.status}, SL=${bracketData.stop_loss?.status}`
+        );
         bracketOrdersStored++;
+
+        // IMPORTANT:
+        // Alpaca's /orders?status=filled can return the BRACKET PARENT order as 'filled'
+        // while the exit leg (TP/SL) may not appear as a separate filled order.
+        // In that case, we still need to close the position based on the filled leg.
+        const tryCloseFromFilledLeg = async (leg: {
+          status: string;
+          filled_qty: number;
+          filled_avg_price: number | null;
+          filled_at?: string | null;
+        }, reason: 'take_profit' | 'stop_loss') => {
+          if (leg.status !== 'filled' || leg.filled_qty <= 0) return;
+
+          const exitPrice = leg.filled_avg_price ?? avgPrice;
+          const exitTimestamp = leg.filled_at ?? timestamp;
+
+          // If entry side is BUY, the position is LONG and the exit leg is SELL (close LONG)
+          // If entry side is SELL, the position is SHORT and the exit leg is BUY (close SHORT)
+          const closeSideFromLeg: 'long' | 'short' =
+            bracketData.entry_side === 'buy' ? 'long' : 'short';
+
+          console.log(
+            `  [BRACKET EXIT] Detected filled ${reason} leg -> closing ${closeSideFromLeg.toUpperCase()} @ ${exitPrice} (qty: ${leg.filled_qty})`
+          );
+
+          const { closed, error: legCloseError } = await closeOppositePositions(
+            supabase,
+            user.id,
+            symbol,
+            exitPrice,
+            leg.filled_qty,
+            exitTimestamp,
+            closeSideFromLeg,
+            isPaperTrading,
+            reason
+          );
+
+          if (legCloseError && legCloseError !== 'no_open_positions') {
+            console.error(`  [BRACKET EXIT] Failed to close from leg: ${legCloseError}`);
+          } else if (closed > 0) {
+            closedPositions += closed;
+            console.log(`  [BRACKET EXIT] Closed ${closed} position(s) from ${reason} leg`);
+          }
+        };
+
+        if (bracketData.take_profit) {
+          await tryCloseFromFilledLeg(bracketData.take_profit, 'take_profit');
+        }
+        if (bracketData.stop_loss) {
+          await tryCloseFromFilledLeg(bracketData.stop_loss, 'stop_loss');
+        }
       }
 
       // ========================================
