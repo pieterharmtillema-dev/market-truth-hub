@@ -186,30 +186,80 @@ export function generateFakePositions(userId: string): any[] {
   const positions: any[] = [];
   const now = Date.now();
   const winRateDecimal = meta.win_rate / 100;
-  
+
   for (let i = 0; i < meta.total_trades; i++) {
     const isWin = Math.random() < winRateDecimal;
-    const pnlBase = isWin ? meta.avg_win : -meta.avg_loss;
-    const variance = 0.5 + Math.random();
-    const pnl = pnlBase * variance;
-    
+
+    // Generate realistic trade data
+    const quantity = Math.floor(10 + Math.random() * 90); // 10-100 shares/units
+    const entryPrice = 100 + Math.random() * 400; // $100-$500 entry
+    const side = Math.random() > 0.5 ? 'long' : 'short';
+
+    // Stop price based on typical 1-2% risk
+    const stopDistance = entryPrice * (0.01 + Math.random() * 0.02); // 1-3% stop
+    const stopPrice = side === 'long'
+      ? entryPrice - stopDistance
+      : entryPrice + stopDistance;
+
+    // Initial risk (1R) = distance to stop × quantity
+    const initialRisk = stopDistance * quantity;
+
+    // Generate R-multiple for this trade based on win/loss
+    // Winners: typically 1R to 5R (with average around 2R for profitable traders)
+    // Losers: typically -0.5R to -1R (assuming stops are respected most of the time)
+    let realizedR: number;
+    if (isWin) {
+      realizedR = 0.5 + Math.random() * 4.5; // 0.5R to 5R
+    } else {
+      // 80% of losses respect the stop (-0.5R to -1R)
+      // 20% of losses blow past the stop (-1R to -2R)
+      if (Math.random() < 0.8) {
+        realizedR = -0.5 - Math.random() * 0.5; // -0.5R to -1R
+      } else {
+        realizedR = -1 - Math.random() * 1; // -1R to -2R (stop not respected)
+      }
+    }
+
+    // Calculate PnL from R-multiple
+    const pnl = realizedR * initialRisk;
+
+    // Calculate exit price from PnL
+    const pnlPerShare = pnl / quantity;
+    const exitPrice = side === 'long'
+      ? entryPrice + pnlPerShare
+      : entryPrice - pnlPerShare;
+
     // Space trades over time
     const daysAgo = Math.floor((meta.total_trades - i) * (365 / meta.total_trades));
     const entryTime = new Date(now - daysAgo * 24 * 60 * 60 * 1000);
-    
+
+    // Hold time varies by trading style
+    let maxHoldMinutes: number;
+    if (meta.holding_time.includes('Scalp')) {
+      maxHoldMinutes = 30;
+    } else if (meta.holding_time.includes('Day')) {
+      maxHoldMinutes = 480; // 8 hours
+    } else if (meta.holding_time.includes('Swing')) {
+      maxHoldMinutes = 10080; // 7 days
+    } else {
+      maxHoldMinutes = 43200; // 30 days
+    }
+
     positions.push({
       id: i + 1,
       user_id: userId,
       open: false,
       pnl: pnl,
-      pnl_pct: pnl / 1000 * 100, // Assuming $1000 base position
+      pnl_pct: (pnl / (entryPrice * quantity)) * 100,
       entry_timestamp: entryTime.toISOString(),
-      exit_timestamp: new Date(entryTime.getTime() + Math.random() * 24 * 60 * 60 * 1000).toISOString(),
-      entry_price: 100 + Math.random() * 50,
-      exit_price: 100 + Math.random() * 50 + (isWin ? 5 : -5),
-      side: Math.random() > 0.5 ? 'long' : 'short',
+      exit_timestamp: new Date(entryTime.getTime() + Math.random() * maxHoldMinutes * 60 * 1000).toISOString(),
+      entry_price: entryPrice,
+      exit_price: exitPrice,
+      stop_price: stopPrice,
+      quantity: quantity,
+      side: side,
     });
   }
-  
+
   return positions;
 }
