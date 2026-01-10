@@ -13,6 +13,7 @@ import { HeroEnvironment, CharacterAccessories, calculateUnlocks } from "./HeroE
 import { FAKE_PROFILES, FAKE_TRADER_META } from "@/lib/fakeProfiles";
 import { calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics";
 import { PerformanceTrend } from "@/components/analytics";
+import { TraxRating } from "./TraxRating";
 import {
   Trophy,
   TrendingUp,
@@ -626,6 +627,9 @@ export function PublicTraderCharacterHero({
               <div className="flex items-center justify-center gap-2 mb-1">
                 <span className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Statistics</span>
               </div>
+
+              {/* TRAX Rating - Compact */}
+              <TraxRating positions={positions} compact />
 
               {/* Total Trades Card */}
               <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 sm:p-2">

@@ -24,6 +24,7 @@ interface Position {
 interface TraxRatingProps {
   positions: Position[];
   className?: string;
+  compact?: boolean;
 }
 
 type RatingGrade = 'S' | 'A' | 'B' | 'C' | 'D' | 'F' | 'N/A';
@@ -301,11 +302,103 @@ function getReliabilityBadge(reliability: Reliability): {
  * Displays a letter grade (S, A, B, C, D, F, N/A) representing overall trading performance
  * with reliability indicators and detailed breakdown on hover.
  */
-export function TraxRating({ positions, className }: TraxRatingProps) {
+export function TraxRating({ positions, className, compact = false }: TraxRatingProps) {
   const rating = useMemo(() => calculateTraxRating(positions), [positions]);
   const colors = getGradeColors(rating.grade);
   const reliabilityBadge = getReliabilityBadge(rating.reliability);
 
+  // Compact version for hero card
+  if (compact) {
+    return (
+      <div className={cn('relative', className)}>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                'relative overflow-hidden rounded-lg border p-2 cursor-help transition-all hover:border-primary/50',
+                colors.bg,
+                colors.border
+              )}>
+                <div className="flex items-center justify-between gap-2">
+                  {/* Left: Grade */}
+                  <div className="flex items-center gap-2">
+                    <Shield className={cn('h-3 w-3', colors.icon)} />
+                    <span className={cn('text-xl font-black', colors.text)}>
+                      {rating.grade}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
+                      TRAX
+                    </span>
+                  </div>
+
+                  {/* Right: Reliability badge */}
+                  <Badge
+                    variant={reliabilityBadge.variant}
+                    className={cn('text-[8px] px-1.5 py-0 h-4', reliabilityBadge.className)}
+                  >
+                    {rating.reliability === 'high' ? 'High' :
+                     rating.reliability === 'medium' ? 'Med' :
+                     rating.reliability === 'low' ? 'Low' : 'N/A'}
+                  </Badge>
+                </div>
+
+                {/* Warning for insufficient data */}
+                {rating.reliability === 'insufficient' && (
+                  <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/30">
+                    <AlertTriangle className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />
+                    <span className="text-[8px] text-amber-400 line-clamp-1">
+                      Small sample ({rating.sampleSize})
+                    </span>
+                  </div>
+                )}
+              </div>
+            </TooltipTrigger>
+
+            <TooltipContent className="max-w-[280px] p-4" side="bottom">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold mb-1">TRAX Rating: {rating.grade} ({rating.score}/100)</p>
+                  <p className="text-xs text-muted-foreground mb-2">{rating.reason}</p>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Expectancy:</span>
+                    <span className={cn(
+                      'font-medium',
+                      rating.expectancy > 0 ? 'text-green-400' : rating.expectancy < 0 ? 'text-red-400' : 'text-muted-foreground'
+                    )}>
+                      {rating.expectancy >= 0 ? '+' : ''}{rating.expectancy.toFixed(2)}R
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Profit Factor:</span>
+                    <span className="font-medium">{rating.profitFactor.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Win Rate:</span>
+                    <span className="font-medium">{rating.winRate.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Sample Size:</span>
+                    <span className="font-medium">{rating.sampleSize} trades</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-border/30">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong>Grade Scale:</strong> S (Elite), A (Excellent), B (Good), C (Average), D (Below Avg), F (Poor)
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
+  }
+
+  // Full version
   return (
     <div className={cn('relative', className)}>
       <TooltipProvider>

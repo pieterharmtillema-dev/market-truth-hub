@@ -13,7 +13,6 @@ import { useFollows } from "@/hooks/useFollows";
 import { PublicPredictionCard, PublicPredictionData } from "@/components/predictions/PublicPredictionCard";
 import { PublicTraderCharacterHero } from "@/components/profile/PublicTraderCharacterHero";
 import { ProfitabilityEvidenceMini } from "@/components/profile/ProfitabilityEvidenceMini";
-import { TraxRating } from "@/components/profile/TraxRating";
 import { AvatarDisplay } from "@/components/profile/AvatarDisplay";
 import { CategoryBadge, TraderCategory } from "@/components/profile/CategoryBadge";
 import { FAKE_PROFILES, FAKE_TRADER_META, PublicProfile, FakeTraderMeta } from "@/lib/fakeProfiles";
@@ -288,16 +287,10 @@ const TraderProfile = () => {
           onPositionsLoaded={setPositions}
         />
 
-        {/* TRAX Rating & Profitability Evidence - Separate from Hero */}
+        {/* Profitability Evidence - Separate from Hero */}
         {positions.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* TRAX Rating - Takes 1 column */}
-            <TraxRating positions={positions} />
-
-            {/* Profitability Evidence - Takes 2 columns */}
-            <div className="lg:col-span-2">
-              <ProfitabilityEvidenceMini positions={positions} />
-            </div>
+          <div className="mt-4">
+            <ProfitabilityEvidenceMini positions={positions} />
           </div>
         )}
 
