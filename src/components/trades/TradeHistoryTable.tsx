@@ -291,7 +291,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
       {/* Table */}
       <div className="rounded-lg border border-border overflow-hidden bg-card">
         <ScrollArea className="h-[calc(100vh-32rem)] min-h-[400px]">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
               <TableRow className="border-b border-border hover:bg-transparent">
                 <TableHead className="w-10 pl-4"></TableHead>
