@@ -29,6 +29,7 @@ interface Position {
   entry_timestamp: string;
   exit_timestamp?: string | null;
   open: boolean;
+  stop_price?: number | null;
 }
 
 interface ProfitabilityEvidenceMiniProps {
@@ -66,10 +67,9 @@ export function ProfitabilityEvidenceMini({
       entry_timestamp: pos.entry_timestamp,
       exit_timestamp: pos.exit_timestamp || null,
       open: pos.open,
-      // Try to get stop price from bracket data if available
-      // In practice, this would need to be passed in or fetched
-      // For now, we'll calculate R using entry-exit distance as proxy
-      stop_price: null, // TODO: Wire up actual bracket data if available
+      // Use stop price from position data if available (e.g., fake profiles)
+      // For real users, this would come from bracket_data or be null
+      stop_price: pos.stop_price ?? null,
     }));
 
     return calculateRMetrics(trades);

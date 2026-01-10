@@ -273,10 +273,10 @@ export function PublicTraderCharacterHero({
           setAverageR(metricsData.average_r || 0);
         }
 
-        // Fetch positions for best streak calculation
+        // Fetch positions for best streak calculation and R-metrics
         const { data: positionsData } = await supabase
           .from("positions")
-          .select("id, pnl, pnl_pct, open, entry_timestamp")
+          .select("id, pnl, pnl_pct, open, entry_timestamp, exit_timestamp, entry_price, exit_price, quantity, side")
           .eq("user_id", userId);
 
         if (positionsData) {
