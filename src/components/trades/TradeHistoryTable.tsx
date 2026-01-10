@@ -295,13 +295,13 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
             <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
               <TableRow className="border-b border-border hover:bg-transparent">
                 <TableHead className="w-10 pl-4"></TableHead>
-                <TableHead className="min-w-[120px]">Symbol</TableHead>
-                <TableHead className="min-w-[80px]">Side</TableHead>
-                <TableHead className="min-w-[100px] text-right">Entry</TableHead>
-                <TableHead className="min-w-[100px] text-right">Exit</TableHead>
-                <TableHead className="min-w-[70px] text-right">Qty</TableHead>
-                <TableHead className="min-w-[100px] text-right">P/L</TableHead>
-                <TableHead className="min-w-[140px]">Date</TableHead>
+                <TableHead className="w-[120px]">Symbol</TableHead>
+                <TableHead className="w-[100px]">Side</TableHead>
+                <TableHead className="w-[120px] text-right">Entry</TableHead>
+                <TableHead className="w-[120px] text-right">Exit</TableHead>
+                <TableHead className="w-[80px] text-right">Qty</TableHead>
+                <TableHead className="w-[120px] text-right">P/L</TableHead>
+                <TableHead className="w-[140px]">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -319,7 +319,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         </Button>
                       </CollapsibleTrigger>
                     </TableCell>
-                    <TableCell className="min-w-[120px]">
+                    <TableCell className="w-[120px]">
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-semibold text-base">{position.symbol}</span>
@@ -332,7 +332,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[80px]">
+                    <TableCell className="w-[100px]">
                       <Badge
                         variant={position.side === 'long' ? 'default' : 'destructive'}
                         className={`gap-1 ${position.side === 'long' ? 'bg-green-500/15 text-green-400 hover:bg-green-500/20' : 'bg-red-500/15 text-red-400 hover:bg-red-500/20'}`}
@@ -345,14 +345,14 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         {position.side.toUpperCase()}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-right min-w-[100px]">
+                    <TableCell className="w-[120px] font-mono text-sm text-right">
                       ${position.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-right min-w-[100px]">
+                    <TableCell className="w-[120px] font-mono text-sm text-right">
                       {position.exit_price ? `$${position.exit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                     </TableCell>
-                    <TableCell className="text-right font-medium min-w-[70px]">{position.quantity}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold min-w-[100px]">
+                    <TableCell className="w-[80px] text-right font-medium">{position.quantity}</TableCell>
+                    <TableCell className="w-[120px] text-right font-mono font-semibold">
                       {position.pnl != null ? (
                         <span className={`${position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {position.pnl >= 0 ? '+' : ''}${Math.abs(position.pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -361,7 +361,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
                         '—'
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm min-w-[140px]">
+                    <TableCell className="w-[140px] text-muted-foreground text-sm">
                       {format(new Date(position.entry_timestamp), 'MMM d, yy HH:mm')}
                     </TableCell>
                   </TableRow>
