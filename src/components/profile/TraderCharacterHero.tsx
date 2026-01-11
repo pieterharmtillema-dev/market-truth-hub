@@ -11,6 +11,7 @@ import { useTradingMetrics } from "@/hooks/useTradingMetrics";
 import { AdjustedWinRate, calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics/AdjustedWinRate";
 import { WinLossSizeRatio, calculateNormalizedReturn } from "@/components/analytics/WinLossSizeRatio";
 import { PerformanceTrend } from "@/components/analytics/PerformanceTrend";
+import { TraxRating } from "./TraxRating";
 import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
@@ -1042,6 +1043,9 @@ export function TraderCharacterHero({
                     />
                   </div>
                 </div>
+
+                {/* TRAX Rating - Compact */}
+                <TraxRating positions={positions} compact />
               </div>
             </div>
           </div>
