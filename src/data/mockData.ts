@@ -295,39 +295,95 @@ export const mockTrendingAssets = [
     symbol: "BTC",
     name: "Bitcoin",
     assetType: 'crypto' as const,
-    crowdSentiment: { bullishPct: 68, bearishPct: 22 },
-    weightedSentiment: { bullishPct: 82, bearishPct: 10 },
-    predictions: 156,
     discussions: 423,
     confidence: 'high' as const,
+    horizonData: {
+      crowdSentiment: {
+        short: { bullishPct: 72, bearishPct: 18 },
+        mid: { bullishPct: 68, bearishPct: 22 },
+        long: { bullishPct: 65, bearishPct: 25 },
+      },
+      weightedSentiment: {
+        short: { bullishPct: 85, bearishPct: 8 },
+        mid: { bullishPct: 82, bearishPct: 10 },
+        long: { bullishPct: 78, bearishPct: 12 },
+      },
+      predictions: {
+        short: 89,
+        mid: 156,
+        long: 203,
+      },
+    },
   },
   {
     symbol: "NVDA",
     name: "NVIDIA",
     assetType: 'stock' as const,
-    crowdSentiment: { bullishPct: 75, bearishPct: 15 },
-    weightedSentiment: { bullishPct: 85, bearishPct: 8 },
-    predictions: 89,
     discussions: 234,
     confidence: 'high' as const,
+    horizonData: {
+      crowdSentiment: {
+        short: { bullishPct: 78, bearishPct: 12 },
+        mid: { bullishPct: 75, bearishPct: 15 },
+        long: { bullishPct: 70, bearishPct: 18 },
+      },
+      weightedSentiment: {
+        short: { bullishPct: 88, bearishPct: 5 },
+        mid: { bullishPct: 85, bearishPct: 8 },
+        long: { bullishPct: 80, bearishPct: 10 },
+      },
+      predictions: {
+        short: 45,
+        mid: 89,
+        long: 134,
+      },
+    },
   },
   {
     symbol: "ETH",
     name: "Ethereum",
     assetType: 'crypto' as const,
-    crowdSentiment: { bullishPct: 55, bearishPct: 30 },
-    weightedSentiment: { bullishPct: 62, bearishPct: 25 },
-    predictions: 112,
     discussions: 312,
+    horizonData: {
+      crowdSentiment: {
+        short: { bullishPct: 60, bearishPct: 28 },
+        mid: { bullishPct: 55, bearishPct: 30 },
+        long: { bullishPct: 52, bearishPct: 32 },
+      },
+      weightedSentiment: {
+        short: { bullishPct: 68, bearishPct: 22 },
+        mid: { bullishPct: 62, bearishPct: 25 },
+        long: { bullishPct: 58, bearishPct: 28 },
+      },
+      predictions: {
+        short: 67,
+        mid: 112,
+        long: 156,
+      },
+    },
   },
   {
     symbol: "SPY",
     name: "S&P 500 ETF",
     assetType: 'etf' as const,
-    crowdSentiment: { bullishPct: 45, bearishPct: 40 },
-    weightedSentiment: { bullishPct: 48, bearishPct: 38 },
-    predictions: 67,
     discussions: 189,
+    horizonData: {
+      crowdSentiment: {
+        short: { bullishPct: 50, bearishPct: 38 },
+        mid: { bullishPct: 45, bearishPct: 40 },
+        long: { bullishPct: 42, bearishPct: 42 },
+      },
+      weightedSentiment: {
+        short: { bullishPct: 52, bearishPct: 35 },
+        mid: { bullishPct: 48, bearishPct: 38 },
+        long: { bullishPct: 45, bearishPct: 40 },
+      },
+      predictions: {
+        short: 34,
+        mid: 67,
+        long: 98,
+      },
+    },
   },
 ];
 

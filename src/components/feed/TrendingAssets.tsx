@@ -1,23 +1,54 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { TrendingUp, ChevronDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Time horizon types
+export type TimeHorizon = 'short' | 'mid' | 'long';
 
 interface SentimentData {
   bullishPct: number;
   bearishPct: number;
 }
 
+interface HorizonScopedSentiment {
+  short?: SentimentData;
+  mid?: SentimentData;
+  long?: SentimentData;
+}
+
+interface HorizonScopedData {
+  crowdSentiment?: HorizonScopedSentiment;
+  weightedSentiment?: HorizonScopedSentiment;
+  predictions?: {
+    short?: number;
+    mid?: number;
+    long?: number;
+  };
+  numericPredictions?: {
+    short?: Array<{ targetPrice: number; currentPrice: number }>;
+    mid?: Array<{ targetPrice: number; currentPrice: number }>;
+    long?: Array<{ targetPrice: number; currentPrice: number }>;
+  };
+}
+
 interface TrendingAsset {
   symbol: string;
   name: string;
   assetType?: 'crypto' | 'stock' | 'etf' | 'forex' | 'commodity';
-  crowdSentiment: SentimentData;
-  weightedSentiment?: SentimentData; // Optional, falls back to crowd if missing
-  predictions: number;
+
+  // Legacy format (no horizon scope)
+  crowdSentiment?: SentimentData;
+  weightedSentiment?: SentimentData;
+  predictions?: number;
   discussions: number;
   confidence?: 'high' | 'medium' | 'low';
   numericPredictions?: Array<{ targetPrice: number; currentPrice: number }>;
+
+  // Horizon-scoped format (new)
+  horizonData?: HorizonScopedData;
 }
 
 interface TrendingAssetsProps {
@@ -122,6 +153,42 @@ function computeConsensusLabel({
 }
 
 /**
+ * Extract horizon-specific data from asset
+ * Falls back to legacy format if horizon data not available
+ */
+function getHorizonData(asset: TrendingAsset, horizon: TimeHorizon): {
+  crowdSentiment: SentimentData;
+  weightedSentiment: SentimentData;
+  predictions: number;
+  numericPredictions?: Array<{ targetPrice: number; currentPrice: number }>;
+} {
+  // Try horizon-scoped data first
+  if (asset.horizonData) {
+    const crowdSentiment = asset.horizonData.crowdSentiment?.[horizon];
+    const weightedSentiment = asset.horizonData.weightedSentiment?.[horizon];
+    const predictions = asset.horizonData.predictions?.[horizon];
+    const numericPredictions = asset.horizonData.numericPredictions?.[horizon];
+
+    if (crowdSentiment) {
+      return {
+        crowdSentiment,
+        weightedSentiment: weightedSentiment || crowdSentiment,
+        predictions: predictions || 0,
+        numericPredictions,
+      };
+    }
+  }
+
+  // Fallback to legacy format
+  return {
+    crowdSentiment: asset.crowdSentiment || { bullishPct: 0, bearishPct: 0 },
+    weightedSentiment: asset.weightedSentiment || asset.crowdSentiment || { bullishPct: 0, bearishPct: 0 },
+    predictions: asset.predictions || 0,
+    numericPredictions: asset.numericPredictions,
+  };
+}
+
+/**
  * Render a single sentiment row with stacked bar and text
  */
 function SentimentRow({
@@ -173,28 +240,76 @@ function SentimentRow({
   );
 }
 
+/**
+ * Time Horizon Selector Component
+ */
+function TimeHorizonSelector({
+  selected,
+  onChange,
+}: {
+  selected: TimeHorizon;
+  onChange: (horizon: TimeHorizon) => void;
+}) {
+  const horizons: Array<{ value: TimeHorizon; label: string }> = [
+    { value: 'short', label: '1–7d' },
+    { value: 'mid', label: '1–3m' },
+    { value: 'long', label: '6–12m' },
+  ];
+
+  return (
+    <div className="flex gap-1 bg-muted/30 rounded-lg p-0.5">
+      {horizons.map((horizon) => (
+        <Button
+          key={horizon.value}
+          size="sm"
+          variant="ghost"
+          onClick={() => onChange(horizon.value)}
+          aria-selected={selected === horizon.value}
+          className={cn(
+            "h-7 px-3 text-xs font-medium transition-all",
+            selected === horizon.value
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+          )}
+        >
+          {horizon.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 export function TrendingAssets({ assets }: TrendingAssetsProps) {
+  // State: selected time horizon (default = mid-term)
+  const [selectedHorizon, setSelectedHorizon] = useState<TimeHorizon>('mid');
+
   return (
     <Card variant="glass" className="overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-primary" />
-          Trending Markets
-        </CardTitle>
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            Trending Markets
+          </CardTitle>
+          <TimeHorizonSelector
+            selected={selectedHorizon}
+            onChange={setSelectedHorizon}
+          />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y divide-border/50">
           {assets.map((asset) => {
+            // Extract horizon-specific data
+            const horizonData = getHorizonData(asset, selectedHorizon);
+
             const consensus = computeConsensusLabel({
-              numericPredictions: asset.numericPredictions,
-              crowdBullishPct: asset.crowdSentiment.bullishPct,
-              crowdBearishPct: asset.crowdSentiment.bearishPct,
-              predictionsCount: asset.predictions,
+              numericPredictions: horizonData.numericPredictions,
+              crowdBullishPct: horizonData.crowdSentiment.bullishPct,
+              crowdBearishPct: horizonData.crowdSentiment.bearishPct,
+              predictionsCount: horizonData.predictions,
               assetType: asset.assetType,
             });
-
-            // Use weighted sentiment if available, otherwise fall back to crowd
-            const weightedSentiment = asset.weightedSentiment || asset.crowdSentiment;
 
             return (
               <div
@@ -223,16 +338,16 @@ export function TrendingAssets({ assets }: TrendingAssetsProps) {
                 {/* Crowd Sentiment row */}
                 <SentimentRow
                   label="Crowd Sentiment"
-                  bullishPct={asset.crowdSentiment.bullishPct}
-                  bearishPct={asset.crowdSentiment.bearishPct}
+                  bullishPct={horizonData.crowdSentiment.bullishPct}
+                  bearishPct={horizonData.crowdSentiment.bearishPct}
                 />
 
                 {/* Weighted Sentiment row */}
                 <div className="mt-1.5">
                   <SentimentRow
                     label="Weighted Sentiment"
-                    bullishPct={weightedSentiment.bullishPct}
-                    bearishPct={weightedSentiment.bearishPct}
+                    bullishPct={horizonData.weightedSentiment.bullishPct}
+                    bearishPct={horizonData.weightedSentiment.bearishPct}
                   />
                 </div>
 
@@ -249,7 +364,7 @@ export function TrendingAssets({ assets }: TrendingAssetsProps) {
 
                 {/* Counts row */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5">
-                  <span>{asset.predictions} predictions</span>
+                  <span>{horizonData.predictions} predictions</span>
                   <span>•</span>
                   <span>{asset.discussions} discussions</span>
                 </div>
