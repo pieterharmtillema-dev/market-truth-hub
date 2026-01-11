@@ -835,38 +835,42 @@ export function TraderCharacterHero({
               </div>
 
               {/* Right: Actions */}
-              <div className="flex gap-2 self-start sm:self-auto">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
-                  onClick={onSocialClick}
-                >
-                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({
-                        title: `${profile?.display_name || 'Trader'}'s Profile`,
-                        text: `Check out my trading profile`,
-                        url: window.location.href,
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </Button>
-                <ProfileEditDialog
-                  userId={userId}
-                  currentName={profile?.display_name}
-                  currentAvatarUrl={profile?.avatar_url}
-                  currentBio={profile?.bio}
-                  onProfileUpdated={handleProfileUpdate}
-                />
+              <div className="flex flex-col items-end gap-2 self-start sm:self-auto">
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
+                    onClick={onSocialClick}
+                  >
+                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/30 backdrop-blur-sm hover:bg-background/50 h-8 w-8 sm:h-10 sm:w-10"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `${profile?.display_name || 'Trader'}'s Profile`,
+                          text: `Check out my trading profile`,
+                          url: window.location.href,
+                        });
+                      }
+                    }}
+                  >
+                    <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </Button>
+                  <ProfileEditDialog
+                    userId={userId}
+                    currentName={profile?.display_name}
+                    currentAvatarUrl={profile?.avatar_url}
+                    currentBio={profile?.bio}
+                    onProfileUpdated={handleProfileUpdate}
+                  />
+                </div>
+                {/* TRAX Rating */}
+                <TraxRating positions={positions} compact />
               </div>
             </div>
           </div>
@@ -1043,9 +1047,6 @@ export function TraderCharacterHero({
                     />
                   </div>
                 </div>
-
-                {/* TRAX Rating - Compact */}
-                <TraxRating positions={positions} compact />
               </div>
             </div>
           </div>
