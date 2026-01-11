@@ -428,7 +428,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                     {rating.grade}
                   </span>
                   <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
-                    TRAX
+                    TRADE
                   </span>
                 </div>
 
@@ -468,7 +468,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                     <span className={cn('text-2xl font-black', colors.text)}>{rating.grade}</span>
                   </div>
                   <div>
-                    <p className="font-semibold">TRAX Rating</p>
+                    <p className="font-semibold">Trade Score</p>
                     <p className="text-xs text-muted-foreground">Score: {rating.score}/100</p>
                   </div>
                 </div>
@@ -595,7 +595,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                   <div className="flex items-center gap-2">
                     <Shield className={cn('h-5 w-5', colors.icon)} />
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      TRAX Rating
+                      Trade Score
                     </span>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -608,8 +608,8 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                           {/* Header with close button */}
                           <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
                             <div>
-                              <h3 className="text-sm font-bold">What is TRAX?</h3>
-                              <p className="text-xs text-muted-foreground">TRAding eXcellence Rating</p>
+                              <h3 className="text-sm font-bold">What is Trade Score?</h3>
+                              <p className="text-xs text-muted-foreground">Performance Based on Executed Trades</p>
                             </div>
                           </div>
 
@@ -628,7 +628,10 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                           {/* How it works */}
                           <div className="space-y-2">
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                              TRAX measures a trader's skill using <strong>risk-adjusted performance</strong>—not raw profits or win rate.
+                              Trade Score reflects performance based on the trades you have executed. It does not include predictions.
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Trade Score measures a trader's skill using <strong>risk-adjusted performance</strong>—not raw profits or win rate.
                             </p>
                             <p className="text-xs text-muted-foreground leading-relaxed">
                               Every trade is measured in <strong>R-multiples</strong> (risk units): if you risk $100 and make $300, that's +3R. This lets us compare traders fairly regardless of account size.
@@ -637,7 +640,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
 
                           {/* What TRAX rewards */}
                           <div className="space-y-1.5">
-                            <p className="text-xs font-semibold">What TRAX rewards:</p>
+                            <p className="text-xs font-semibold">What Trade Score rewards:</p>
                             <ul className="text-xs text-muted-foreground space-y-1 pl-4">
                               <li className="flex items-start gap-1.5">
                                 <span className="text-green-400 mt-0.5">•</span>
@@ -660,7 +663,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
 
                           {/* What TRAX ignores */}
                           <div className="space-y-1.5">
-                            <p className="text-xs font-semibold">What TRAX ignores:</p>
+                            <p className="text-xs font-semibold">What Trade Score ignores:</p>
                             <ul className="text-xs text-muted-foreground space-y-1 pl-4">
                               <li className="flex items-start gap-1.5">
                                 <span className="text-red-400 mt-0.5">•</span>
@@ -722,7 +725,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                           {/* Disclaimer */}
                           <div className="pt-2 border-t border-border">
                             <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-                              TRAX is educational, not a guarantee. Past performance doesn't predict future returns. Always do your own research.
+                              Trade Score is educational, not a guarantee. Past performance doesn't predict future returns. Always do your own research.
                             </p>
                           </div>
                         </div>
