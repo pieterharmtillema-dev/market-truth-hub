@@ -405,63 +405,80 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
   const colors = getGradeColors(rating.grade);
   const reliabilityBadge = getReliabilityBadge(rating.reliability);
 
-  // Compact version for hero card
+  // Compact version for hero card - uses Popover for clickable explanation
   if (compact) {
     return (
       <div className={cn('relative', className)}>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                'relative overflow-hidden rounded-lg border p-2 cursor-help transition-all hover:border-primary/50',
-                colors.bg,
-                colors.border
-              )}>
-                <div className="flex items-center justify-between gap-2">
-                  {/* Left: Grade */}
-                  <div className="flex items-center gap-2">
-                    <Shield className={cn('h-3 w-3', colors.icon)} />
-                    <span className={cn('text-xl font-black', colors.text)}>
-                      {rating.grade}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
-                      TRAX
-                    </span>
-                  </div>
-
-                  {/* Right: Reliability badge */}
-                  <Badge
-                    variant={reliabilityBadge.variant}
-                    className={cn('text-[8px] px-1.5 py-0 h-4', reliabilityBadge.className)}
-                  >
-                    {rating.reliability === 'high' ? 'High' :
-                     rating.reliability === 'medium' ? 'Med' :
-                     rating.reliability === 'low' ? 'Low' : 'N/A'}
-                  </Badge>
+        <Popover>
+          <PopoverTrigger asChild>
+            <div className={cn(
+              'relative overflow-hidden rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/50 hover:scale-[1.02]',
+              colors.bg,
+              colors.border
+            )}>
+              <div className="flex items-center justify-between gap-2">
+                {/* Left: Grade */}
+                <div className="flex items-center gap-2">
+                  <Shield className={cn('h-3 w-3', colors.icon)} />
+                  <span className={cn('text-xl font-black', colors.text)}>
+                    {rating.grade}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
+                    TRAX
+                  </span>
                 </div>
 
-                {/* Warning for insufficient data */}
-                {rating.reliability === 'insufficient' && (
-                  <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/30">
-                    <AlertTriangle className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />
-                    <span className="text-[8px] text-amber-400 line-clamp-1">
-                      Small sample ({rating.sampleSize})
-                    </span>
-                  </div>
-                )}
+                {/* Right: Reliability badge */}
+                <Badge
+                  variant={reliabilityBadge.variant}
+                  className={cn('text-[8px] px-1.5 py-0 h-4', reliabilityBadge.className)}
+                >
+                  {rating.reliability === 'high' ? 'High' :
+                   rating.reliability === 'medium' ? 'Med' :
+                   rating.reliability === 'low' ? 'Low' : 'N/A'}
+                </Badge>
               </div>
-            </TooltipTrigger>
 
-            <TooltipContent className="max-w-[280px] p-4" side="bottom">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-semibold mb-1">TRAX Rating: {rating.grade} ({rating.score}/100)</p>
-                  <p className="text-xs text-muted-foreground mb-2">{rating.reason}</p>
+              {/* Warning for insufficient data */}
+              {rating.reliability === 'insufficient' && (
+                <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/30">
+                  <AlertTriangle className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />
+                  <span className="text-[8px] text-amber-400 line-clamp-1">
+                    Small sample ({rating.sampleSize})
+                  </span>
                 </div>
+              )}
+            </div>
+          </PopoverTrigger>
 
-                <div className="space-y-2 text-xs">
+          <PopoverContent className="w-80 p-0 bg-card border-border" side="bottom" align="end">
+            <div className="p-4 space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center border',
+                    colors.bg,
+                    colors.border
+                  )}>
+                    <span className={cn('text-2xl font-black', colors.text)}>{rating.grade}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">TRAX Rating</p>
+                    <p className="text-xs text-muted-foreground">Score: {rating.score}/100</p>
+                  </div>
+                </div>
+                <Badge className={cn('text-xs', reliabilityBadge.className)}>
+                  {reliabilityBadge.label}
+                </Badge>
+              </div>
+
+              {/* Current Metrics */}
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Metrics</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Expectancy:</span>
+                    <span className="text-muted-foreground">Expectancy</span>
                     <span className={cn(
                       'font-medium',
                       rating.expectancy > 0 ? 'text-green-400' : rating.expectancy < 0 ? 'text-red-400' : 'text-muted-foreground'
@@ -470,28 +487,81 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Profit Factor:</span>
+                    <span className="text-muted-foreground">Profit Factor</span>
                     <span className="font-medium">{rating.profitFactor.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Win Rate:</span>
+                    <span className="text-muted-foreground">Win Rate</span>
                     <span className="font-medium">{rating.winRate.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Sample Size:</span>
+                    <span className="text-muted-foreground">Sample Size</span>
                     <span className="font-medium">{rating.sampleSize} trades</span>
                   </div>
                 </div>
+              </div>
 
-                <div className="pt-2 border-t border-border/30">
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong>Grade Scale:</strong> S (Elite), A (Excellent), B (Good), C (Average), D (Below Avg), F (Poor)
-                  </p>
+              {/* How It's Calculated */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <HelpCircle className="w-3 h-3" />
+                  How It's Calculated
+                </p>
+                <div className="text-xs text-muted-foreground space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-semibold w-8">40%</span>
+                    <span><strong>Expectancy</strong> — Average R-multiple per trade (diminishing returns after 0.5R)</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-semibold w-8">30%</span>
+                    <span><strong>Profit Factor</strong> — Gross profits ÷ gross losses (plateaus after 2.5)</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-semibold w-8">20%</span>
+                    <span><strong>Risk Mgmt</strong> — Loss control, worst loss, and outlier dependency</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary font-semibold w-8">10%</span>
+                    <span><strong>Win Rate</strong> — Penalizes extreme values, optimal 40-60%</span>
+                  </div>
                 </div>
               </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+
+              {/* Grade Scale */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grade Scale</p>
+                <div className="grid grid-cols-6 gap-1 text-center">
+                  {[
+                    { grade: 'S', range: '90+', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30' },
+                    { grade: 'A', range: '80-89', color: 'text-green-400 bg-green-500/10 border-green-500/30' },
+                    { grade: 'B', range: '70-79', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' },
+                    { grade: 'C', range: '60-69', color: 'text-purple-400 bg-purple-500/10 border-purple-500/30' },
+                    { grade: 'D', range: '50-59', color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
+                    { grade: 'F', range: '<50', color: 'text-red-400 bg-red-500/10 border-red-500/30' },
+                  ].map(({ grade, range, color }) => (
+                    <div key={grade} className={cn('rounded-md border p-1.5', color, rating.grade === grade && 'ring-2 ring-primary')}>
+                      <span className="text-sm font-bold block">{grade}</span>
+                      <span className="text-[9px] opacity-70">{range}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reliability Note */}
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-[10px] text-muted-foreground">
+                  <strong>Reliability:</strong> Score adjusted by sample size. 
+                  200+ trades = 100%, 50-199 = 90%, 20-49 = 75%. 
+                  Minimum 20 trades required.
+                </p>
+              </div>
+
+              {rating.reason && (
+                <p className="text-[10px] text-amber-400/80 italic">{rating.reason}</p>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     );
   }
