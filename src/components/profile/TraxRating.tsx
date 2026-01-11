@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -11,9 +11,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, HelpCircle, X } from 'lucide-react';
+import { Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface Position {
   pnl: number | null;
@@ -405,12 +409,12 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
   const colors = getGradeColors(rating.grade);
   const reliabilityBadge = getReliabilityBadge(rating.reliability);
 
-  // Compact version for hero card - uses Popover for clickable explanation
+  // Compact version for hero card - uses Dialog for clickable explanation
   if (compact) {
     return (
       <div className={cn('relative', className)}>
-        <Popover>
-          <PopoverTrigger asChild>
+        <Dialog>
+          <DialogTrigger asChild>
             <div className={cn(
               'relative overflow-hidden rounded-lg border p-2 cursor-pointer transition-all hover:border-primary/50 hover:scale-[1.02]',
               colors.bg,
@@ -449,10 +453,10 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                 </div>
               )}
             </div>
-          </PopoverTrigger>
+          </DialogTrigger>
 
-          <PopoverContent className="w-80 p-0 bg-card border-border" side="bottom" align="end">
-            <div className="p-4 space-y-4">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-0">
+            <div className="p-4 sm:p-6 space-y-4">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -478,25 +482,25 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Metrics</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Expectancy</span>
+                    <span className="text-muted-foreground text-xs">Expectancy</span>
                     <span className={cn(
-                      'font-medium',
+                      'font-medium text-xs',
                       rating.expectancy > 0 ? 'text-green-400' : rating.expectancy < 0 ? 'text-red-400' : 'text-muted-foreground'
                     )}>
                       {rating.expectancy >= 0 ? '+' : ''}{rating.expectancy.toFixed(2)}R
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Profit Factor</span>
-                    <span className="font-medium">{rating.profitFactor.toFixed(2)}</span>
+                    <span className="text-muted-foreground text-xs">Profit Factor</span>
+                    <span className="font-medium text-xs">{rating.profitFactor.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Win Rate</span>
-                    <span className="font-medium">{rating.winRate.toFixed(1)}%</span>
+                    <span className="text-muted-foreground text-xs">Win Rate</span>
+                    <span className="font-medium text-xs">{rating.winRate.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Sample Size</span>
-                    <span className="font-medium">{rating.sampleSize} trades</span>
+                    <span className="text-muted-foreground text-xs">Sample Size</span>
+                    <span className="font-medium text-xs">{rating.sampleSize} trades</span>
                   </div>
                 </div>
               </div>
@@ -530,7 +534,7 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
               {/* Grade Scale */}
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grade Scale</p>
-                <div className="grid grid-cols-6 gap-1 text-center">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 text-center">
                   {[
                     { grade: 'S', range: '90+', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30' },
                     { grade: 'A', range: '80-89', color: 'text-green-400 bg-green-500/10 border-green-500/30' },
@@ -550,8 +554,8 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
               {/* Reliability Note */}
               <div className="pt-2 border-t border-border/50">
                 <p className="text-[10px] text-muted-foreground">
-                  <strong>Reliability:</strong> Score adjusted by sample size. 
-                  200+ trades = 100%, 50-199 = 90%, 20-49 = 75%. 
+                  <strong>Reliability:</strong> Score adjusted by sample size.
+                  200+ trades = 100%, 50-199 = 90%, 20-49 = 75%.
                   Minimum 20 trades required.
                 </p>
               </div>
@@ -560,8 +564,8 @@ export function TraxRating({ positions, className, compact = false }: TraxRating
                 <p className="text-[10px] text-amber-400/80 italic">{rating.reason}</p>
               )}
             </div>
-          </PopoverContent>
-        </Popover>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
