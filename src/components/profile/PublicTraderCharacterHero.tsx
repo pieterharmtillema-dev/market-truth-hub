@@ -15,6 +15,7 @@ import { calculateAdjustedWinRate, getMinimumTrades } from "@/components/analyti
 import { PerformanceTrend } from "@/components/analytics";
 import { TraxRating } from "./TraxRating";
 import { PredictionScore } from "./PredictionScore";
+import { usePredictionAccuracy } from "@/hooks/usePredictionAccuracy";
 import {
   Trophy,
   TrendingUp,
@@ -126,6 +127,9 @@ export function PublicTraderCharacterHero({
   const [loading, setLoading] = useState(true);
   const [statsAnimated, setStatsAnimated] = useState(false);
   const [characterConfig, setCharacterConfig] = useState<CharacterConfig>(DEFAULT_CHARACTER_CONFIG);
+
+  // Get prediction accuracy for this user
+  const { data: predictionAccuracy } = usePredictionAccuracy(userId);
 
   // Calculate best streak from positions
   const bestStreak = useMemo(() => {
@@ -563,8 +567,11 @@ export function PublicTraderCharacterHero({
                   </Button>
                 </div>
 
-                {/* Trade Score */}
-                <TraxRating positions={positions} compact />
+                {/* Trade Score & Prediction Score */}
+                <div className="flex items-center gap-2">
+                  <TraxRating positions={positions} compact />
+                  <PredictionScore predictionAccuracy={predictionAccuracy} compact />
+                </div>
               </div>
             </div>
           </div>
