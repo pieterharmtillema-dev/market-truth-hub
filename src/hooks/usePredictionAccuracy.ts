@@ -19,8 +19,6 @@ export interface PredictionAccuracyData {
  * Accuracy is calculated based on:
  * - Correct predictions (status='hit')
  * - Incorrect predictions (status='missed')
- * - Time decay (recent predictions weighted more)
- * - Clamped between 40%-70% to prevent extremes
  * - Requires minimum 5 resolved predictions
  *
  * @param userId - User ID to fetch accuracy for (null for current user)
@@ -54,35 +52,52 @@ export function usePredictionAccuracy(userId?: string | null) {
         targetUserId = user.id;
       }
 
-      // Fetch from public_profiles view (includes accuracy data)
-      const { data: profileData, error: profileError } = await supabase
-        .from("public_profiles")
-        .select("prediction_accuracy, prediction_accuracy_correct, prediction_accuracy_incorrect, prediction_accuracy_total, prediction_accuracy_last_calculated")
+      // Calculate from predictions table directly
+      // Only count user-created long-term predictions (data_source = 'user')
+      const { data: predictions, error: predictionsError } = await supabase
+        .from("predictions")
+        .select("status, resolved_at")
         .eq("user_id", targetUserId)
-        .maybeSingle();
+        .eq("data_source", "user")
+        .in("status", ["hit", "missed"]);
 
-      if (profileError) {
-        console.error("Error fetching prediction accuracy:", profileError);
-        setError(profileError.message);
+      if (predictionsError) {
+        console.error("Error fetching predictions:", predictionsError);
+        setError(predictionsError.message);
         setData(null);
         return;
       }
 
-      if (!profileData) {
-        setData(null);
+      if (!predictions || predictions.length === 0) {
+        setData({
+          value: null,
+          correct: 0,
+          incorrect: 0,
+          totalResolved: 0,
+          hasSufficientData: false,
+          lastCalculated: null,
+        });
         return;
       }
 
-      const accuracyData: PredictionAccuracyData = {
-        value: profileData.prediction_accuracy,
-        correct: profileData.prediction_accuracy_correct || 0,
-        incorrect: profileData.prediction_accuracy_incorrect || 0,
-        totalResolved: profileData.prediction_accuracy_total || 0,
-        hasSufficientData: (profileData.prediction_accuracy_total || 0) >= 5,
-        lastCalculated: profileData.prediction_accuracy_last_calculated,
-      };
+      const correct = predictions.filter(p => p.status === "hit").length;
+      const incorrect = predictions.filter(p => p.status === "missed").length;
+      const totalResolved = correct + incorrect;
+      const accuracy = totalResolved > 0 ? correct / totalResolved : null;
 
-      setData(accuracyData);
+      // Find last resolved timestamp
+      const lastResolved = predictions
+        .filter(p => p.resolved_at)
+        .sort((a, b) => new Date(b.resolved_at!).getTime() - new Date(a.resolved_at!).getTime())[0];
+
+      setData({
+        value: accuracy,
+        correct,
+        incorrect,
+        totalResolved,
+        hasSufficientData: totalResolved >= 5,
+        lastCalculated: lastResolved?.resolved_at || null,
+      });
     } catch (err) {
       console.error("Error in usePredictionAccuracy:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -94,39 +109,12 @@ export function usePredictionAccuracy(userId?: string | null) {
 
   /**
    * Trigger recalculation of prediction accuracy
-   * Calls the Edge Function to recalculate and store accuracy
+   * Simply refetches from the database
    */
   const recalculate = async () => {
     try {
       setCalculating(true);
       setError(null);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError("Not authenticated");
-        return;
-      }
-
-      const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/calculate-prediction-accuracy`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to calculate accuracy");
-      }
-
-      const result = await response.json();
-      console.log("Prediction accuracy recalculated:", result);
-
-      // Refresh data after calculation
       await fetchAccuracy();
     } catch (err) {
       console.error("Error recalculating prediction accuracy:", err);
