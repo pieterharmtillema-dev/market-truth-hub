@@ -43,10 +43,6 @@ interface Profile {
   avatar_url: string | null;
   bio: string | null;
   character_config: string | null;
-  prediction_accuracy: number | null;
-  prediction_accuracy_correct: number;
-  prediction_accuracy_incorrect: number;
-  prediction_accuracy_total: number;
 }
 
 interface TraderProfile {
@@ -450,7 +446,7 @@ export function TraderCharacterHero({
         // Fetch profile data
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("display_name, avatar_url, bio, character_config, prediction_accuracy, prediction_accuracy_correct, prediction_accuracy_incorrect, prediction_accuracy_total")
+          .select("display_name, avatar_url, bio, character_config")
           .eq("user_id", userId)
           .single();
 
@@ -460,10 +456,6 @@ export function TraderCharacterHero({
             avatar_url: profileData.avatar_url,
             bio: profileData.bio,
             character_config: profileData.character_config as string | null,
-            prediction_accuracy: profileData.prediction_accuracy,
-            prediction_accuracy_correct: profileData.prediction_accuracy_correct || 0,
-            prediction_accuracy_incorrect: profileData.prediction_accuracy_incorrect || 0,
-            prediction_accuracy_total: profileData.prediction_accuracy_total || 0,
           });
 
           // Parse character config
@@ -878,20 +870,8 @@ export function TraderCharacterHero({
                     onProfileUpdated={handleProfileUpdate}
                   />
                 </div>
-                {/* Trade Score and Prediction Score */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <TraxRating positions={positions} compact />
-                  <PredictionScore
-                    predictionAccuracy={profile ? {
-                      value: profile.prediction_accuracy,
-                      correct: profile.prediction_accuracy_correct,
-                      incorrect: profile.prediction_accuracy_incorrect,
-                      totalResolved: profile.prediction_accuracy_total,
-                      hasSufficientData: profile.prediction_accuracy_total >= 5,
-                    } : null}
-                    compact
-                  />
-                </div>
+                {/* Trade Score */}
+                <TraxRating positions={positions} compact />
               </div>
             </div>
           </div>
