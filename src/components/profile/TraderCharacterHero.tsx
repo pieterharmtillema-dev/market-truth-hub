@@ -8,11 +8,12 @@ import { AvatarDisplay } from "./AvatarDisplay";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { CategoryBadge, TraderCategory } from "./CategoryBadge";
 import { useTradingMetrics } from "@/hooks/useTradingMetrics";
+import { usePredictionAccuracy } from "@/hooks/usePredictionAccuracy";
 import { AdjustedWinRate, calculateAdjustedWinRate, getMinimumTrades } from "@/components/analytics/AdjustedWinRate";
 import { WinLossSizeRatio, calculateNormalizedReturn } from "@/components/analytics/WinLossSizeRatio";
 import { PerformanceTrend } from "@/components/analytics/PerformanceTrend";
 import { TraxRating } from "./TraxRating";
-import { PredictionScore, PredictionAccuracyData } from "./PredictionScore";
+import { PredictionScore } from "./PredictionScore";
 import { CharacterRenderer } from "./CharacterRenderer";
 import { CharacterCustomizer } from "./CharacterCustomizer";
 import { CharacterConfig, DEFAULT_CHARACTER_CONFIG, parseCharacterConfig, stringifyCharacterConfig } from "./characterConfig";
@@ -229,6 +230,9 @@ export function TraderCharacterHero({
 
   // Get real trading metrics
   const { metrics, loading: loadingMetrics } = useTradingMetrics();
+
+  // Get prediction accuracy
+  const { data: predictionAccuracy, loading: loadingPredictionAccuracy } = usePredictionAccuracy(userId);
 
   // Calculate best streak from positions
   const bestStreak = useMemo(() => {
@@ -870,8 +874,11 @@ export function TraderCharacterHero({
                     onProfileUpdated={handleProfileUpdate}
                   />
                 </div>
-                {/* Trade Score */}
-                <TraxRating positions={positions} compact />
+                {/* Trade Score & Prediction Score */}
+                <div className="flex items-center gap-2">
+                  <TraxRating positions={positions} compact />
+                  <PredictionScore predictionAccuracy={predictionAccuracy} compact />
+                </div>
               </div>
             </div>
           </div>
