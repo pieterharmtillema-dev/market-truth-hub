@@ -81,10 +81,11 @@ export function ManualTradeEntryDialog({ open, onOpenChange, onSuccess }: Manual
         pnl_pct: pnlPct,
         open: isOpen,
         platform: 'Manual Entry',
-        trade_source: 'manual',
+        trade_source: 'manual' as const,
+        is_simulation: false,
       };
 
-      const { error } = await supabase.from('positions').insert(position);
+      const { error } = await supabase.from('positions').insert([position]);
 
       if (error) throw error;
 
