@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BracketDetailsPanel, BracketData, ExitReasonBadge, OrderDetails } from './BracketDetailsPanel';
+import { AddTradeDialog } from './AddTradeDialog';
 
 interface Position {
   id: number;
@@ -48,6 +49,30 @@ interface AlpacaOrderWithBracket {
 
 interface TradeHistoryTableProps {
   refreshTrigger?: number;
+}
+
+function EmptyState() {
+  const [showAddTrade, setShowAddTrade] = useState(false);
+
+  return (
+    <>
+      <div className="text-center py-16 text-muted-foreground">
+        <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-40" />
+        <p className="text-lg font-medium">No positions yet</p>
+        <p className="text-sm mt-1">Add your first trade manually or import from CSV</p>
+        <Button
+          onClick={() => setShowAddTrade(true)}
+          className="mt-4"
+        >
+          Add Trade
+        </Button>
+      </div>
+      <AddTradeDialog
+        open={showAddTrade}
+        onOpenChange={setShowAddTrade}
+      />
+    </>
+  );
 }
 
 export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
@@ -211,11 +236,7 @@ export function TradeHistoryTable({ refreshTrigger }: TradeHistoryTableProps) {
 
   if (positions.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground">
-        <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-40" />
-        <p className="text-lg font-medium">No positions yet</p>
-        <p className="text-sm mt-1">Connect your exchange to start tracking trades</p>
-      </div>
+      <EmptyState />
     );
   }
 

@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TradeTagSelector } from './TradeTagSelector';
 import { TradeScreenshots } from './TradeScreenshots';
+import { AddTradeDialog } from './AddTradeDialog';
 
 interface Attachment {
   id: string;
@@ -44,6 +45,32 @@ interface TradeJournalListProps {
   dateTo?: string;
   verifiedOnly?: boolean;
   onClearDateFilter?: () => void;
+}
+
+function EmptyState() {
+  const [showAddTrade, setShowAddTrade] = useState(false);
+
+  return (
+    <>
+      <Card className="border-border/50 bg-card/50">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">No positions yet</p>
+          <p className="text-xs mt-2">Add your first trade manually or import from CSV</p>
+          <Button
+            onClick={() => setShowAddTrade(true)}
+            className="mt-4"
+          >
+            Add Trade
+          </Button>
+        </CardContent>
+      </Card>
+      <AddTradeDialog
+        open={showAddTrade}
+        onOpenChange={setShowAddTrade}
+      />
+    </>
+  );
 }
 
 export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnly, onClearDateFilter }: TradeJournalListProps) {
@@ -203,14 +230,7 @@ export function TradeJournalList({ refreshTrigger, dateFrom, dateTo, verifiedOnl
   }
 
   if (positions.length === 0) {
-    return (
-      <Card className="border-border/50 bg-card/50">
-        <CardContent className="py-12 text-center text-muted-foreground">
-          <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No positions yet. Connect your extension to get started.</p>
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState />;
   }
 
   return (
