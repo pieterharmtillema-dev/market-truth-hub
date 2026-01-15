@@ -6,13 +6,31 @@ import traxLogo from "@/assets/trax-logo.png";
 import { TrexWalker } from "./TrexWalker";
 import { AddTradeDialog } from "@/components/trades/AddTradeDialog";
 
-const navItems = [
+interface NavLinkItem {
+  icon: typeof Home;
+  label: string;
+  path: string;
+}
+
+interface NavButtonItem {
+  icon: typeof Plus;
+  label: string;
+  isButton: true;
+}
+
+type NavItem = NavLinkItem | NavButtonItem;
+
+const navItems: NavItem[] = [
   { icon: Home, label: "Feed", path: "/" },
   { icon: TrendingUp, label: "Markets", path: "/markets" },
-  { type: "button" as const, icon: Plus, label: "Add Trade" },
+  { icon: Plus, label: "Add Trade", isButton: true },
   { icon: History, label: "Trades", path: "/past-trades" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
+
+function isButtonItem(item: NavItem): item is NavButtonItem {
+  return 'isButton' in item && item.isButton === true;
+}
 
 export function MobileNav() {
   const [showAddTrade, setShowAddTrade] = useState(false);
@@ -26,7 +44,8 @@ export function MobileNav() {
         <TrexWalker />
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item, index) => {
-            if (item.type === "button") {
+            if (isButtonItem(item)) {
+              const Icon = item.icon;
               return (
                 <button
                   key={index}
@@ -37,13 +56,14 @@ export function MobileNav() {
                   )}
                 >
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-primary-foreground" />
+                    <Icon className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <span className="text-[10px] font-medium">{item.label}</span>
                 </button>
               );
             }
 
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.path}
@@ -54,7 +74,7 @@ export function MobileNav() {
                 )}
                 activeClassName="text-primary bg-primary/10"
               >
-                <item.icon className="w-5 h-5" />
+                <Icon className="w-5 h-5" />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </NavLink>
             );
